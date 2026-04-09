@@ -1,0 +1,29 @@
+{% load wagtailcore_tags %}
+
+<section class="album-grid-section">
+  {% if value.heading %}
+    <h2 class="section-title">{{ value.heading }}</h2>
+  {% endif %}
+
+  <div class="album-grid">
+    {% for item in albums %}
+      <a href="{{ item.href }}" class="album-card">
+        <div class="album-card__cover">
+          {% if item.image_url %}
+            <img src="{{ item.image_url }}" alt="{{ item.name }}" loading="lazy">
+          {% else %}
+            <div class="album-card__placeholder"></div>
+          {% endif %}
+        </div>
+        <div class="album-card__info">
+          <span class="album-card__title">{{ item.name }}</span>
+          {% if item.artist_name %}
+            <span class="album-card__artist">{{ item.artist_name }}</span>
+          {% endif %}
+        </div>
+      </a>
+    {% empty %}
+      <p>No hi ha elements per mostrar.</p>
+    {% endfor %}
+  </div>
+</section>

@@ -1,0 +1,11 @@
+{% if pager %}
+<nav class="pager" aria-label="Paginació">
+  {% if pager.has_prev %}
+    <a href="{{ pager.prev_href }}" class="pager__link pager__link--prev">&laquo; Anterior</a>
+  {% endif %}
+  <span class="pager__info">{{ pager.page }} / {{ pager.num_pages }} ({{ pager.count }} resultats)</span>
+  {% if pager.has_next %}
+    <a href="{{ pager.next_href }}" class="pager__link pager__link--next">Següent &raquo;</a>
+  {% endif %}
+</nav>
+{% endif %}

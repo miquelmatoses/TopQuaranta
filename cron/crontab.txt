@@ -1,0 +1,9 @@
+MAILTO=""
+0 * * * * /root/TopQuaranta/cron/worker.sh
+0 */4 * * * /root/TopQuaranta/cron/update_playlist_daily.sh
+0 3 * * 6 /root/TopQuaranta/cron/update_playlist_weekly.sh
+0 3 * * 7 /root/TopQuaranta/cron/send_telegram_pv.sh
+0 3 * * 1 /root/TopQuaranta/cron/send_telegram_album.sh
+0 3 * * 2 /root/TopQuaranta/cron/send_telegram_cat.sh
+0 3 * * 3 /root/TopQuaranta/cron/send_telegram_singles.sh
+0 3 * * 4 /root/TopQuaranta/cron/send_telegram_ib.sh

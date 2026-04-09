@@ -1,0 +1,5 @@
+Django>=5.1,<5.3
+wagtail>=7.0,<7.1
+django-allauth==64.1.0
+cryptography==42.0.8
+Django>=5.1,<5.3

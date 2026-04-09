@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}{{ section_title }} — {{ block.super }}{% endblock %}
+{% block body_class %}music-albums{% endblock %}
+
+{% block content %}
+<h1>{{ section_title }}</h1>
+
+<div class="music-toolbar">
+  <form class="music-search" method="get">
+    <input type="search" name="q" value="{{ params.q|default:'' }}" placeholder="Cerca albums...">
+    <button type="submit">Cercar</button>
+  </form>
+
+  {% if type_options %}
+  <div class="music-type-filter">
+    <select name="type" onchange="location.href=this.value">
+      {% for opt in type_options %}
+        <option value="?type={{ opt.value }}&order={{ params.order|default:'release_desc' }}"
+          {% if album_type == opt.value %}selected{% endif %}>
+          {{ opt.label }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+</div>
+
+{% if chips_order %}
+<div class="chips">
+  {% for chip in chips_order %}
+    <a href="{{ chip.href }}" class="chip {% if chip.active %}chip--active{% endif %}">{{ chip.label }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if chips_filters %}
+<div class="chips chips--filters">
+  {% for chip in chips_filters %}
+    <a href="{{ chip.href }}" class="chip chip--filter chip--active">{{ chip.label }} &times;</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="music-grid">
+  {% for item in items %}
+    <a href="{{ item.href }}" class="music-card">
+      <div class="music-card__cover">
+        {% if item.image %}
+          <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy">
+        {% else %}
+          <div class="music-card__placeholder"></div>
+        {% endif %}
+        {% if item.badge %}
+          <span class="music-card__badge">{{ item.badge }}</span>
+        {% endif %}
+      </div>
+      <div class="music-card__info">
+        <span class="music-card__title">{{ item.title }}</span>
+        {% if item.subtitle %}<span class="music-card__subtitle">{{ item.subtitle }}</span>{% endif %}
+      </div>
+    </a>
+  {% empty %}
+    <p>No s'han trobat albums.</p>
+  {% endfor %}
+</div>
+
+{% include "home/_pager.html" %}
+{% endblock %}

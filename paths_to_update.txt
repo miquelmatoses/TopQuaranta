@@ -1,0 +1,74 @@
+/root/TopQuaranta_Local/dossier_web.txt:138: MEDIA_ROOT = '/root/TopQuaranta_Local/web_cms/media'
+/root/TopQuaranta_Local/dossier_web.txt:149: STATIC_ROOT = '/root/TopQuaranta_Local/web_cms/staticfiles'
+/root/TopQuaranta_Local/dossier_web.txt:151: TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates',\
+ 'DIRS': ['/root/TopQuaranta_Local/web_cms/tqcms/templates'], 'APP_DIRS': True, 'OPTIONS': {'context_processors': ['djan\
+go.template.context_processors.debug', 'django.template.context_processors.request', 'django.contrib.auth.context_proces\
+sors.auth', 'django.contrib.messages.context_processors.messages', 'wagtail.contrib.settings.context_processors.settings\
+']}}]
+/root/TopQuaranta_Local/dossier_web.txt:398: 3301230 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/ve\
+nv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:399: 3301232 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/ve\
+nv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:400: 3301233 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/ve\
+nv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:401: 3301234 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/ve\
+nv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:435: ├─3301230 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/\
+venv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:436: ├─3301232 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/\
+venv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:437: ├─3301233 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/\
+venv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:438: └─3301234 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuaranta_Local/\
+venv/bin/gunicorn tqcms.wsgi:application --bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:459: WorkingDirectory=/root/TopQuaranta_Local/web_cms
+/root/TopQuaranta_Local/dossier_web.txt:462: ExecStart=/root/TopQuaranta_Local/venv/bin/gunicorn tqcms.wsgi:application \
+--bind 127.0.0.1:8081 --workers 3 --timeout 120
+/root/TopQuaranta_Local/dossier_web.txt:837: STATIC_ROOT: /root/TopQuaranta_Local/web_cms/staticfiles → exists: True
+/root/TopQuaranta_Local/dossier_web.txt:838: STATICFILES_DIRS: ['/root/TopQuaranta_Local/web_cms/tqcms/static']
+/root/TopQuaranta_Local/dossier_web.txt:840: MEDIA_ROOT: /root/TopQuaranta_Local/web_cms/media → exists: True
+/root/TopQuaranta_Local/dossier_web.txt:1950: 18	load_dotenv("/root/TopQuaranta_Local/.env")
+/root/TopQuaranta_Local/utils/imatges.py:334: "pv": "/root/TopQuaranta_Local/media/logo-hz-pv.svg",
+/root/TopQuaranta_Local/utils/imatges.py:335: "cat": "/root/TopQuaranta_Local/media/logo-hz-cat.svg",
+/root/TopQuaranta_Local/utils/imatges.py:336: "ib": "/root/TopQuaranta_Local/media/logo-hz-ib.svg",
+/root/TopQuaranta_Local/utils/imatges.py:337: "ppcc": "/root/TopQuaranta_Local/media/logo-hz.svg",
+/root/TopQuaranta_Local/utils/imatges.py:338: "general": "/root/TopQuaranta_Local/media/logo-hz.svg",
+/root/TopQuaranta_Local/utils/imatges.py:341: territori or "general", "/root/TopQuaranta_Local/media/logo-hz.svg"
+/root/TopQuaranta_Local/utils/imatges.py:420: "pv": "/root/TopQuaranta_Local/media/logo-hz-pv.svg",
+/root/TopQuaranta_Local/utils/imatges.py:421: "cat": "/root/TopQuaranta_Local/media/logo-hz-cat.svg",
+/root/TopQuaranta_Local/utils/imatges.py:422: "ib": "/root/TopQuaranta_Local/media/logo-hz-ib.svg",
+/root/TopQuaranta_Local/utils/imatges.py:423: "ppcc": "/root/TopQuaranta_Local/media/logo-hz.svg",
+/root/TopQuaranta_Local/utils/imatges.py:424: "general": "/root/TopQuaranta_Local/media/logo-hz.svg",
+/root/TopQuaranta_Local/utils/imatges.py:427: territori or "general", "/root/TopQuaranta_Local/media/logo-hz.svg"
+/root/TopQuaranta_Local/web_cms/tqcms/settings/base.py:18: load_dotenv("/root/TopQuaranta_Local/.env")
+/root/TopQuaranta_Local/cron/crontab.txt:2: 0 * * * * /root/TopQuaranta_Local/cron/worker.sh
+/root/TopQuaranta_Local/cron/crontab.txt:3: 0 */4 * * * /root/TopQuaranta_Local/cron/update_playlist_daily.sh
+/root/TopQuaranta_Local/cron/crontab.txt:4: 0 3 * * 6 /root/TopQuaranta_Local/cron/update_playlist_weekly.sh
+/root/TopQuaranta_Local/cron/crontab.txt:5: 0 3 * * 1 /root/TopQuaranta_Local/cron/send_telegram_pv.sh
+/root/TopQuaranta_Local/cron/crontab.txt:6: 0 3 * * 2 /root/TopQuaranta_Local/cron/send_telegram_cat.sh
+/root/TopQuaranta_Local/cron/crontab.txt:7: 0 3 * * 3 /root/TopQuaranta_Local/cron/send_telegram_ib.sh
+/root/TopQuaranta_Local/cron/crontab.txt:8: 0 3 * * 7 /root/TopQuaranta_Local/cron/send_telegram_album.sh
+/root/TopQuaranta_Local/cron/send_telegram_ib.sh:14: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/worker.sh:17: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/worker.sh:26: timeout 3540 /root/TopQuaranta_Local/venv/bin/python3 scripts/worker.py
+/root/TopQuaranta_Local/cron/send_telegram_album.sh:14: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/update_playlist_weekly.sh:13: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/send_telegram_cat.sh:14: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/update_playlist_daily.sh:16: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/update_playlist_daily.sh:21: timeout 180 /root/TopQuaranta_Local/venv/bin/python3 scripts/b\
+ot_exclusions.py
+/root/TopQuaranta_Local/cron/update_playlist_daily.sh:22: timeout 300 /root/TopQuaranta_Local/venv/bin/python3 scripts/u\
+pdate_playlist_daily.py
+/root/TopQuaranta_Local/cron/send_telegram_pv.sh:14: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/worker_update_artistes.sh:17: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/worker_update_artistes.sh:26: timeout 120 /root/TopQuaranta_Local/venv/bin/python3 scripts/\
+worker_update_artistes.py
+/root/TopQuaranta_Local/cron/worker_topcancons.sh:17: cd /root/TopQuaranta_Local
+/root/TopQuaranta_Local/cron/worker_topcancons.sh:26: timeout 180 /root/TopQuaranta_Local/venv/bin/python3 /root/TopQuar\
+anta_Local/scripts/worker_update_top_cancons.py
+/root/TopQuaranta_Local/tools/find_local_paths.py:5: PROJECT_ROOT = "/root/TopQuaranta_Local"  # Directory to scan
+/root/TopQuaranta_Local/tools/find_local_paths.py:6: TARGET = "/root/TopQuaranta_Local"        # String to search for
+/root/TopQuaranta_Local/scripts/diag_web.sh:7: PROJECT_ROOT="/root/TopQuaranta_Local"
+/root/TopQuaranta_Local/scripts/genera_dossier_web.sh:5: PROJECT_ROOT="/root/TopQuaranta_Local"
+/root/TopQuaranta_Local/scripts/playlist_render_and_send.py:1: # /root/TopQuaranta_Local/scripts/playlist_render_and_sen\
+d.py

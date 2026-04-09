@@ -1,0 +1,20 @@
+# playlists.py
+PLAYLIST_IDS = {
+    "weekly_cat": "2rjDevnzE7qPphdrxAhYOT",
+    "weekly_pv": "5yMimy5GaaG5ipQadbm1Yq",
+    "weekly_ib": "4GhnQ4rvBPJxwBH0PJ3QKK",
+    "weekly_altres": "4ts0Pyov3qnexNGrk6wWul",
+    "weekly": "75IQLLWrOrJ1BaJc1RlJeY",
+    "daily": "4nBIangCLrNMFj0L1Uj2jb",
+    "daily_cat": "0Vzdo5gpRPeSBpWVFUKE1G",
+    "daily_pv": "0zt9V8u8lRsgdPPRVIc9kC",
+    "daily_ib": "2MMTTGmQkpte20Ripx3hxa",
+    "daily_altres": "3qvaDqSrhbvrR5TOvANEvp",
+    "novetats_dilluns": "6exFHk1DUrqSINn7oFZo8s",
+    "novetats_dimarts": "6St966o9lNhq5ICJp80c8V",
+    "novetats_dimecres": "0jvRYoHtv1iwVd0BAVqkDZ",
+    "novetats_dijous": "3HGl5GvhZaCLX9grkVBBTn",
+    "novetats_divendres": "0FgFm7qNcdPzETGyJdNaUJ",
+    "novetats_dissabte": "1aLbOqACZdpwAa7O56neoW",
+    "novetats_diumenge": "1UVpQh2fGGtG7bAOkjGlYx",
+}

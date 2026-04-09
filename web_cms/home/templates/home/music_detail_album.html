@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{ album.name }} — {{ block.super }}{% endblock %}
+{% block body_class %}music-detail music-detail--album{% endblock %}
+
+{% block content %}
+<article class="detail-album">
+  <div class="detail-header">
+    {% if album.image_url %}
+      <img class="detail-header__cover" src="{{ album.image_url }}" alt="{{ album.name }}">
+    {% endif %}
+    <div class="detail-header__info">
+      <h1>{{ album.name }}</h1>
+      <p class="detail-header__artists">
+        {% for a in artists %}
+          {% if a.href %}<a href="{{ a.href }}">{{ a.name }}</a>{% else %}{{ a.name }}{% endif %}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+      {% if album.release_date %}<p class="detail-header__date">{{ album.release_date }}</p>{% endif %}
+      {% if album.album_type %}<span class="badge">{{ album.album_type }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% if songs %}
+  <section class="detail-songs">
+    <h2>Cançons</h2>
+    <ol class="song-list">
+      {% for s in songs %}
+        <li class="song-list__item">
+          <a href="{{ page.url }}songs/{{ s.id }}/">
+            <span class="song-list__name">{{ s.name }}</span>
+            {% if s.popularity is not None %}
+              <span class="song-list__pop">pop {{ s.popularity }}</span>
+            {% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

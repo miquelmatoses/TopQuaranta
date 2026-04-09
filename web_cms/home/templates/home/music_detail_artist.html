@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ artist.nom }} — {{ block.super }}{% endblock %}
+{% block body_class %}music-detail music-detail--artist{% endblock %}
+
+{% block content %}
+<article class="detail-artist">
+  <div class="detail-header">
+    {% if artist.imatge_url %}
+      <img class="detail-header__cover detail-header__cover--round" src="{{ artist.imatge_url }}" alt="{{ artist.nom }}">
+    {% endif %}
+    <div class="detail-header__info">
+      <h1>{{ artist.nom }}</h1>
+      {% if artist.localitat or artist.comarca %}
+        <p class="detail-header__location">{{ artist.localitat }}{% if artist.comarca %} ({{ artist.comarca }}){% endif %}{% if artist.territori %} &mdash; {{ artist.territori }}{% endif %}</p>
+      {% endif %}
+      {% if artist.generes %}<p class="detail-header__genres">{{ artist.generes }}</p>{% endif %}
+      <div class="detail-header__stats">
+        {% if artist.followers is not None %}<span>{{ artist.followers }} followers</span>{% endif %}
+        {% if artist.popularitat is not None %}<span>Popularitat: {{ artist.popularitat }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if artist.bio %}
+  <section class="detail-bio">
+    <h2>Bio</h2>
+    <p>{{ artist.bio }}</p>
+  </section>
+  {% endif %}
+
+  <section class="detail-links">
+    {% if artist.web %}<a href="{{ artist.web }}" target="_blank" rel="noopener">Web</a>{% endif %}
+    {% if artist.instagram %}<a href="https://instagram.com/{{ artist.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+    {% if artist.youtube %}<a href="{{ artist.youtube }}" target="_blank" rel="noopener">YouTube</a>{% endif %}
+    {% if artist.tiktok %}<a href="{{ artist.tiktok }}" target="_blank" rel="noopener">TikTok</a>{% endif %}
+    {% if artist.bluesky %}<a href="{{ artist.bluesky }}" target="_blank" rel="noopener">Bluesky</a>{% endif %}
+    {% if artist.soundcloud %}<a href="{{ artist.soundcloud }}" target="_blank" rel="noopener">SoundCloud</a>{% endif %}
+    {% if artist.bandcamp %}<a href="{{ artist.bandcamp }}" target="_blank" rel="noopener">Bandcamp</a>{% endif %}
+    {% if artist.deezer %}<a href="{{ artist.deezer }}" target="_blank" rel="noopener">Deezer</a>{% endif %}
+    {% if artist.viquipedia %}<a href="{{ artist.viquipedia }}" target="_blank" rel="noopener">Viquipèdia</a>{% endif %}
+  </section>
+
+  {% if albums %}
+  <section class="detail-albums">
+    <h2>Discografia</h2>
+    <div class="music-grid">
+      {% for a in albums %}
+        <a href="{{ page.url }}albums/{{ a.id }}/" class="music-card">
+          <div class="music-card__cover">
+            {% if a.image_url %}
+              <img src="{{ a.image_url }}" alt="{{ a.name }}" loading="lazy">
+            {% else %}
+              <div class="music-card__placeholder"></div>
+            {% endif %}
+          </div>
+          <div class="music-card__info">
+            <span class="music-card__title">{{ a.name }}</span>
+            {% if a.release_date %}<span class="music-card__subtitle">{{ a.release_date }}</span>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,254 @@
+{% load static wagtailcore_tags wagtailsettings_tags wagtailimages_tags wagtailuserbar l10n navigation_tags %}
+
+<!DOCTYPE html>
+<html lang="ca">
+ <head>
+ <meta charset="utf-8" />
+ <title>
+ {% block title %}
+ {% wagtail_site as current_site %}
+ {% if page %}
+ {% if page.seo_title %}{{ page.seo_title }}{% else %}{{ page.title }}{% endif %}
+ {% else %}
+ {{ current_site.site_name }}
+ {% endif %}
+ {% endblock %}
+ </title>
+ {% if page and page.search_description %}
+ <meta name="description" content="{{ page.search_description }}" />
+ {% endif %}
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+ {# Force all links in the live preview panel to be opened in a new tab #}
+ {% if request.in_preview_panel %}
+ <base target="_blank">
+ {% endif %}
+
+ {# Global stylesheets #}
+ <link rel="stylesheet" type="text/css" href="{% static 'css/tqcms.css' %}">
+
+ {% block extra_css %}
+ {% endblock %}
+
+ {# ——— Carrega Google Fonts si la família triada ho necessita ——— #}
+ {% with s=settings.home.SiteDesign %}
+ {% if s.font_family in "inter roboto merriweather" %}
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ {% if s.font_family == "inter" %}
+ <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+ {% elif s.font_family == "roboto" %}
+ <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+ {% elif s.font_family == "merriweather" %}
+ <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+ {% endif %}
+ {% endif %}
+ {% endwith %}
+
+ {# ——— Favicon i apple-touch-icon des de SiteDesign.favicon ——— #}
+ {% with s=settings.home.SiteDesign %}
+ {% if s.favicon %}
+ {# 180x180 per iOS #}
+ {% image s.favicon max-180x180 as ico180 %}
+ <link rel="apple-touch-icon" sizes="180x180" href="{{ ico180.url }}">
+
+ {# 32x32 clàssic #}
+ {% image s.favicon max-32x32 as ico32 %}
+ <link rel="icon" type="image/png" sizes="32x32" href="{{ ico32.url }}">
+
+ {# 16x16 fallback #}
+ {% image s.favicon max-16x16 as ico16 %}
+ <link rel="icon" type="image/png" sizes="16x16" href="{{ ico16.url }}">
+ {% endif %}
+ {% endwith %}
+
+ {% with s=settings.home.SiteDesign %}
+ {% localize off %}
+ <style id="tq-brand">
+ :root{
+ /* ——— Colors (SiteDesign) ——— */
+ --brand: {{ s.brand|default:"#0047FF" }};
+ --text: {{ s.text|default:"#111111" }};
+ {# Accent/enllaç: si no hi ha link, fa fallback a brand #}
+ --bg: {{ s.background|default:"#FFFFFF" }};
+ --border: #dddddd;
+ --danger: #c00;
+
+ {# Header: per defecte empra fons/text generals #}
+ --header-bg: var(--bg);
+ --header-text: var(--text);
+ --header-h: {{ s.header_height|default:96 }}px;
+
+ {# Footer: per defecte és "invertit": fons marca + text on-brand #}
+ --footer-bg: var(--brand);
+ --footer-text: var(--bg);
+
+ /* ——— Maquetació ——— */
+ --container-max: {{ s.container_max_width|default:1180 }}px;
+ --gutter: {{ s.container_gutter|default:16 }}px;
+ --logo-w: {{ s.logo_width|default:200 }}px;
+ --logo-h: {{ s.logo_height|default:60 }}px;
+
+
+ /* ——— Tipografia ——— */
+ {% comment %}
+ Mapegem font_family (choices) a stacks segurs. Si no hi ha elecció, fem fallback a body_font o a system-ui.
+ {% endcomment %}
+ {% if s.font_family == "inter" %}
+ --body-font:"Inter", system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+ {% elif s.font_family == "roboto" %}
+ --body-font: Roboto, system-ui, -apple-system,"Segoe UI", Helvetica, Arial, sans-serif;
+ {% elif s.font_family == "merriweather" %}
+ --body-font:"Merriweather", Georgia,"Times New Roman", serif;
+ {% elif s.font_family == "system" %}
+ --body-font: system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+ {% elif s.body_font %}
+ --body-font: {{ s.body_font }};
+ {% else %}
+ --body-font: system-ui, -apple-system,"Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+ {% endif %}
+
+ --font-base: {{ s.base_font_size_px|default:16 }}px;
+ --font-scale: {{ s.scale_ratio|default:1.25 }};
+ }
+
+ html, body{
+ color: var(--text);
+ background: var(--bg);
+ font-family: var(--body-font);
+ font-size: var(--font-base);
+ }
+
+ /* Escalat dels títols amb la relació definida */
+ h1{ font-size: calc(var(--font-base) * (var(--font-scale) * var(--font-scale) * var(--font-scale))); line-height:1.2; }
+ h2{ font-size: calc(var(--font-base) * (var(--font-scale) * var(--font-scale))); line-height:1.25; }
+ h3{ font-size: calc(var(--font-base) * var(--font-scale)); line-height:1.3; }
+ h4{ font-size: calc(var(--font-base) * 1.05); }
+ h5{ font-size: var(--font-base); }
+ h6{ font-size: calc(var(--font-base) * 0.95); }
+ </style>
+ {% endlocalize %}
+ {% endwith %}
+
+
+ </head>
+
+ <body class="{% block body_class %}{% endblock %}">
+ {% wagtailuserbar %}
+
+ <header class="site-header">
+ <div class="container site-nav">
+ <div class="site-header__nav-left">
+ {% with s=settings.home.SiteDesign %}
+  {% if s.logo %}
+    {% image s.logo max-320x120 as r %}
+    <img class="site-logo" src="{{ r.url }}" alt="{{ s.site_name|default:'Top Quaranta' }}">
+    {% if s.show_site_name %}<span class="fw-800 fs-18">{{ s.site_name|default:'Top Quaranta' }}</span>{% endif %}
+  {% else %}
+    {% if s.show_site_name %}<span class="fw-800 fs-18">{{ s.site_name|default:'Top Quaranta' }}</span>{% endif %}
+  {% endif %}
+{% endwith %}
+ </div>
+ <div class="site-header__nav-right">
+ {% wagtail_site as current_site %}
+ {% get_main_menu as main_menu %}
+<nav class="nav-menu" aria-label="Seccions">
+  {% if main_menu %}
+    {% for item in main_menu.items.all %}
+      <div class="menu-item">
+        {% with u=item.resolved_url %}
+          <a href="{{ u }}"
+            class="{% if request.path == u %}is-active{% endif %}"
+            {% if item.new_tab %}target="_blank" rel="noopener"{% endif %}>
+            {{ item.label }}
+          </a>
+        {% endwith %}
+        {% if item.children.all %}
+          <ul class="nav-menu__submenu">
+            {% for c in item.children.all %}
+              <li>
+                {% with u=c.resolved_url %}
+                  <a href="{{ u }}"
+                    class="{% if request.path == u %}is-active{% endif %}"
+                    {% if c.new_tab %}target="_blank" rel="noopener"{% endif %}>
+                    {{ c.label }}
+                  </a>
+                {% endwith %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    {# Fallback a l'estructura actual (arbre) si no hi ha snippet definit #}
+    {% with menu_pages=current_site.root_page.get_children.live.in_menu %}
+      {% if menu_pages %}
+        {% for p in menu_pages %}
+          <div class="menu-item">
+            <a href="{{ p.url }}" class="{% if request.path == p.url %}is-active{% endif %}">{{ p.title }}</a>
+            {% with children=p.get_children.live.in_menu %}
+              {% if children %}
+                <ul class="nav-menu__submenu">
+                  {% for c in children %}
+                    <li><a href="{{ c.url }}">{{ c.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <a href="/">Inici</a>
+        {% if user.is_authenticated %}
+          <a href="/admin/">Panell</a>
+          <a href="{% url 'account_logout' %}">Tancar sessió</a>
+        {% else %}
+          <a href="/admin/">Entrar</a>
+          <a href="{% url 'account_signup' %}">Registrar-se</a>
+        {% endif %}
+      {% endif %}
+    {% endwith %}
+  {% endif %}
+</nav>
+
+ <button class="search-toggle" aria-label="Obrir cerca">&#128269;</button>
+
+<div class="menu-item">
+  <a href="/admin/" class="user-link tq-link-plain tq-fs-18">
+  &#128100;
+</a>
+</div>
+
+ </div>
+ </div>
+ <div class="search-panel">
+ <form class="container" action="/search/" method="get">
+ <input type="search" name="q" placeholder="Cerca...">
+ <button type="submit">Cercar</button>
+ </form>
+ </div>
+ </header>
+
+ <main>
+ <div class="container">
+ {% block content %}{% endblock %}
+ </div>
+ </main>
+
+
+ {% wagtail_site as current_site %}
+ <footer class="site-footer">
+ <div class="container">
+ <small>&copy; {% now "Y" %} {{ current_site.site_name }}</small>
+ </div>
+ </footer>
+
+ {# Global javascript #}
+ <script type="text/javascript" src="{% static 'js/tqcms.js' %}"></script>
+
+ {% block extra_js %}
+ {# Override this in templates to add extra javascript #}
+ {% endblock %}
+ </body>
+</html>

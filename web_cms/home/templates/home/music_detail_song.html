@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ song.name }} — {{ block.super }}{% endblock %}
+{% block body_class %}music-detail music-detail--song{% endblock %}
+
+{% block content %}
+<article class="detail-song">
+  <div class="detail-header">
+    {% if album and album.image_url %}
+      <img class="detail-header__cover" src="{{ album.image_url }}" alt="{{ song.name }}">
+    {% endif %}
+    <div class="detail-header__info">
+      <h1>{{ song.name }}</h1>
+      <p class="detail-header__artists">
+        {% for a in artists %}
+          {% if a.href %}<a href="{{ a.href }}">{{ a.name }}</a>{% else %}{{ a.name }}{% endif %}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </p>
+      {% if album %}
+        <p class="detail-header__album">
+          <a href="{{ page.url }}albums/{{ album.id }}/">{{ album.name }}</a>
+          {% if album.release_date %}<span class="detail-header__date">{{ album.release_date }}</span>{% endif %}
+        </p>
+      {% endif %}
+      {% if song.popularity is not None %}
+        <p class="detail-header__pop">Popularitat: {{ song.popularity }}</p>
+      {% endif %}
+      {% if song.isrc %}
+        <p class="detail-header__isrc">ISRC: {{ song.isrc }}</p>
+      {% endif %}
+    </div>
+  </div>
+</article>
+{% endblock %}

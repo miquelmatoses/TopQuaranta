@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Rànquing setmanal — {{ block.super }}{% endblock %}
+{% block body_class %}rankings{% endblock %}
+
+{% block content %}
+<h1>Rànquing setmanal</h1>
+
+{% if meta.error == "no_data" %}
+  <p>No hi ha dades de rànquing disponibles.</p>
+{% else %}
+
+<div class="rankings-toolbar">
+  <div class="rankings-filters">
+    <select onchange="location.href='?territori='+this.value+'{% if meta.date %}&date={{ meta.date }}{% endif %}'">
+      {% for t in meta.territoris_valids %}
+        <option value="{{ t }}" {% if meta.territori == t %}selected{% endif %}>
+          {% if t == "ppcc" %}General (PPCC){% elif t == "cat" %}Catalunya{% elif t == "pv" %}País Valencià{% elif t == "ib" %}Illes Balears{% elif t == "altres" %}Altres{% else %}{{ t }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+
+    {% if meta.dates %}
+    <select onchange="location.href='?territori={{ meta.territori }}&date='+this.value">
+      {% for d in meta.dates %}
+        <option value="{{ d }}" {% if meta.date == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+  </div>
+</div>
+
+<table class="ranking-table">
+  <thead>
+    <tr>
+      <th class="ranking-table__pos">#</th>
+      <th class="ranking-table__cover"></th>
+      <th class="ranking-table__song">Cançó</th>
+      <th class="ranking-table__score">Score</th>
+      <th class="ranking-table__change"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="ranking-table__pos">{{ item.posicio }}</td>
+      <td class="ranking-table__cover">
+        {% if item.album_caratula_url %}
+          <img src="{{ item.album_caratula_url }}" alt="" loading="lazy" width="48" height="48">
+        {% endif %}
+      </td>
+      <td class="ranking-table__song">
+        <span class="ranking-table__title">{{ item.titol }}</span>
+        <span class="ranking-table__artist">
+          {% for a in item.artistes %}{{ a }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </span>
+      </td>
+      <td class="ranking-table__score">
+        {% if item.score is not None %}{{ item.score|floatformat:1 }}{% endif %}
+      </td>
+      <td class="ranking-table__change">
+        {% if item.canvi_posicio is not None %}
+          {% if item.canvi_posicio > 0 %}
+            <span class="change change--up">+{{ item.canvi_posicio }}</span>
+          {% elif item.canvi_posicio < 0 %}
+            <span class="change change--down">{{ item.canvi_posicio }}</span>
+          {% else %}
+            <span class="change change--same">=</span>
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No hi ha resultats per a aquesta setmana/territori.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endif %}
+{% endblock %}
