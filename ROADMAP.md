@@ -40,10 +40,15 @@
 - [x] Run `importar_legacy`, verify counts
 - [x] Write `test_importar_legacy.py` (12 tests)
 
+- [x] Populate ISRC from legacy `spotify_tracks.external_ids` via `poblar_isrc` command
+  - 749/10,351 cançons matched (legacy `spotify_tracks` only has 2,805 rows)
+  - Remaining 9,602 cançons need ISRC from Deezer or Spotify (future)
+
 **Results:**
 - Artistes: 2,273 (legacy `status='go'`)
 - Albums: 4,250
 - Cançons: 10,351 (deduplicated from 11,555 legacy rows)
+- ISRCs populated: 749 (from legacy `spotify_tracks`)
 - Skipped: 1,146 (no matching artist), 58 deduplicated
 - Legacy tables untouched
 
