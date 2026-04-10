@@ -15,3 +15,11 @@ DATABASES = {
 }
 
 ALLOWED_HOSTS = ["*"]
+
+# Last.fm (for tests)
+LASTFM_API_KEY = "test-key"
+LASTFM_API_SECRET = ""
+
+# Spotify (for tests)
+SPOTIFY_CLIENT_ID = "test-client-id"
+SPOTIFY_CLIENT_SECRET = "test-client-secret"

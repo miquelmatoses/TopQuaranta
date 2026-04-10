@@ -33,7 +33,7 @@
 - [x] Create `ranking/models.py` (`ConfiguracioGlobal`, `IngestaDiari`, `RankingSetmanal`) and migrate
 - [x] Write `importar_legacy` management command
   - Territory mapping: `'Catalunya'→CAT`, `'País Valencià'→VAL`, `'Balears'/'Illes'→BAL`
-  - Status mapping: `'go'→actiu=True, aprovat=True`
+  - Status mapping: `'go'→aprovat=True`
   - Deduplicate cançons (legacy PK `id_canco+territori` → single row)
   - Artist lookup via `artistes_ids[0]` (spotify_id), not `artista_basat` (display name)
   - `lastfm_nom = nom` as initial default
@@ -133,7 +133,12 @@
 - [ ] Implement `descobrir_artistes` command
 - [ ] Add Wagtail approval queue admin
 - [ ] Migrate CMS pages to read from new models
-- [ ] Implement `ingestar_metadata` command (Spotify, single credential pair)
+- [x] Implement `ingestar_metadata` command (Spotify, single credential pair)
+  - Spotify client: `ingesta/clients/spotify.py` (Client Credentials, individual calls)
+  - Command: `--artista-id`, `--force`, `--dry-run` flags
+  - Stores ISRC on each Canco, links collaborators via M2M
+  - **Blocked:** Spotify API returns 403 "Active premium subscription required" — app owner needs active Premium
+  - Refactor: removed `Artista.actiu` field (was derived state, not manual attribute)
 
 **Go/no-go:**
 - Discovery runs without crash

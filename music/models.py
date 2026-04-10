@@ -46,8 +46,6 @@ class Artista(models.Model):
         blank=True,
         help_text="Territories this artist belongs to. Tracks appear in all.",
     )
-    actiu = models.BooleanField(default=True)
-
     # Discovery provenance
     auto_descobert = models.BooleanField(default=False)
     font_descoberta = models.CharField(

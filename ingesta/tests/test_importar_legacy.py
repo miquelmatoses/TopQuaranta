@@ -123,7 +123,6 @@ class TestImportarLegacyArtistes:
         assert Artista.objects.count() == 1
         a = Artista.objects.first()
         assert a.nom == "Active"
-        assert a.actiu is True
         assert a.aprovat is True
 
     @patch("ingesta.management.commands.importar_legacy.LegacyArtista")

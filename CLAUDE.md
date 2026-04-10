@@ -386,8 +386,6 @@ class Artista(models.Model):
         Territori, related_name="artistes", blank=True,
         help_text="Territories this artist belongs to. Tracks appear in all.",
     )
-    actiu = models.BooleanField(default=True)
-
     # Discovery provenance
     auto_descobert = models.BooleanField(default=False)
     font_descoberta = models.CharField(
@@ -773,7 +771,7 @@ Manual Wagtail entry     ─┘         (or aprovat=True for manual)
                               (default filter: aprovat=False)
                                            │
                               Approve → aprovat=True
-                              Reject  → actiu=False (keep, avoids re-discovery)
+                              Reject  → aprovat=False (keep, avoids re-discovery)
                                            │
                               ingestar_metadata command
                               Spotify: tracks released in last 12 months
@@ -914,7 +912,7 @@ python manage.py importar_legacy [--artistes] [--cancons] [--dry-run]
 - Reads from `LegacyArtista` and `LegacyCanco` (unmanaged models)
 - Maps legacy territory strings to new codes:
   `'Catalunya'→'CAT'`, `'País Valencià'→'VAL'`, `'Balears'→'BAL'`
-- Maps legacy `status='go'` → `actiu=True, aprovat=True`
+- Maps legacy `status='go'` → `aprovat=True`
 - Deduplicates cançons (legacy has one row per territory, new has one row total)
 - Sets `lastfm_nom = nom` initially (to be verified in Phase 2)
 - Prints mapping report: imported / skipped / errors
@@ -994,9 +992,9 @@ python manage.py distribuir_ranking --setmana YYYY-MM-DD [--territori CAT] [--dr
 
 In `music/admin.py`, register `Artista` with Wagtail `SnippetViewSet`:
 
-- Default list filter: `aprovat=False, actiu=True` (shows pending candidates)
+- Default list filter: `aprovat=False` (shows pending candidates)
 - Visible columns: nom, territori, font_descoberta, created_at
-- Bulk actions: Approve (`aprovat=True`), Reject (`actiu=False`)
+- Bulk actions: Approve (`aprovat=True`), Reject (`aprovat=False`)
 - Search by nom
 
 This is the human firewall against false positives (Marató artists, one-off
@@ -1106,7 +1104,7 @@ music/tests/test_models.py:
 ingesta/tests/test_importar_legacy.py:
   test_territory_mapping    'Catalunya' → CAT M2M, 'País Valencià' → VAL M2M, 'Balears' → BAL M2M
   test_deduplication        same id_canco in 3 territories → 1 Canco
-  test_status_mapping       status='go' → actiu=True, aprovat=True
+  test_status_mapping       status='go' → aprovat=True
 ```
 
 ---

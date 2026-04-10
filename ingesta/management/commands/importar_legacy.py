@@ -110,7 +110,6 @@ class Command(BaseCommand):
                 spotify_id=legacy.id_spotify,
                 nom=legacy.nom or legacy.nom_spotify or "",
                 lastfm_nom=legacy.nom or legacy.nom_spotify or "",
-                actiu=True,
                 aprovat=True,
                 auto_descobert=False,
                 font_descoberta="legacy",
