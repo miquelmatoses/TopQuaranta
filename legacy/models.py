@@ -23,7 +23,7 @@ class LegacyArtista(models.Model):
 class LegacyCanco(models.Model):
     """Read-only access to legacy `cançons` table for data migration."""
 
-    id_canco = models.CharField(max_length=50)
+    id_canco = models.CharField(max_length=50, primary_key=True)
     territori = models.CharField(max_length=50)
     titol = models.TextField(null=True)
     artista_basat = models.TextField(null=True)
