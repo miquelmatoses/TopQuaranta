@@ -61,6 +61,7 @@ class Command(BaseCommand):
         cancons = (
             Canco.objects.filter(
                 activa=True,
+                verificada=True,
                 artista__aprovat=True,
                 data_llancament__gte=cutoff,
             )

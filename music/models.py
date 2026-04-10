@@ -148,6 +148,10 @@ class Canco(models.Model):
         help_text="Tracks older than 12 months are excluded from ingestion.",
     )
     activa = models.BooleanField(default=True)
+    verificada = models.BooleanField(
+        default=False,
+        help_text="False = pending admin review. Only verified tracks enter the ranking.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

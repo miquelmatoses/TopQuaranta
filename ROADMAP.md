@@ -137,8 +137,12 @@
 - [ ] Implement collaborator detection in `ingesta/pipeline.py`
 - [ ] Implement `descobrir_artistes` command
 - [ ] Add Wagtail approval queue admin (artists)
-- [ ] Add Wagtail track verification queue
-  - Each new Canco from `ingestar_metadata` enters with `verificada=False`
+- [x] Add `verificada` field to Canco model (safety gate before ranking)
+  - `verificada=False` by default — new tracks from `ingestar_metadata` need review
+  - Data migration marks 10,351 legacy cançons (with `spotify_id`) as `verificada=True`
+  - `ingestar_senyal` now filters `verificada=True` — unverified tracks are excluded
+  - 5,993 Deezer tracks pending review (includes false positives from generic names)
+- [ ] Add Wagtail track verification queue UI
   - Wagtail admin shows a weekly queue of pending new tracks (~30 max)
   - One-click approve/reject by admin
   - Only `verificada=True` cançons enter the ranking pipeline
