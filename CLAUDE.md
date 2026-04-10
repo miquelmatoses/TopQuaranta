@@ -1122,6 +1122,18 @@ ingesta/tests/test_importar_legacy.py:
 - black + isort formatting
 - Comments and docstrings: English only
 
+### Git workflow
+
+After every session with significant changes, Claude Code must:
+
+```bash
+git add -A && git commit && git push origin main
+```
+
+- The commit message is written by Claude Code based on the actual changes
+- Always pull before pushing if the remote has diverged (`git pull --rebase`)
+- Never skip this step — the server deploys from `main`
+
 ---
 
 ## 15. Implementation Phases
