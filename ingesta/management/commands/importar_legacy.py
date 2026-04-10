@@ -199,8 +199,14 @@ class Command(BaseCommand):
                 continue
             seen_ids.add(legacy.id_canco)
 
-            # Find the artist — artista_basat holds the spotify_id of the main artist
-            artista = artista_map.get(legacy.artista_basat)
+            # Find the artist — artistes_ids[0] holds the spotify_id of the main artist
+            # (artista_basat is a display name, not a spotify_id)
+            ids = legacy.artistes_ids
+            if not ids or (isinstance(ids, list) and len(ids) == 0):
+                stats["skipped_no_artist"] += 1
+                continue
+            main_spotify_id = ids[0] if isinstance(ids, list) else ids
+            artista = artista_map.get(main_spotify_id)
             if artista is None:
                 stats["skipped_no_artist"] += 1
                 continue

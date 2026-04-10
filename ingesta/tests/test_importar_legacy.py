@@ -43,7 +43,8 @@ def _make_legacy_canco(**kwargs):
         "id_canco": "track_abc",
         "territori": "cat",
         "titol": "Benvolguts",
-        "artista_basat": "spotify_123",
+        "artista_basat": "Txarango",
+        "artistes_ids": ["spotify_123"],
         "album_id": "album_xyz",
         "album_titol": "De mica en mica",
         "album_data": None,
@@ -208,11 +209,11 @@ class TestImportarLegacyCancons:
 
     @patch("ingesta.management.commands.importar_legacy.LegacyCanco")
     def test_skip_no_matching_artist(self, mock_model):
-        """Tracks with unknown artista_basat are skipped."""
+        """Tracks with unknown artistes_ids[0] are skipped."""
         self._setup_artista()
         cancons = [
-            _make_legacy_canco(id_canco="t1", artista_basat="spotify_123"),
-            _make_legacy_canco(id_canco="t2", artista_basat="unknown_artist"),
+            _make_legacy_canco(id_canco="t1", artistes_ids=["spotify_123"]),
+            _make_legacy_canco(id_canco="t2", artistes_ids=["unknown_artist"]),
         ]
         mock_model.objects.filter.return_value = FakeLegacyQuerySet(cancons)
 

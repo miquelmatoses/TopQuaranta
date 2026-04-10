@@ -31,6 +31,7 @@ class LegacyCanco(models.Model):
     album_titol = models.TextField(null=True)
     album_data = models.DateField(null=True)
     album_caratula_url = models.TextField(null=True)
+    artistes_ids = models.TextField(null=True)
     exclosa = models.BooleanField(default=False)
 
     class Meta:
