@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-10
+> Updated: 2026-04-10 — Phase 2 near completion
 
 ---
 
@@ -56,12 +56,12 @@
 - [x] Obtain Last.fm API key
 - [x] Add `LASTFM_API_KEY` + `LASTFM_API_SECRET` to `.env`
 - [x] Implement `ingesta/clients/lastfm.py::get_track_info()`
-- [ ] Write `test_lastfm_client.py` (mocked HTTP) ← **next**
+- [x] Write `test_lastfm_client.py` (4 tests: success, track_not_found, network_error, rate_limit_sleep)
 - [x] Implement `ingestar_senyal` management command
 - [x] Run `ingestar_senyal --dry-run --limit 50`, inspect output
-- [ ] Fix `lastfm_nom` mismatches (manual or heuristic)
+- [ ] Fix `lastfm_nom` mismatches (manual or heuristic) ← **next**
 - [ ] Run daily ingestion for 7 consecutive days
-- [ ] Set up cron: `ingestar_senyal` daily at 06:00
+- [x] Set up cron: `ingestar_senyal` daily at 06:00 (`/etc/cron.d/topquaranta`)
 
 **Current state:**
 - 808 eligible tracks (released within last 12 months)
