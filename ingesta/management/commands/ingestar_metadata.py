@@ -4,20 +4,21 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from ingesta.clients.spotify import SpotifyClient
+from ingesta.clients import deezer
 from music.models import Album, Artista, Canco
 
 logger = logging.getLogger(__name__)
 
-ALBUM_TYPE_MAP = {
+RECORD_TYPE_MAP = {
     "album": "album",
     "single": "single",
-    "compilation": "album",
+    "ep": "ep",
+    "compile": "album",
 }
 
 
 class Command(BaseCommand):
-    help = "Fetch Spotify metadata (albums + tracks) for approved artists."
+    help = "Fetch Deezer metadata (albums + tracks) for approved artists."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -34,7 +35,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Show what would be fetched without calling Spotify or writing to DB.",
+            help="Show what would be fetched without calling Deezer or writing to DB.",
         )
 
     def handle(self, *args, **options):
@@ -47,30 +48,33 @@ class Command(BaseCommand):
                 self.style.WARNING("DRY RUN — no API calls, no DB writes.\n")
             )
 
-        # Build queryset
-        qs = Artista.objects.filter(aprovat=True).exclude(spotify_id__isnull=True).exclude(spotify_id="")
+        qs = Artista.objects.filter(aprovat=True)
 
         if artista_id:
             qs = qs.filter(pk=artista_id)
             if not qs.exists():
-                raise CommandError(f"No approved Artista with pk={artista_id} and a spotify_id found.")
+                raise CommandError(f"No approved Artista with pk={artista_id}.")
+        else:
+            # Skip artists already marked as not found on Deezer (unless --force)
+            if not force:
+                qs = qs.filter(deezer_no_trobat=False)
 
         total = qs.count()
         self.stdout.write(f"Artists to process: {total}")
 
         cutoff = date.today() - timedelta(days=365)
-        self.stdout.write(f"Release cutoff: {cutoff} (only albums released after this date)")
+        self.stdout.write(f"Release cutoff: {cutoff}")
 
         if dry_run:
             for a in qs[:20]:
-                self.stdout.write(f"  Would fetch: {a.nom} (spotify_id={a.spotify_id})")
+                status = f"deezer_id={a.deezer_id}" if a.deezer_id else "needs lookup"
+                self.stdout.write(f"  Would fetch: {a.nom} ({status})")
             if total > 20:
                 self.stdout.write(f"  ... and {total - 20} more")
             return
 
-        client = SpotifyClient()
-
         artists_ok = 0
+        artists_not_found = 0
         artists_err = 0
         albums_created = 0
         albums_updated = 0
@@ -79,14 +83,16 @@ class Command(BaseCommand):
 
         for i, artista in enumerate(qs.iterator(), 1):
             try:
-                a_new, a_upd, t_new, t_upd = self._process_artist(
-                    client, artista, cutoff, force
-                )
-                albums_created += a_new
-                albums_updated += a_upd
-                tracks_created += t_new
-                tracks_updated += t_upd
-                artists_ok += 1
+                result = self._process_artist(artista, cutoff, force)
+                if result is None:
+                    artists_not_found += 1
+                else:
+                    a_new, a_upd, t_new, t_upd = result
+                    albums_created += a_new
+                    albums_updated += a_upd
+                    tracks_created += t_new
+                    tracks_updated += t_upd
+                    artists_ok += 1
             except Exception as exc:
                 logger.error("Error processing %s: %s", artista.nom, exc)
                 artists_err += 1
@@ -94,14 +100,15 @@ class Command(BaseCommand):
             if i % 50 == 0:
                 self.stdout.write(
                     f"  Processed {i}/{total}... "
-                    f"(albums: +{albums_created}/~{albums_updated}, "
-                    f"tracks: +{tracks_created}/~{tracks_updated})"
+                    f"(ok={artists_ok}, not_found={artists_not_found}, "
+                    f"err={artists_err})"
                 )
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"\nMetadata ingestion complete:\n"
                 f"  Artists OK: {artists_ok}\n"
+                f"  Artists not found on Deezer: {artists_not_found}\n"
                 f"  Artists errors: {artists_err}\n"
                 f"  Albums created: {albums_created}\n"
                 f"  Albums updated: {albums_updated}\n"
@@ -112,19 +119,25 @@ class Command(BaseCommand):
 
     def _process_artist(
         self,
-        client: SpotifyClient,
         artista: Artista,
         cutoff: date,
         force: bool,
-    ) -> tuple[int, int, int, int]:
+    ) -> tuple[int, int, int, int] | None:
         """
-        Fetch and store albums + tracks for one artist.
-        Returns (albums_created, albums_updated, tracks_created, tracks_updated).
+        Fetch and store albums + tracks for one artist via Deezer.
+        Returns (albums_created, albums_updated, tracks_created, tracks_updated)
+        or None if artist not found/validated on Deezer.
         """
-        albums_data = client.get_artist_albums(artista.spotify_id, min_date=cutoff)
-        if albums_data is None:
-            logger.warning("No album data returned for %s", artista.nom)
-            return 0, 0, 0, 0
+        # Step 1: resolve deezer_id
+        if not artista.deezer_id:
+            deezer_id = self._resolve_deezer_id(artista)
+            if not deezer_id:
+                return None
+        else:
+            deezer_id = artista.deezer_id
+
+        # Step 2: fetch albums
+        albums_data = deezer.get_artist_albums(deezer_id, min_date=cutoff)
 
         a_created = 0
         a_updated = 0
@@ -138,19 +151,12 @@ class Command(BaseCommand):
             elif force:
                 a_updated += 1
 
-            tracks_data = client.get_album_tracks(album_data["id"])
+            tracks_data = deezer.get_album_tracks(album_data["id"])
             if not tracks_data:
                 continue
 
             for track_data in tracks_data:
-                # Fetch full track to get ISRC
-                full_track = client.get_track(track_data["id"])
-                if full_track:
-                    track_data["isrc"] = full_track.get("isrc", "")
-
-                was_new = self._upsert_track(
-                    artista, album, track_data, force
-                )
+                was_new = self._upsert_track(artista, album, track_data, force)
                 if was_new:
                     t_created += 1
                 elif force:
@@ -158,29 +164,94 @@ class Command(BaseCommand):
 
         return a_created, a_updated, t_created, t_updated
 
+    def _resolve_deezer_id(self, artista: Artista) -> int | None:
+        """
+        Search Deezer for this artist, validate via ISRC cross-check,
+        and persist deezer_id if validated.
+        Returns deezer_id or None.
+        """
+        result = deezer.search_artist(artista.nom)
+        if not result:
+            logger.info("Deezer: no match for '%s' — marking deezer_no_trobat", artista.nom)
+            artista.deezer_no_trobat = True
+            artista.save(update_fields=["deezer_no_trobat"])
+            return None
+
+        candidate_id = result["id"]
+        candidate_name = result["name"]
+
+        # ISRC validation: find a known Canco with ISRC for this artist
+        known_track = (
+            Canco.objects.filter(artista=artista)
+            .exclude(isrc="")
+            .exclude(isrc__isnull=True)
+            .first()
+        )
+
+        if known_track:
+            # Fetch albums from candidate to find a track with matching ISRC
+            validated = self._validate_via_isrc(candidate_id, known_track.isrc)
+            if not validated:
+                logger.warning(
+                    "Deezer ISRC validation failed for '%s' "
+                    "(candidate='%s' id=%d, expected ISRC=%s)",
+                    artista.nom, candidate_name, candidate_id, known_track.isrc,
+                )
+                artista.deezer_no_trobat = True
+                artista.save(update_fields=["deezer_no_trobat"])
+                return None
+            logger.info(
+                "Deezer ISRC validated for '%s' → '%s' (id=%d)",
+                artista.nom, candidate_name, candidate_id,
+            )
+        else:
+            # No ISRC to validate against — accept name match only
+            logger.info(
+                "Deezer name-only match for '%s' → '%s' (id=%d, no ISRC to validate)",
+                artista.nom, candidate_name, candidate_id,
+            )
+
+        artista.deezer_id = candidate_id
+        artista.deezer_no_trobat = False
+        artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
+        return candidate_id
+
+    def _validate_via_isrc(self, deezer_artist_id: int, expected_isrc: str) -> bool:
+        """
+        Check if any track from this Deezer artist has the expected ISRC.
+        Fetches up to 3 albums and checks their tracks.
+        """
+        albums = deezer.get_artist_albums(deezer_artist_id)
+        for album in albums[:3]:
+            tracks = deezer.get_album_tracks(album["id"])
+            for track in tracks:
+                if track.get("isrc", "").upper() == expected_isrc.upper():
+                    return True
+        return False
+
     def _upsert_album(
         self, artista: Artista, data: dict, force: bool
     ) -> tuple[Album, bool]:
-        """Create or update an Album. Returns (album, was_created)."""
-        tipus = ALBUM_TYPE_MAP.get(data.get("album_type", "album"), "album")
+        """Create or update an Album from Deezer data."""
+        tipus = RECORD_TYPE_MAP.get(data.get("record_type", "album"), "album")
 
         defaults = {
-            "nom": data["name"],
+            "nom": data["title"],
             "artista": artista,
             "data_llancament": data.get("release_date"),
             "tipus": tipus,
-            "imatge_url": data.get("image_url", ""),
+            "imatge_url": data.get("cover_xl", ""),
         }
 
         with transaction.atomic():
             if force:
                 album, created = Album.objects.update_or_create(
-                    spotify_id=data["id"],
+                    deezer_id=data["id"],
                     defaults=defaults,
                 )
             else:
                 album, created = Album.objects.get_or_create(
-                    spotify_id=data["id"],
+                    deezer_id=data["id"],
                     defaults=defaults,
                 )
 
@@ -189,12 +260,12 @@ class Command(BaseCommand):
     def _upsert_track(
         self, artista: Artista, album: Album, data: dict, force: bool
     ) -> bool:
-        """Create or update a Canco. Returns True if newly created."""
+        """Create or update a Canco from Deezer data. Returns True if new."""
         defaults = {
-            "nom": data["name"],
+            "nom": data["title"],
             "album": album,
             "artista": artista,
-            "durada_ms": data.get("duration_ms"),
+            "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
             "isrc": data.get("isrc", ""),
             "data_llancament": album.data_llancament,
         }
@@ -202,22 +273,21 @@ class Command(BaseCommand):
         with transaction.atomic():
             if force:
                 canco, created = Canco.objects.update_or_create(
-                    spotify_id=data["id"],
+                    deezer_id=data["id"],
                     defaults=defaults,
                 )
             else:
                 canco, created = Canco.objects.get_or_create(
-                    spotify_id=data["id"],
+                    deezer_id=data["id"],
                     defaults=defaults,
                 )
 
-        # Handle collaborators — link any known artists from the track's artist list
-        if created or force:
-            track_artist_ids = [a["id"] for a in data.get("artists", [])]
-            # Exclude the main artist
-            collab_ids = [aid for aid in track_artist_ids if aid != artista.spotify_id]
-            if collab_ids:
-                collabs = Artista.objects.filter(spotify_id__in=collab_ids)
-                canco.artistes_col.set(collabs)
+        # Link collaborators if this track has a different main artist on Deezer
+        if (created or force) and data.get("artist_id"):
+            deezer_artist_id = data["artist_id"]
+            if deezer_artist_id != artista.deezer_id:
+                collabs = Artista.objects.filter(deezer_id=deezer_artist_id)
+                if collabs.exists():
+                    canco.artistes_col.add(*collabs)
 
         return created

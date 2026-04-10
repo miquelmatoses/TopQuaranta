@@ -373,6 +373,7 @@ class Artista(models.Model):
     """
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
     lastfm_nom = models.CharField(
         max_length=255,
         help_text="Exact name for Last.fm API calls (case-sensitive).",
@@ -385,6 +386,10 @@ class Artista(models.Model):
     territoris = models.ManyToManyField(
         Territori, related_name="artistes", blank=True,
         help_text="Territories this artist belongs to. Tracks appear in all.",
+    )
+    deezer_no_trobat = models.BooleanField(
+        default=False,
+        help_text="True if Deezer search failed ISRC validation — skip in future runs.",
     )
     # Discovery provenance
     auto_descobert = models.BooleanField(default=False)
@@ -774,19 +779,21 @@ Manual Wagtail entry     ─┘         (or aprovat=True for manual)
                               Reject  → aprovat=False (keep, avoids re-discovery)
                                            │
                               ingestar_metadata command
-                              Spotify: tracks released in last 12 months
+                              Deezer: tracks released in last 12 months
                               Store ISRC on each Canco
                                            │
                               ingestar_senyal starts collecting daily Last.fm data
 ```
 
-### Spotify metadata scope (approved artists only)
+### Deezer metadata scope (approved artists only)
 
 - Only fetch tracks with `data_llancament >= today - 365 days`
-- Individual API calls only — `GET /v1/artists/{id}/albums` then
-  `GET /v1/albums/{id}/tracks` — batch endpoints are broken in Development Mode
-- Store `isrc` on every `Canco` (universal cross-system key for future integrations)
-- Spotify playlists: out of scope for this refactor
+- Deezer API is public, no authentication needed
+- Artist matching: normalized name match → ISRC cross-validation
+- If ISRC validation fails, artist is marked `deezer_no_trobat=True` and skipped
+- Store `isrc` on every `Canco` (Deezer provides 100% ISRC coverage)
+- Store `deezer_id` on `Artista`, `Album`, and `Canco`
+- Spotify client kept as fallback but currently blocked (needs Premium)
 
 ---
 
@@ -882,13 +889,50 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
 Use only for metadata on approved artists: track name, ISRC, duration, release date,
 album art. Respect 12-month filter on release dates.
 
-### 8.3 Viasona (ingesta/clients/viasona.py)
+### 8.3 Deezer (ingesta/clients/deezer.py) — PRIMARY METADATA SOURCE
+
+**API:** Public, no authentication. Base URL: `https://api.deezer.com`
+
+**Why Deezer over Spotify:** Spotify API requires active Premium subscription
+for the app owner (403 since 2024). Deezer has no such restriction, provides
+100% ISRC coverage, reliable release dates, and good coverage of Catalan artists.
+
+**Functions:**
+
+- `search_artist(nom)` → `{"id": int, "name": str}` or `None`
+  - Normalizes names (lowercase, strip accents) for comparison
+  - Exact match first, then containment match
+  - Never returns first result without verification
+
+- `get_artist_albums(deezer_id, min_date)` → list of album dicts
+  - Handles pagination
+  - Filters by `min_date` (release date cutoff)
+
+- `get_album_tracks(album_id)` → list of track dicts with ISRC
+  - Fetches full track endpoint for each track to get ISRC
+
+**Rate limit:** 0.1s between calls. Retry 3x with exponential backoff.
+Never raises — returns None/[] on error.
+
+**ISRC validation flow (in ingestar_metadata):**
+1. Search Deezer by artist name
+2. Find a known Canco with ISRC for this artist
+3. Fetch up to 3 albums from Deezer candidate, check if any track matches ISRC
+4. If match → save `deezer_id`, proceed
+5. If no match → set `deezer_no_trobat=True`, skip artist
+
+### 8.4 Viasona (ingesta/clients/viasona.py)
 
 **Legacy code:** `scripts/update_from_viasona.py` — BeautifulSoup scraper.
 Audit, simplify, wrap cleanly. Must:
 - Return a list of artist names and any available identifiers
 - Handle pagination
 - Never crash the discovery command — log errors and continue
+
+### 8.5 Spotify (ingesta/clients/spotify.py) — FALLBACK
+
+**Status:** Blocked since 2024, requires active Premium subscription for app owner.
+Client implemented but returns 403. Kept as fallback if Premium is restored.
 
 ---
 
@@ -957,13 +1001,17 @@ python manage.py actualitzar_score_entrada [--des-de YYYY-MM-DD]
 ### 9.5 ingestar_metadata (on demand)
 
 ```
-python manage.py ingestar_metadata [--artista-id N] [--force]
+python manage.py ingestar_metadata [--artista-id N] [--force] [--dry-run]
 ```
 
-- Fetches Spotify data for approved artists
-- Respects 12-month filter
-- Stores ISRC on each Canco
-- Individual API calls only
+- Uses Deezer API (public, no auth) as primary metadata source
+- For each approved artist without `deezer_id`:
+  1. Searches Deezer by name (normalized matching)
+  2. Validates via ISRC cross-check if known tracks exist
+  3. Saves `deezer_id` or marks `deezer_no_trobat=True`
+- Fetches albums released in last 12 months, creates Album + Canco
+- Stores ISRC and `deezer_id` on each record
+- Skips artists with `deezer_no_trobat=True` (unless `--force`)
 
 ### 9.6 descobrir_artistes (weekly — Mondays)
 

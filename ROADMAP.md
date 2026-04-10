@@ -138,11 +138,14 @@
 - [ ] Implement `descobrir_artistes` command
 - [ ] Add Wagtail approval queue admin
 - [ ] Migrate CMS pages to read from new models
-- [x] Implement `ingestar_metadata` command (Spotify, single credential pair)
-  - Spotify client: `ingesta/clients/spotify.py` (Client Credentials, individual calls)
+- [x] Implement `ingestar_metadata` command with Deezer as primary source
+  - Deezer client: `ingesta/clients/deezer.py` (public API, no auth needed)
+  - Artist matching: normalized name → ISRC cross-validation → `deezer_id` saved
+  - Added fields: `deezer_id` (BigIntegerField) on Artista, Album, Canco; `deezer_no_trobat` on Artista
   - Command: `--artista-id`, `--force`, `--dry-run` flags
-  - Stores ISRC on each Canco, links collaborators via M2M
-  - **Blocked:** Spotify API returns 403 "Active premium subscription required" — app owner needs active Premium
+  - Stores ISRC on each Canco (Deezer provides 100% coverage)
+  - Tested live: Zoo (2 albums, 12 tracks), La Fúmiga (6 albums, 6 tracks)
+  - Spotify client kept as fallback (`ingesta/clients/spotify.py`) — blocked by Premium requirement
   - Refactor: removed `Artista.actiu` field (was derived state, not manual attribute)
 
 **Go/no-go:**

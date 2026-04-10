@@ -29,6 +29,7 @@ class Artista(models.Model):
     """
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
     lastfm_nom = models.CharField(
         max_length=255,
         help_text="Exact name for Last.fm API calls (case-sensitive).",
@@ -45,6 +46,10 @@ class Artista(models.Model):
         related_name="artistes",
         blank=True,
         help_text="Territories this artist belongs to. Tracks appear in all.",
+    )
+    deezer_no_trobat = models.BooleanField(
+        default=False,
+        help_text="True if Deezer search failed ISRC validation — skip in future runs.",
     )
     # Discovery provenance
     auto_descobert = models.BooleanField(default=False)
@@ -82,6 +87,7 @@ class Album(models.Model):
     ]
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
     artista = models.ForeignKey(Artista, on_delete=models.CASCADE, related_name="albums")
     nom = models.CharField(max_length=500)
     data_llancament = models.DateField(null=True, blank=True)
@@ -108,6 +114,7 @@ class Canco(models.Model):
     """
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
     isrc = models.CharField(
         max_length=15,
         blank=True,
