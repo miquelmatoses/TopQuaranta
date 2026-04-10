@@ -1122,7 +1122,20 @@ ingesta/tests/test_importar_legacy.py:
 - black + isort formatting
 - Comments and docstrings: English only
 
+### Development environment
+
+Claude Code runs directly on the Hetzner production server (CX22, 188.245.60.20),
+not on a local machine. There is no separate local development environment for
+TopQuaranta.
+
+- Working directory: `/home/topquaranta/app/`
+- Direct access to the production PostgreSQL database (`topquaranta`)
+- Can execute `manage.py` commands directly (migrations, imports, etc.)
+- The virtualenv is at `/home/topquaranta/app/.venv/`
+
 ### Git workflow
+
+The flow is: Claude Code (server) → `git push` → GitHub (source of truth).
 
 After every session with significant changes, Claude Code must:
 
@@ -1133,6 +1146,7 @@ git add -A && git commit && git push origin main
 - The commit message is written by Claude Code based on the actual changes
 - Always pull before pushing if the remote has diverged (`git pull --rebase`)
 - Never skip this step — the server deploys from `main`
+- GitHub is the canonical source; the server working copy is just the active checkout
 
 ---
 
