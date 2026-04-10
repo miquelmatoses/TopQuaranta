@@ -37,11 +37,18 @@ class Command(BaseCommand):
             action="store_true",
             help="Show what would be fetched without calling Deezer or writing to DB.",
         )
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=None,
+            help="Limit number of artists to process.",
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
         force = options["force"]
         artista_id = options["artista_id"]
+        limit = options["limit"]
 
         if dry_run:
             self.stdout.write(
@@ -62,6 +69,10 @@ class Command(BaseCommand):
         total = qs.count()
         self.stdout.write(f"Artists to process: {total}")
 
+        if limit:
+            qs = qs[:limit]
+            self.stdout.write(f"  Limited to: {limit}")
+
         cutoff = date.today() - timedelta(days=365)
         self.stdout.write(f"Release cutoff: {cutoff}")
 
@@ -81,7 +92,8 @@ class Command(BaseCommand):
         tracks_created = 0
         tracks_updated = 0
 
-        for i, artista in enumerate(qs.iterator(), 1):
+        iterable = qs if limit else qs.iterator()
+        for i, artista in enumerate(iterable, 1):
             try:
                 result = self._process_artist(artista, cutoff, force)
                 if result is None:

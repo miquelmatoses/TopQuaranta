@@ -136,7 +136,13 @@
 - [ ] Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
 - [ ] Implement collaborator detection in `ingesta/pipeline.py`
 - [ ] Implement `descobrir_artistes` command
-- [ ] Add Wagtail approval queue admin
+- [ ] Add Wagtail approval queue admin (artists)
+- [ ] Add Wagtail track verification queue
+  - Each new Canco from `ingestar_metadata` enters with `verificada=False`
+  - Wagtail admin shows a weekly queue of pending new tracks (~30 max)
+  - One-click approve/reject by admin
+  - Only `verificada=True` cançons enter the ranking pipeline
+  - Replaces the legacy workflow: Spotify playlists reviewed manually a few days/week
 - [ ] Migrate CMS pages to read from new models
 - [x] Implement `ingestar_metadata` command with Deezer as primary source
   - Deezer client: `ingesta/clients/deezer.py` (public API, no auth needed)
@@ -147,6 +153,17 @@
   - Tested live: Zoo (2 albums, 12 tracks), La Fúmiga (6 albums, 6 tracks)
   - Spotify client kept as fallback (`ingesta/clients/spotify.py`) — blocked by Premium requirement
   - Refactor: removed `Artista.actiu` field (was derived state, not manual attribute)
+- [x] First full `ingestar_metadata` run (2026-04-10, partial results while run continues)
+  - **Proportions (stable at ~400/2273 processed):** 80% found, 20% not found
+  - Only 24 artists had ISRC cross-validation (the rest were name-only match)
+  - 100% of new Deezer tracks have ISRC
+  - **False positives detected** (generic names matched to international artists):
+    Aion (479 albums, metal), Animal (121), Aïsha (55), Atman (43), Apa (35),
+    Arrap (32), Benitozz (30), Bizarre (17), Aradia (17), Amulet (16)
+  - **Containment match issues:** Abast→'La Abasto Reggae', Addenda→'addeN'
+  - **Conclusion:** name-only matching works for unique Catalan names but fails
+    for generic/short names. The `verificada=False` track approval queue (Phase 6)
+    is essential before any new tracks enter the ranking
 
 **Go/no-go:**
 - Discovery runs without crash
