@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest==8.4.1
+pytest-django==4.11.1
+pytest-cov==6.2.1
+factory-boy==3.3.3
+responses==0.25.7
+black==25.1.0
+isort==6.0.1
