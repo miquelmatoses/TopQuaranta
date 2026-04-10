@@ -1,7 +1,7 @@
 # CLAUDE.md — TopQuaranta System Architecture
 
 > Persistent memory for Claude Code. Read this file before making any change.
-> Last updated: 2026-04-10 — post-audit rewrite with migration strategy
+> Last updated: 2026-04-10 — territory M2M + collaborators model
 
 > **Strategy: new project, same database.**
 > The legacy codebase (`/root/TopQuaranta/`) is a reference, not a starting point.
@@ -342,26 +342,33 @@ All new models under Django migrations. Never use raw DDL outside migrations.
 from django.db import models
 
 
+class Territori(models.Model):
+    """
+    Territory for Catalan-language music rankings.
+    Fixed set: CAT, VAL, BAL. Managed via data migration, not admin.
+    """
+
+    codi = models.CharField(max_length=3, primary_key=True)
+    nom = models.CharField(max_length=50)
+
+    class Meta:
+        ordering = ["codi"]
+        verbose_name = "Territori"
+        verbose_name_plural = "Territoris"
+
+    def __str__(self) -> str:
+        return self.nom
+
+
 class Artista(models.Model):
     """
     A music artist tracked by TopQuaranta.
 
     Territory is a manually curated field — Last.fm has no geographic signal.
-    Artists are added via:
-      - Viasona scraper (primary automated candidate source)
-      - Collaborator detection (Spotify featured-artist heuristic)
-      - Manual entry via Wagtail admin
-    All automated sources feed a human approval step before entering rankings.
-
-    Artists with territori='ALL' appear in all three territory rankings.
+    Artists can belong to multiple territories via M2M (e.g. Marala → CAT, VAL, BAL).
+    A track appears in territory T if ANY of its artists (main or collaborator)
+    belongs to T.
     """
-
-    TERRITORI_CHOICES = [
-        ("CAT", "Catalunya"),
-        ("VAL", "País Valencià"),
-        ("BAL", "Illes Balears"),
-        ("ALL", "Tots els territoris"),
-    ]
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     lastfm_nom = models.CharField(
@@ -373,7 +380,10 @@ class Artista(models.Model):
         help_text="MusicBrainz ID — improves Last.fm lookup accuracy.",
     )
     nom = models.CharField(max_length=255)
-    territori = models.CharField(max_length=3, choices=TERRITORI_CHOICES, default="CAT")
+    territoris = models.ManyToManyField(
+        Territori, related_name="artistes", blank=True,
+        help_text="Territories this artist belongs to. Tracks appear in all.",
+    )
     actiu = models.BooleanField(default=True)
 
     # Discovery provenance
@@ -395,13 +405,12 @@ class Artista(models.Model):
         verbose_name_plural = "Artistes"
 
     def __str__(self) -> str:
-        return f"{self.nom} ({self.territori})"
+        codis = ",".join(self.territoris.values_list("codi", flat=True))
+        return f"{self.nom} ({codis})" if codis else self.nom
 
     def get_territoris(self) -> list[str]:
-        """Expand 'ALL' into individual territory codes."""
-        if self.territori == "ALL":
-            return ["CAT", "VAL", "BAL"]
-        return [self.territori]
+        """Return list of territory codes for this artist."""
+        return list(self.territoris.values_list("codi", flat=True))
 
 
 class Album(models.Model):
@@ -430,15 +439,18 @@ class Canco(models.Model):
     """
     A single track. Only tracks released within the last 12 months are ingested.
 
-    IMPORTANT: In legacy, the same track was duplicated per territory (PK was
-    id_canco + territori). In the new model, a track exists ONCE. Territory
-    comes from the artist. This is a deliberate denormalization fix.
+    In the new model, a track exists ONCE (not duplicated per territory like legacy).
+    Territory is derived from the artists:
+      - artista: main artist (FK, for display and default lookups)
+      - artistes_col: collaborating artists (M2M)
+    A track appears in territory T if ANY artist (main or collaborator) belongs to T.
+
+    Examples:
+      - Txarango (CAT) + La Fumiga (VAL) collab → track in CAT and VAL rankings
+      - Marala (CAT, VAL, BAL) solo → track in all 3 rankings
 
     ISRC is the universal cross-system identifier:
       Spotify → ISRC → Last.fm / MusicBrainz (future cross-referencing)
-
-    lastfm_nom may differ from Spotify name (encoding, punctuation, featuring format).
-    Set lastfm_verificat=True on first successful Last.fm API response.
     """
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
@@ -449,7 +461,11 @@ class Canco(models.Model):
     album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name="cancons")
     artista = models.ForeignKey(
         Artista, on_delete=models.CASCADE, related_name="cancons",
-        help_text="Denormalized from album for query performance.",
+        help_text="Main artist (for display). Territory also from collaborators.",
+    )
+    artistes_col = models.ManyToManyField(
+        Artista, related_name="participacions", blank=True,
+        help_text="Collaborating artists. Track appears in their territories too.",
     )
     nom = models.CharField(max_length=500)
     lastfm_nom = models.CharField(
@@ -478,6 +494,19 @@ class Canco(models.Model):
     def lastfm_lookup_nom(self) -> str:
         """Return the best name for Last.fm API calls."""
         return self.lastfm_nom if self.lastfm_nom else self.nom
+
+    def get_territoris(self) -> set[str]:
+        """
+        Return all territories this track should appear in.
+        Union of main artist's territories + all collaborators' territories.
+        """
+        codis = set(self.artista.territoris.values_list("codi", flat=True))
+        codis.update(
+            Territori.objects.filter(
+                artistes__participacions=self
+            ).values_list("codi", flat=True)
+        )
+        return codis
 ```
 
 ### ranking/models.py
@@ -1063,14 +1092,17 @@ ranking/tests/test_algorisme.py:
   test_album_monopoly       4th track from same album is penalized
   test_artist_monopoly      6th track from same artist is penalized
   test_novelty_bonus        2-week-old track scores above equivalent 30-week-old track
-  test_all_territory        artista territori='ALL' appears in CAT, VAL, BAL rankings
+  test_all_territory        artista with 3 territoris appears in CAT, VAL, BAL rankings
 
 music/tests/test_models.py:
-  test_get_territoris_all   Artista(territori='ALL').get_territoris() == ['CAT','VAL','BAL']
-  test_get_territoris_cat   Artista(territori='CAT').get_territoris() == ['CAT']
+  test_get_territoris_multiple   Artista with CAT+VAL+BAL → get_territoris() == {'CAT','VAL','BAL'}
+  test_get_territoris_single     Artista with VAL → get_territoris() == ['VAL']
+  test_get_territoris_empty      Artista with no territories → get_territoris() == []
+  test_get_territoris_with_collaborator  Canco(Zoo VAL + Txarango CAT collab) → {'VAL','CAT'}
+  test_get_territoris_marala_style       Canco(Marala CAT+VAL+BAL) → all 3 territories
 
 ingesta/tests/test_importar_legacy.py:
-  test_territory_mapping    'Catalunya' → 'CAT', 'País Valencià' → 'VAL', 'Balears' → 'BAL'
+  test_territory_mapping    'Catalunya' → CAT M2M, 'País Valencià' → VAL M2M, 'Balears' → BAL M2M
   test_deduplication        same id_canco in 3 territories → 1 Canco
   test_status_mapping       status='go' → actiu=True, aprovat=True
 ```
@@ -1254,7 +1286,9 @@ ingesta/tests/test_importar_legacy.py:
 | `score_entrada` formula deferred | Cannot design a good normalization without real distribution data |
 | Algorithm extracted, not rewritten | Well-founded 14-CTE logic; port to Python, adapt inputs, keep math identical |
 | `ConfiguracioGlobal` as Django model | Version-controlled, editable via admin, testable — was raw table with no ORM |
-| Territory on artist, not track | Legacy duplicated tracks per territory (PK bloat). Territory is a property of the artist, not the song |
+| Territory on artist (M2M), not track | Legacy duplicated tracks per territory (PK bloat). Territory is a property of the artist. Artists can belong to multiple territories (Marala → CAT+VAL+BAL). Tracks with collaborators appear in all artists' territories (Txarango CAT + La Fumiga VAL → track in both rankings) |
+| Territori model + data migration | Fixed set (CAT, VAL, BAL) created via data migration `0002_create_territoris`. No 'ALL' hack — artists simply have multiple M2M entries |
+| Canco.artistes_col M2M | Tracks can have collaborating artists. `artista` FK = main artist for display; `artistes_col` M2M = all collaborators. `Canco.get_territoris()` returns union of all artists' territories |
 | Territory codes `CAT`/`VAL`/`BAL` (3 chars) | Legacy used inconsistent full strings; codes are shorter, indexable, unambiguous |
 | Human approval for all auto-discovered artists | Prevents false positives (Marató, one-off collabs) |
 | ISRC on every Canco | Universal cross-system key; enables future integrations |
