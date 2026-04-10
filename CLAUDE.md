@@ -2,6 +2,8 @@
 
 > Persistent memory for Claude Code. Read this file before making any change.
 > Last updated: 2026-04-10 — territory M2M + collaborators model
+>
+> See **ROADMAP.md** for implementation status.
 
 > **Strategy: new project, same database.**
 > The legacy codebase (`/root/TopQuaranta/`) is a reference, not a starting point.
@@ -1148,161 +1150,15 @@ git add -A && git commit && git push origin main
 - Never skip this step — the server deploys from `main`
 - GitHub is the canonical source; the server working copy is just the active checkout
 
----
+### Roadmap tracking
 
-## 15. Implementation Phases
-
-### Phase 0 — New project skeleton
-
-**Goal:** clean foundation, connected to existing DB, running on dedicated user.
-
-1. Create OS user `topquaranta` with home `/home/topquaranta/`
-2. Create `/home/topquaranta/app/` project directory
-3. `git init`, connect to GitHub repo, `.gitignore`
-4. Create virtualenv, install Django 5.2 + Wagtail 7.0 + dependencies
-5. `django-admin startproject topquaranta .`
-6. Create settings split: `base.py`, `local.py`, `production.py`
-7. Configure `DATABASE_URL` pointing to existing `topquaranta` DB
-8. Create apps: `music/`, `ingesta/`, `ranking/`, `distribucio/`, `legacy/`
-9. Create `.env` + `.env.example` (only the new keys)
-10. Set up `pytest.ini`, empty `conftest.py`, `requirements-dev.txt`
-11. Run `python manage.py migrate` (Django system tables only — no custom models yet)
-
-**Go/no-go:**
-- `python manage.py check` → no errors
-- `python manage.py dbshell` → connects to the existing DB
-- `pytest` → runs (0 tests OK)
-- Legacy tables visible via `\dt` in dbshell
-- Git push to GitHub works
-- Process runs as `topquaranta` user, not root
-
-### Phase 1 — Data migration from legacy
-
-**Goal:** import existing artists and tracks into new clean models.
-
-1. Create `legacy/models.py` with unmanaged models (`LegacyArtista`, `LegacyCanco`)
-2. Create `music/models.py` (`Artista`, `Album`, `Canco`) and run `makemigrations` + `migrate`
-3. Create `ranking/models.py` (`ConfiguracioGlobal`, `IngestaDiari`, `RankingSetmanal`) and migrate
-4. Write `importar_legacy` management command:
-   - Map territory strings: `'Catalunya'→'CAT'`, `'País Valencià'→'VAL'`, `'Balears'→'BAL'`
-   - Map status: `'go'→actiu=True`, else `actiu=False`
-   - Deduplicate cançons (legacy PK is `id_canco+territori`, new PK is autoincrement)
-   - Set `lastfm_nom = nom` as initial default
-   - Import `configuracio_global` values into `ConfiguracioGlobal`
-5. Run `importar_legacy --dry-run`, inspect report
-6. Run `importar_legacy`, verify counts
-7. Write `test_importar_legacy.py`
-
-**Go/no-go:**
-- `Artista` count ≈ 2,313 (legacy `status='go'`)
-- `Canco` count < `cançons` count (deduplication worked)
-- Territory distribution makes sense (CAT >> VAL > BAL)
-- `ConfiguracioGlobal.load()` returns correct values
-- Legacy tables untouched (same row counts as before)
-
-### Phase 2 — Last.fm data collection
-
-**Goal:** ingest raw data. No formula yet — just capture everything.
-
-1. Obtain Last.fm API key from https://www.last.fm/api/account/create
-2. Add `LASTFM_API_KEY` + `LASTFM_API_SECRET` to `.env`
-3. Implement `ingesta/clients/lastfm.py::get_track_info()`
-4. Write `test_lastfm_client.py` (mocked HTTP)
-5. Implement `ingestar_senyal` management command
-6. Run `ingestar_senyal --dry-run --limit 50`, inspect output
-7. Fix `lastfm_nom` mismatches found in step 6 (manual or heuristic)
-8. Run daily ingestion for 7 consecutive days
-9. Set up cron: `ingestar_senyal` daily at 06:00
-
-**Go/no-go:**
-- ≥ 80% of active tracks have successful Last.fm data after 5 days
-- Error rate < 20%
-- `IngestaDiari` rows show non-zero `playcount` and `listeners`
-- `score_entrada` is NULL everywhere (correct — formula not defined yet)
-
-### Phase 3 — Signal formula definition
-
-**Goal:** look at real data and decide how to normalize.
-
-1. Write one-off analysis script → print distribution stats:
-   - min/max/median/p10/p90 of `lastfm_playcount` and `lastfm_listeners`
-   - weekly delta distribution
-   - compare known big artist vs known small local artist
-2. Discuss formula in conversation (not in code)
-3. Implement formula in `ranking/senyal.py::calcular_score_entrada()`
-4. Implement `actualitzar_score_entrada` command and run backfill
-5. Verify: `score_entrada` not NULL for ≥ 95% of rows, distribution 0–100 reasonable
-
-### Phase 4 — Ranking algorithm adaptation
-
-**Goal:** run the existing algorithm with the new signal.
-
-1. Extract SQL from `vw_top40_weekly_cat` PostgreSQL view
-2. Port to `ranking/algorisme.py`:
-   - Parameterize territory (single function, territory as argument)
-   - Replace legacy table/column references with new model tables
-   - Read coefficients from `ConfiguracioGlobal`
-3. Write `test_algorisme.py` (fixture-based, known expected output)
-4. Implement `calcular_ranking` management command
-5. Run ranking, manually validate cultural plausibility
-6. Small coefficient tweaks only if output distribution looks wrong
-
-**Go/no-go:**
-- Rankings for CAT, VAL, BAL without SQL errors
-- Each territory ≥ 20 entries
-- Results pass manual sense-check
-- Runs in < 30 seconds
-
-### Phase 5 — Distribution (Telegram + images)
-
-**Goal:** restore weekly image publication.
-
-1. Audit legacy `utils/imagens.py` (41KB) — extract color palettes, layout logic
-2. Rebuild `distribucio/image_generator.py` (Pillow)
-3. Audit legacy Telegram bot code
-4. Rebuild `distribucio/telegram_bot.py`
-5. Implement `distribuir_ranking` command
-6. Test with `--dry-run` before sending to real channel
-
-**Go/no-go:**
-- `--dry-run` generates correct image for all territories
-- Real Telegram send works
-
-### Phase 6 — Artist discovery + CMS migration
-
-**Goal:** automate discovery, migrate CMS to new models.
-
-1. Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
-2. Implement collaborator detection in `ingesta/pipeline.py`
-3. Implement `descobrir_artistes` command
-4. Add Wagtail approval queue admin
-5. Migrate CMS pages to read from new models (point Wagtail at `music.Artista` etc.)
-6. Implement `ingestar_metadata` command (Spotify, single credential pair)
-
-**Go/no-go:**
-- Discovery runs without crash
-- New candidates appear in Wagtail admin
-- Website displays data from new models
-- Full pipeline: discovery → approval → metadata → signal → ranking → distribution
-
-### Phase 7 — Legacy cleanup
-
-**Goal:** remove legacy tables and views, clean up.
-
-1. Verify all functions work from new pipeline for ≥ 4 weeks
-2. Drop legacy SQL views (`vw_top40_*`, etc.)
-3. Drop legacy tables (`artistes`, `cançons`, `ranking_diari`, old `ranking_setmanal`,
-   `spotify_*`, `exclusions`, etc.) — **only after backup confirmed**
-4. Remove `legacy/` app from project
-5. Remove old cron jobs
-6. Archive `/root/TopQuaranta/` directory
-7. Full test suite passes, coverage ≥ 70%
-
-**This phase requires explicit approval before each destructive step.**
+At the end of every work session, update `ROADMAP.md` to reflect the real state:
+mark completed items with `[x]`, annotate the next pending step within the current
+phase, and update the following phase summary if scope has changed.
 
 ---
 
-## 16. Key Decisions and Rationale
+## 15. Key Decisions and Rationale
 
 | Decision | Rationale |
 |---|---|
