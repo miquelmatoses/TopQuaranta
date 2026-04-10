@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-10 — Phase 2 near completion
+> Updated: 2026-04-10 — Deezer metadata pipeline operational, verificada safety gate deployed
 
 ---
 
@@ -39,10 +39,9 @@
   - `lastfm_nom = nom` as initial default
 - [x] Run `importar_legacy`, verify counts
 - [x] Write `test_importar_legacy.py` (12 tests)
-
 - [x] Populate ISRC from legacy `spotify_tracks.external_ids` via `poblar_isrc` command
   - 749/10,351 cançons matched (legacy `spotify_tracks` only has 2,805 rows)
-  - Remaining 9,602 cançons need ISRC from Deezer or Spotify (future)
+- [x] Refactor: removed `Artista.actiu` field (was derived state, not manual attribute)
 
 **Results:**
 - Artistes: 2,273 (legacy `status='go'`)
@@ -64,13 +63,14 @@
 - [x] Write `test_lastfm_client.py` (4 tests: success, track_not_found, network_error, rate_limit_sleep)
 - [x] Implement `ingestar_senyal` management command
 - [x] Run `ingestar_senyal --dry-run --limit 50`, inspect output
+- [x] Set up cron: `ingestar_senyal` daily at 06:00 (`/etc/cron.d/topquaranta`)
+- [x] `ingestar_senyal` filters by `verificada=True` — safe from Deezer false positives
 - [ ] Fix `lastfm_nom` mismatches (manual or heuristic) ← **next**
 - [ ] Run daily ingestion for 7 consecutive days
-- [x] Set up cron: `ingestar_senyal` daily at 06:00 (`/etc/cron.d/topquaranta`)
 
 **Current state:**
-- 808 eligible tracks (released within last 12 months)
-- Test run (10 tracks): 9 success, 1 track-not-found
+- Eligible tracks (verified, recent, approved): ~808
+- `ingestar_senyal` only processes `verificada=True` cançons — unverified Deezer tracks are excluded
 - Idempotency verified (re-run skips already-ingested)
 
 **Go/no-go (pending):**
@@ -129,45 +129,73 @@
 
 ---
 
-## Phase 6 — Artist discovery + CMS migration
+## Phase 6 — Metadata pipeline, artist discovery + CMS migration
 
-**Goal:** automate discovery, migrate CMS to new models.
+**Goal:** automate discovery, feed the ranking with verified new tracks.
+
+### Deezer metadata pipeline `DONE`
+
+- [x] Implement Deezer client: `ingesta/clients/deezer.py`
+  - Public API, no authentication needed
+  - `search_artist()`: normalized name matching (lowercase, strip accents)
+  - `get_artist_albums()`: with date filter + pagination
+  - `get_album_tracks()`: fetches full track endpoint for ISRC (100% coverage)
+  - Rate limit 0.1s, retry 3x with backoff, never raises
+- [x] Implement `ingestar_metadata` command using Deezer
+  - Iterates `Artista.objects.filter(aprovat=True)`
+  - Artist resolution: search by name → ISRC cross-validation → save `deezer_id`
+  - If ISRC validation fails or no search match → `deezer_no_trobat=True`, skip
+  - Creates Album + Canco with `deezer_id`, stores ISRC on every track
+  - Flags: `--artista-id`, `--force`, `--dry-run`, `--limit`
+  - New tracks always enter with `verificada=False`
+- [x] Model changes (migrations 0003–0007):
+  - Removed `Artista.actiu` (was derived state)
+  - Added `deezer_id` (BigIntegerField) on Artista, Album, Canco
+  - Added `deezer_no_trobat` (BooleanField) on Artista
+  - Added `verificada` (BooleanField, default=False) on Canco
+  - Data migration: 10,351 legacy cançons → `verificada=True`
+- [x] Tests: 54 passing (15 Deezer client, 10 command, 12 legacy, 5 Spotify, 4 Last.fm, 5 parse, 3 misc)
+- [x] Spotify client kept as fallback (`ingesta/clients/spotify.py`) — blocked by Premium requirement
+
+### First full production run (2026-04-10, in progress)
+
+- Run still in progress (~1,200/2,273 artists processed, proportions stable)
+- **Artist matching: 82% found, 18% not found**
+  - ISRC-validated: ~24 artists (only 7% had legacy ISRCs for cross-check)
+  - Name-only match: ~93% of found artists
+- **False positives detected** (generic names matched to international artists):
+  Aion (479 albums, metal), Animal (121), Aïsha (55), Atman (43), Apa (35),
+  Arrap (32), Benitozz (30), Bizarre (17), Aradia (17), Amulet (16)
+- **Containment match issues:** Abast→'La Abasto Reggae', Addenda→'addeN'
+
+### Database state (2026-04-10)
+
+| Table | Count | Details |
+|---|---|---|
+| `music_artista` | 2,273 | approved; ~976 with `deezer_id`, ~215 `deezer_no_trobat`, ~1,082 pending |
+| `music_album` | ~6,795 | 4,250 legacy + ~2,545 from Deezer |
+| `music_canco` | ~16,344 | 10,351 legacy (`verificada=True`) + ~5,993 Deezer (`verificada=False`) |
+| Deezer tracks with ISRC | ~5,993 | 100% coverage |
+
+### Safety gate: `verificada` field
+
+- `ingestar_senyal` (daily cron) only processes `verificada=True` tracks
+- New Deezer tracks enter with `verificada=False` — blocked from ranking
+- Admin must review and approve before tracks enter the pipeline
+- Prevents false positives (Aion metal, anime, etc.) from polluting rankings
+
+### Pending
 
 - [ ] Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
 - [ ] Implement collaborator detection in `ingesta/pipeline.py`
 - [ ] Implement `descobrir_artistes` command
-- [ ] Add Wagtail approval queue admin (artists)
-- [x] Add `verificada` field to Canco model (safety gate before ranking)
-  - `verificada=False` by default — new tracks from `ingestar_metadata` need review
-  - Data migration marks 10,351 legacy cançons (with `spotify_id`) as `verificada=True`
-  - `ingestar_senyal` now filters `verificada=True` — unverified tracks are excluded
-  - 5,993 Deezer tracks pending review (includes false positives from generic names)
+- [ ] Add Wagtail approval queue admin (artists: `aprovat=False`)
 - [ ] Add Wagtail track verification queue UI
-  - Wagtail admin shows a weekly queue of pending new tracks (~30 max)
+  - Weekly queue of pending new tracks (`verificada=False`, ~30 max)
   - One-click approve/reject by admin
-  - Only `verificada=True` cançons enter the ranking pipeline
-  - Replaces the legacy workflow: Spotify playlists reviewed manually a few days/week
+  - Replaces legacy workflow: Spotify playlists reviewed manually a few days/week
 - [ ] Migrate CMS pages to read from new models
-- [x] Implement `ingestar_metadata` command with Deezer as primary source
-  - Deezer client: `ingesta/clients/deezer.py` (public API, no auth needed)
-  - Artist matching: normalized name → ISRC cross-validation → `deezer_id` saved
-  - Added fields: `deezer_id` (BigIntegerField) on Artista, Album, Canco; `deezer_no_trobat` on Artista
-  - Command: `--artista-id`, `--force`, `--dry-run` flags
-  - Stores ISRC on each Canco (Deezer provides 100% coverage)
-  - Tested live: Zoo (2 albums, 12 tracks), La Fúmiga (6 albums, 6 tracks)
-  - Spotify client kept as fallback (`ingesta/clients/spotify.py`) — blocked by Premium requirement
-  - Refactor: removed `Artista.actiu` field (was derived state, not manual attribute)
-- [x] First full `ingestar_metadata` run (2026-04-10, partial results while run continues)
-  - **Proportions (stable at ~400/2273 processed):** 80% found, 20% not found
-  - Only 24 artists had ISRC cross-validation (the rest were name-only match)
-  - 100% of new Deezer tracks have ISRC
-  - **False positives detected** (generic names matched to international artists):
-    Aion (479 albums, metal), Animal (121), Aïsha (55), Atman (43), Apa (35),
-    Arrap (32), Benitozz (30), Bizarre (17), Aradia (17), Amulet (16)
-  - **Containment match issues:** Abast→'La Abasto Reggae', Addenda→'addeN'
-  - **Conclusion:** name-only matching works for unique Catalan names but fails
-    for generic/short names. The `verificada=False` track approval queue (Phase 6)
-    is essential before any new tracks enter the ranking
+- [ ] Clean up false positive `deezer_id` matches (Aion, Animal, etc.) — manual review
 
 **Go/no-go:**
 - Discovery runs without crash
