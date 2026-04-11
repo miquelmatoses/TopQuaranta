@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-11 — ISRC matching + location fields + bulk verification
+> Updated: 2026-04-11 — ingestar_metadata complete, ISRC matching, location fields
 
 ---
 
@@ -148,6 +148,7 @@
   - Creates Album + Canco with `deezer_id`, stores ISRC on every track
   - Flags: `--artista-id`, `--force`, `--dry-run`, `--limit`
   - New tracks always enter with `verificada=False`
+  - Fix: IntegrityError on duplicate `deezer_id` now caught gracefully — logs warning, continues
 - [x] Model changes (migrations 0003–0007):
   - Removed `Artista.actiu` (was derived state)
   - Added `deezer_id` (BigIntegerField) on Artista, Album, Canco
@@ -170,13 +171,14 @@
 - [x] Copied values from legacy `artistes` table via `spotify_id` matching
   - 2,273 artists updated (localitat: 2,273, comarca: 2,273, provincia: 49)
 
-### First full production run (2026-04-10)
+### Production runs (2026-04-10 → 2026-04-11) `DONE`
 
-- Run still in progress (~1,200/2,273 artists processed, proportions stable)
-- **Artist matching: 82% found, 18% not found**
-  - ISRC-validated: ~24 artists (only 7% had legacy ISRCs for cross-check)
-  - Name-only match: ~93% of found artists
-- **False positives detected** (generic names matched to international artists):
+- **ingestar_metadata complete:** 2,273 artists processed
+  - 1,894 with `deezer_id` (83%) — name search + ISRC matching combined
+  - 370 `deezer_no_trobat=True` (16%)
+  - 10 pending (no Deezer match yet, not marked as not found)
+- **matching_isrc_deezer:** 208 additional artists matched via legacy ISRC cross-check
+- **Known false positives** (generic names matched to international artists):
   Aion (479 albums, metal), Animal (121), Aïsha (55), Atman (43), Apa (35),
   Arrap (32), Benitozz (30), Bizarre (17), Aradia (17), Amulet (16)
 - **Containment match issues:** Abast→'La Abasto Reggae', Addenda→'addeN'
@@ -185,10 +187,10 @@
 
 | Table | Count | Details |
 |---|---|---|
-| `music_artista` | 2,273 | approved; ~1,184 with `deezer_id`, ~220 `deezer_no_trobat`, ~869 pending |
+| `music_artista` | 2,273 | 1,894 with `deezer_id` (83%), 370 `deezer_no_trobat`, 10 pending |
 | `music_album` | ~6,795 | 4,250 legacy + ~2,545 from Deezer |
-| `music_canco` | ~16,344 | 10,351 legacy + ~5,993 Deezer (all 16,344 now `verificada=True`) |
-| Deezer tracks with ISRC | ~5,993 | 100% coverage |
+| `music_canco` | ~22,145 | 16,344 `verificada=True` + 5,801 `verificada=False` (pending review) |
+| Deezer tracks with ISRC | ~5,801 | 100% coverage on Deezer-sourced tracks |
 
 ### Safety gate: `verificada` field
 
