@@ -63,6 +63,11 @@ class Artista(models.Model):
         help_text="False = pending human review in Wagtail admin.",
     )
 
+    # Location (from legacy artistes table)
+    localitat = models.CharField(max_length=255, blank=True)
+    comarca = models.CharField(max_length=255, blank=True)
+    provincia = models.CharField(max_length=255, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

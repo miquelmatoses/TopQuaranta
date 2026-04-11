@@ -1,7 +1,7 @@
 # CLAUDE.md — TopQuaranta System Architecture
 
 > Persistent memory for Claude Code. Read this file before making any change.
-> Last updated: 2026-04-10 — territory M2M + collaborators model
+> Last updated: 2026-04-11 — ISRC matching + location fields
 >
 > See **ROADMAP.md** for implementation status.
 
@@ -401,6 +401,10 @@ class Artista(models.Model):
         default=True,
         help_text="False = pending human review in Wagtail admin.",
     )
+    # Location (from legacy artistes table)
+    localitat = models.CharField(max_length=255, blank=True)
+    comarca = models.CharField(max_length=255, blank=True)
+    provincia = models.CharField(max_length=255, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -1013,7 +1017,20 @@ python manage.py ingestar_metadata [--artista-id N] [--force] [--dry-run]
 - Stores ISRC and `deezer_id` on each record
 - Skips artists with `deezer_no_trobat=True` (unless `--force`)
 
-### 9.6 descobrir_artistes (weekly — Mondays)
+### 9.6 matching_isrc_deezer (on demand)
+
+```
+python manage.py matching_isrc_deezer [--dry-run] [--limit N]
+```
+
+- For artists without `deezer_id` and `deezer_no_trobat=False`:
+  1. Finds an ISRC from legacy `spotify_tracks` table via `spotify_id`
+  2. Queries Deezer: `GET /track/isrc:{isrc}`
+  3. Verifies artist name matches (main or contributor) to avoid false positives
+  4. Saves `deezer_id` on match, or marks `deezer_no_trobat=True` on failure
+- First run (2026-04-11): 208 matched out of 926 (713 had no ISRC in legacy)
+
+### 9.7 descobrir_artistes (weekly — Mondays)
 
 ```
 python manage.py descobrir_artistes [--font viasona|collaboradors|tots]
@@ -1024,7 +1041,7 @@ python manage.py descobrir_artistes [--font viasona|collaboradors|tots]
 - Skips artists already in DB (match by spotify_id or normalized nom)
 - Does NOT create Album or Canco records — only the Artista candidate
 
-### 9.7 distribuir_ranking (weekly — Sundays after calcular_ranking)
+### 9.8 distribuir_ranking (weekly — Sundays after calcular_ranking)
 
 ```
 python manage.py distribuir_ranking --setmana YYYY-MM-DD [--territori CAT] [--dry-run]
