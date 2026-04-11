@@ -68,9 +68,10 @@
 - [ ] Fix `lastfm_nom` mismatches (manual or heuristic) ← **next**
 - [ ] Run daily ingestion for 7 consecutive days
 
-**Current state:**
-- Eligible tracks (verified, recent, approved): ~808
+**Current state (2026-04-11):**
+- Eligible tracks (verified, recent, approved): 6,779
 - `ingestar_senyal` only processes `verificada=True` cançons — unverified Deezer tracks are excluded
+- Cron will process 6,779 tracks starting 2026-04-12
 - Idempotency verified (re-run skips already-ingested)
 
 **Go/no-go (pending):**
@@ -189,7 +190,7 @@
 |---|---|---|
 | `music_artista` | 2,273 | 1,894 with `deezer_id` (83%), 370 `deezer_no_trobat`, 10 pending |
 | `music_album` | ~6,795 | 4,250 legacy + ~2,545 from Deezer |
-| `music_canco` | ~22,145 | 16,344 `verificada=True` + 5,801 `verificada=False` (pending review) |
+| `music_canco` | ~22,145 | 16,344 `verificada=True` (6,779 within scope) + 5,801 `verificada=False` (pending review) |
 | Deezer tracks with ISRC | ~5,801 | 100% coverage on Deezer-sourced tracks |
 
 ### Safety gate: `verificada` field
