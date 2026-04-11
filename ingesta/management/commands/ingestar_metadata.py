@@ -2,7 +2,7 @@ import logging
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from ingesta.clients import deezer
 from music.models import Album, Artista, Canco
@@ -185,8 +185,9 @@ class Command(BaseCommand):
         result = deezer.search_artist(artista.nom)
         if not result:
             logger.info("Deezer: no match for '%s' — marking deezer_no_trobat", artista.nom)
-            artista.deezer_no_trobat = True
-            artista.save(update_fields=["deezer_no_trobat"])
+            with transaction.atomic():
+                artista.deezer_no_trobat = True
+                artista.save(update_fields=["deezer_no_trobat"])
             return None
 
         candidate_id = result["id"]
@@ -209,8 +210,9 @@ class Command(BaseCommand):
                     "(candidate='%s' id=%d, expected ISRC=%s)",
                     artista.nom, candidate_name, candidate_id, known_track.isrc,
                 )
-                artista.deezer_no_trobat = True
-                artista.save(update_fields=["deezer_no_trobat"])
+                with transaction.atomic():
+                    artista.deezer_no_trobat = True
+                    artista.save(update_fields=["deezer_no_trobat"])
                 return None
             logger.info(
                 "Deezer ISRC validated for '%s' → '%s' (id=%d)",
@@ -223,9 +225,19 @@ class Command(BaseCommand):
                 artista.nom, candidate_name, candidate_id,
             )
 
-        artista.deezer_id = candidate_id
-        artista.deezer_no_trobat = False
-        artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
+        try:
+            with transaction.atomic():
+                artista.deezer_id = candidate_id
+                artista.deezer_no_trobat = False
+                artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
+        except IntegrityError:
+            logger.warning(
+                "Deezer ID %d already assigned to another artist — "
+                "skipping '%s' (not marking deezer_no_trobat)",
+                candidate_id, artista.nom,
+            )
+            artista.refresh_from_db()
+            return None
         return candidate_id
 
     def _validate_via_isrc(self, deezer_artist_id: int, expected_isrc: str) -> bool:
