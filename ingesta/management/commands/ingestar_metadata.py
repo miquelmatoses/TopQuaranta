@@ -306,6 +306,21 @@ class Command(BaseCommand):
         self, artista: Artista, album: Album, data: dict, force: bool
     ) -> bool:
         """Create or update a Canco from Deezer data. Returns True if new."""
+        # The full track endpoint returns track.album.release_date which is the
+        # original release date. The /artist/albums and /album/{id} endpoints
+        # can return re-release dates (e.g. 2025 for a 2020 album).
+        # If the track's album date is earlier, it's the real one — fix the album.
+        track_album_date_str = data.get("album_release_date", "")
+        if track_album_date_str:
+            from ingesta.clients.deezer import _parse_date
+            track_album_date = _parse_date(track_album_date_str)
+            if track_album_date and (
+                not album.data_llancament
+                or track_album_date < album.data_llancament
+            ):
+                album.data_llancament = track_album_date
+                album.save(update_fields=["data_llancament"])
+
         defaults = {
             "nom": data["title"],
             "album": album,
@@ -313,7 +328,6 @@ class Command(BaseCommand):
             "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
             "isrc": data.get("isrc", ""),
             "preview_url": data.get("preview", ""),
-            # Use album date, not track date (Deezer track.release_date can be a re-release)
             "data_llancament": album.data_llancament,
             "verificada": False,
         }
