@@ -1,5 +1,6 @@
 import logging
 
+from django.db import IntegrityError
 from django.core.management.base import BaseCommand
 
 from ingesta.clients import deezer
@@ -8,18 +9,39 @@ from music.models import Artista, Canco
 logger = logging.getLogger(__name__)
 
 
+def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
+    """Get or create an Artista by deezer_id. Returns None on IntegrityError."""
+    try:
+        return Artista.objects.get(deezer_id=deezer_id)
+    except Artista.DoesNotExist:
+        pass
+    try:
+        return Artista.objects.create(
+            nom=name,
+            lastfm_nom=name,
+            deezer_id=deezer_id,
+            aprovat=False,
+            auto_descobert=True,
+            font_descoberta="deezer_contributor",
+        )
+    except IntegrityError:
+        # Race condition or duplicate — refetch
+        return Artista.objects.filter(deezer_id=deezer_id).first()
+
+
 class Command(BaseCommand):
-    help = "Fix main artist on tracks where Deezer's first contributor differs from stored artista."
+    help = "Fix main artist and collaborators on all tracks with deezer_id using Deezer contributors."
 
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=None)
+        parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **options):
         limit = options["limit"]
+        dry_run = options["dry_run"]
 
         qs = Canco.objects.filter(
             deezer_id__isnull=False,
-            verificada=False,
         ).select_related("artista")
         total = qs.count()
         self.stdout.write(f"Tracks to check: {total}")
@@ -27,7 +49,11 @@ class Command(BaseCommand):
         if limit:
             qs = qs[:limit]
 
-        fixed = 0
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN — no DB writes."))
+
+        main_fixed = 0
+        collabs_added = 0
         errors = 0
         checked = 0
 
@@ -47,38 +73,58 @@ class Command(BaseCommand):
             if not contributors:
                 continue
 
+            # Determine main contributor
             main = contributors[0]
             main_id = main.get("id")
             main_name = main.get("name", "")
 
-            if not main_id or main_id == canco.artista.deezer_id:
-                continue
+            # Fix main artist if different
+            if main_id and main_id != canco.artista.deezer_id:
+                if dry_run:
+                    self.stdout.write(
+                        f"  FIX MAIN: {canco.nom} — {canco.artista.nom} → {main_name} (dz={main_id})"
+                    )
+                else:
+                    real_artista = _get_or_create_artista(main_id, main_name)
+                    if real_artista:
+                        canco.artista = real_artista
+                        canco.save(update_fields=["artista_id"])
+                main_fixed += 1
 
-            # Main artist is different — fix it
-            try:
-                real_artista = Artista.objects.get(deezer_id=main_id)
-            except Artista.DoesNotExist:
-                real_artista = Artista.objects.create(
-                    nom=main_name,
-                    lastfm_nom=main_name,
-                    deezer_id=main_id,
-                    aprovat=False,
-                    auto_descobert=True,
-                    font_descoberta="deezer_contributor",
-                )
-                logger.info("Created artist '%s' (deezer_id=%d)", main_name, main_id)
+            # Process secondary contributors
+            current_col_ids = set(canco.artistes_col.values_list("deezer_id", flat=True))
+            main_artista_dz = main_id or canco.artista.deezer_id
 
-            # Add old artista as collaborator if not already
-            canco.artistes_col.add(canco.artista)
-            canco.artista = real_artista
-            canco.save(update_fields=["artista_id"])
-            fixed += 1
+            for contributor in contributors[1:]:
+                c_id = contributor.get("id")
+                c_name = contributor.get("name", "")
+                if not c_id or c_id == main_artista_dz:
+                    continue
+                if c_id in current_col_ids:
+                    continue
+
+                if dry_run:
+                    self.stdout.write(
+                        f"  ADD COLLAB: {canco.nom} += {c_name} (dz={c_id})"
+                    )
+                else:
+                    collab = _get_or_create_artista(c_id, c_name)
+                    if collab:
+                        canco.artistes_col.add(collab)
+                collabs_added += 1
 
             if checked % 100 == 0:
-                self.stdout.write(f"  Checked {checked}... (fixed={fixed})")
+                self.stdout.write(
+                    f"  Processed {checked}/{total}... "
+                    f"(main_fixed={main_fixed}, collabs_added={collabs_added}, errors={errors})"
+                )
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Done: checked={checked}, fixed={fixed}, errors={errors}"
+                f"\nDone:\n"
+                f"  Checked: {checked}\n"
+                f"  Main artist fixed: {main_fixed}\n"
+                f"  Collaborators added: {collabs_added}\n"
+                f"  Errors: {errors}"
             )
         )
