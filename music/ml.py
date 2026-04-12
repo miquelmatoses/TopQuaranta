@@ -21,6 +21,7 @@ Calibrated 2026-04-12 from 120 real decisions. Key findings:
 
 import logging
 import os
+import threading
 import time
 
 from django.db.models import QuerySet
@@ -170,14 +171,13 @@ def recalcular_ml(qs: QuerySet | None = None, limit: int | None = None) -> int:
     return updated
 
 
-def recalcular_ml_si_cal() -> int:
+def recalcular_ml_si_cal() -> None:
     """
-    Recalculate ML if there have been ≥5 new decisions since last recalc.
-    Returns number of cancons updated, or 0 if skipped.
+    Trigger ML recalc in a background thread if ≥5 new decisions since last recalc.
+    Returns immediately — does not block the HTTP response.
     """
     from music.models import HistorialRevisio
 
-    # Read last recalc timestamp
     last_recalc = 0.0
     try:
         with open(LAST_RECALC_FILE) as f:
@@ -191,9 +191,11 @@ def recalcular_ml_si_cal() -> int:
     new_decisions = HistorialRevisio.objects.filter(created_at__gt=last_dt).count()
 
     if new_decisions < MIN_NEW_DECISIONS:
-        return 0
+        return
 
     logger.info(
-        "ML recalc triggered: %d new decisions since last recalc", new_decisions
+        "ML recalc triggered in background: %d new decisions since last recalc",
+        new_decisions,
     )
-    return recalcular_ml()
+    thread = threading.Thread(target=recalcular_ml, daemon=True, name="ml-recalc")
+    thread.start()
