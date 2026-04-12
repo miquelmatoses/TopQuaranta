@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-11 — ingestar_metadata complete, ISRC matching, location fields
+> Updated: 2026-04-12 — emergency fix: reverted 6,002 Deezer-only cançons to verificada=False
 
 ---
 
@@ -68,10 +68,12 @@
 - [ ] Fix `lastfm_nom` mismatches (manual or heuristic) ← **next**
 - [ ] Run daily ingestion for 7 consecutive days
 
-**Current state (2026-04-11):**
-- Eligible tracks (verified, recent, approved): 6,779
-- `ingestar_senyal` only processes `verificada=True` cançons — unverified Deezer tracks are excluded
-- Cron will process 6,779 tracks starting 2026-04-12
+**Current state (2026-04-12):**
+- Emergency fix: 6,002 Deezer-only cançons (no `spotify_id`) reverted to `verificada=False`
+  - Root cause: bulk verification on 2026-04-11 included non-Catalan false positives from Deezer
+  - 57.4% error rate in daily cron triggered the fix
+- Eligible tracks (verified, recent, approved): recalculated from 10,351 legacy-only verified
+- `ingestar_senyal` only processes `verificada=True` cançons — Deezer tracks now excluded until manual review
 - Idempotency verified (re-run skips already-ingested)
 
 **Go/no-go (pending):**
@@ -165,6 +167,7 @@
   - Name verification: checks main artist + contributors to avoid false positives
   - Result: 208 matched, 5 not found, 713 had no ISRC in legacy
 - [x] Bulk verification script: 5,993 Deezer-matched tracks → `verificada=True`
+- [x] **Reverted (2026-04-12):** 6,002 Deezer-only cançons (`spotify_id` NULL or empty) set back to `verificada=False` — 57.4% cron error rate caused by non-Catalan false positives
 
 ### Location fields migration (2026-04-11) `DONE`
 
@@ -190,7 +193,7 @@
 |---|---|---|
 | `music_artista` | 2,273 | 1,894 with `deezer_id` (83%), 370 `deezer_no_trobat`, 10 pending |
 | `music_album` | ~6,795 | 4,250 legacy + ~2,545 from Deezer |
-| `music_canco` | ~22,145 | 16,344 `verificada=True` (6,779 within scope) + 5,801 `verificada=False` (pending review) |
+| `music_canco` | 22,145 | 10,351 `verificada=True` (legacy only) + 11,794 `verificada=False` (Deezer tracks pending review) |
 | Deezer tracks with ISRC | ~5,801 | 100% coverage on Deezer-sourced tracks |
 
 ### Safety gate: `verificada` field
