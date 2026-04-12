@@ -2,7 +2,7 @@ import logging
 from collections import Counter
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 
 from legacy.models import LegacyArtista, LegacyCanco
 from music.models import Album, Artista, Canco, Territori
@@ -10,13 +10,56 @@ from ranking.models import ConfiguracioGlobal
 
 logger = logging.getLogger(__name__)
 
-TERRITORY_MAP = {
+# municipis.Territori → new territory code
+MUNICIPIS_TERRITORI_MAP = {
+    "Catalunya": "CAT",
+    "País Valencià": "VAL",
+    "Illes": "BAL",
+    "Catalunya del Nord": "CNO",
+    "Andorra": "AND",
+    "Franja de Ponent": "FRA",
+    "L'Alguer": "ALG",
+    "El Carxe": "CAR",
+}
+
+# Fallback: legacy artistes.territori → new territory code
+LEGACY_TERRITORI_FALLBACK = {
     "Catalunya": "CAT",
     "País Valencià": "VAL",
     "Balears": "BAL",
     "Illes": "BAL",
-    "Altres": None,  # skip — not a ranked territory
+    "Altres": "ALT",
 }
+
+
+def _build_comarca_map() -> dict[str, str]:
+    """Build comarca → territory code mapping from legacy municipis table."""
+    comarca_map = {}
+    with connection.cursor() as cursor:
+        cursor.execute(
+            'SELECT DISTINCT "Comarca", "Territori" FROM municipis'
+        )
+        for comarca, territori in cursor.fetchall():
+            codi = MUNICIPIS_TERRITORI_MAP.get(territori)
+            if codi and comarca:
+                comarca_map[comarca.strip()] = codi
+    return comarca_map
+
+
+def get_territori(legacy_artista, comarca_map: dict[str, str]) -> str | None:
+    """
+    Determine territory code for a legacy artist.
+    1. comarca → municipis → territory code
+    2. Fallback: artistes.territori
+    Returns territory code or None if unmappable.
+    """
+    # Try comarca lookup first
+    comarca = (legacy_artista.comarca or "").strip()
+    if comarca and comarca in comarca_map:
+        return comarca_map[comarca]
+
+    # Fallback to legacy territori field
+    return LEGACY_TERRITORI_FALLBACK.get(legacy_artista.territori)
 
 
 class Command(BaseCommand):
@@ -46,7 +89,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
-        # If no specific flag, import everything
         import_all = not any(
             [options["artistes"], options["cancons"], options["configuracio"]]
         )
@@ -68,7 +110,7 @@ class Command(BaseCommand):
     def _import_configuracio(self, dry_run: bool) -> None:
         self.stdout.write("Importing configuracio_global...")
         if not dry_run:
-            ConfiguracioGlobal.load()  # creates with defaults if not exists
+            ConfiguracioGlobal.load()
             self.stdout.write(
                 self.style.SUCCESS("ConfiguracioGlobal: OK (defaults loaded)")
             )
@@ -78,87 +120,98 @@ class Command(BaseCommand):
     def _import_artistes(self, dry_run: bool) -> None:
         self.stdout.write("\nImporting artists from legacy `artistes` table...")
 
-        # Pre-load territory objects
         territori_objs = {t.codi: t for t in Territori.objects.all()}
         if not territori_objs:
             raise CommandError(
-                "No Territori objects found. Run migrations first "
-                "(0002_create_territoris)."
+                "No Territori objects found. Run migrations first."
             )
+
+        comarca_map = _build_comarca_map()
+        self.stdout.write(f"  Loaded {len(comarca_map)} comarca → territory mappings.")
+
+        # Pre-load existing artists by spotify_id for update-in-place
+        existing_by_spotify = {
+            a.spotify_id: a
+            for a in Artista.objects.all()
+            if a.spotify_id
+        }
 
         legacy_artistes = LegacyArtista.objects.all()
         total = legacy_artistes.count()
         self.stdout.write(f"  Found {total} legacy artists.")
 
         stats = Counter()
-        # Collect (artista, [territori_codes]) pairs for M2M assignment
-        artista_territoris: list[tuple[Artista, list[str]]] = []
-
+        territory_dist = Counter()
+        # (artista_or_spotify_id, [territori_codes]) for M2M update
+        territory_updates: list[tuple[str, str]] = []  # (spotify_id, codi)
         artistes_to_create = []
-        for i, legacy in enumerate(legacy_artistes.iterator(), 1):
-            territori_codi = TERRITORY_MAP.get(legacy.territori)
-            if territori_codi is None:
-                stats["skipped_territory"] += 1
-                continue
 
+        for i, legacy in enumerate(legacy_artistes.iterator(), 1):
             is_active = legacy.status == "go"
             if not is_active:
                 stats["skipped_inactive"] += 1
                 continue
 
-            artista = Artista(
-                spotify_id=legacy.id_spotify,
-                nom=legacy.nom or legacy.nom_spotify or "",
-                lastfm_nom=legacy.nom or legacy.nom_spotify or "",
-                aprovat=True,
-                auto_descobert=False,
-                font_descoberta="legacy",
-            )
-            artistes_to_create.append(artista)
-            artista_territoris.append((artista, [territori_codi]))
-            stats["imported"] += 1
+            territori_codi = get_territori(legacy, comarca_map)
+            if territori_codi is None:
+                stats["skipped_territory"] += 1
+                continue
+
+            territory_dist[territori_codi] += 1
+
+            if legacy.id_spotify in existing_by_spotify:
+                # Update territory in place — don't recreate
+                territory_updates.append((legacy.id_spotify, territori_codi))
+                stats["updated"] += 1
+            else:
+                artista = Artista(
+                    spotify_id=legacy.id_spotify,
+                    nom=legacy.nom or legacy.nom_spotify or "",
+                    lastfm_nom=legacy.nom or legacy.nom_spotify or "",
+                    aprovat=True,
+                    auto_descobert=False,
+                    font_descoberta="legacy",
+                )
+                artistes_to_create.append((artista, territori_codi))
+                stats["created"] += 1
 
             if i % 500 == 0:
                 self.stdout.write(f"  Processed {i}/{total}...")
 
+        self.stdout.write("\n  Territory distribution:")
+        for codi in sorted(territory_dist.keys()):
+            self.stdout.write(f"    {codi}: {territory_dist[codi]}")
+
         if dry_run:
             self.stdout.write(
                 f"\n  DRY RUN summary — Artists:\n"
-                f"    Would import: {stats['imported']}\n"
-                f"    Skipped (territory 'Altres'/unknown): {stats['skipped_territory']}\n"
+                f"    Would update territories: {stats['updated']}\n"
+                f"    Would create new: {stats['created']}\n"
+                f"    Skipped (unmapped territory): {stats['skipped_territory']}\n"
                 f"    Skipped (inactive status): {stats['skipped_inactive']}\n"
             )
             return
 
         with transaction.atomic():
-            # Clear existing imported data to make idempotent
-            deleted, _ = Artista.objects.filter(font_descoberta="legacy").delete()
-            if deleted:
-                self.stdout.write(f"  Cleared {deleted} previously imported artists.")
+            # Update territories for existing artists
+            for spotify_id, codi in territory_updates:
+                artista = existing_by_spotify[spotify_id]
+                t = territori_objs.get(codi)
+                if t:
+                    artista.territoris.set([t])
 
-            Artista.objects.bulk_create(artistes_to_create, ignore_conflicts=True)
-
-            # Refresh from DB to get PKs (bulk_create with ignore_conflicts
-            # may not set pk on all objects)
-            db_artistes = {
-                a.spotify_id: a
-                for a in Artista.objects.filter(font_descoberta="legacy")
-            }
-
-            # Assign territories via M2M
-            for artista, codis in artista_territoris:
-                db_artista = db_artistes.get(artista.spotify_id)
-                if db_artista:
-                    db_artista.territoris.set(
-                        [territori_objs[c] for c in codis if c in territori_objs]
-                    )
-
-            stats["created"] = len(db_artistes)
+            # Create new artists
+            for artista, codi in artistes_to_create:
+                artista.save()
+                t = territori_objs.get(codi)
+                if t:
+                    artista.territoris.set([t])
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"\n  Artists import complete:\n"
-                f"    Created: {stats['created']}\n"
+                f"    Updated territories: {stats['updated']}\n"
+                f"    Created new: {stats['created']}\n"
                 f"    Skipped (territory): {stats['skipped_territory']}\n"
                 f"    Skipped (inactive): {stats['skipped_inactive']}\n"
                 f"    Total legacy rows: {total}"
@@ -168,7 +221,6 @@ class Command(BaseCommand):
     def _import_cancons(self, dry_run: bool) -> None:
         self.stdout.write("\nImporting tracks from legacy `cançons` table...")
 
-        # Build a lookup of imported artists by spotify_id
         artista_map = {
             a.spotify_id: a
             for a in Artista.objects.filter(font_descoberta="legacy").exclude(
@@ -191,15 +243,11 @@ class Command(BaseCommand):
         cancons_to_create: list[Canco] = []
 
         for i, legacy in enumerate(legacy_cancons.iterator(), 1):
-            # Deduplication: legacy has one row per (id_canco, territori)
-            # We only want one Canco per id_canco
             if legacy.id_canco in seen_ids:
                 stats["deduplicated"] += 1
                 continue
             seen_ids.add(legacy.id_canco)
 
-            # Find the artist — artistes_ids[0] holds the spotify_id of the main artist
-            # (artista_basat is a display name, not a spotify_id)
             ids = legacy.artistes_ids
             if not ids or (isinstance(ids, list) and len(ids) == 0):
                 stats["skipped_no_artist"] += 1
@@ -210,7 +258,6 @@ class Command(BaseCommand):
                 stats["skipped_no_artist"] += 1
                 continue
 
-            # Get or create Album (cached)
             album = self._get_or_create_album(legacy, artista, albums_cache, dry_run)
 
             cancons_to_create.append(
@@ -240,7 +287,6 @@ class Command(BaseCommand):
             return
 
         with transaction.atomic():
-            # Clear previously imported tracks
             deleted_c, _ = Canco.objects.filter(
                 artista__font_descoberta="legacy"
             ).delete()
@@ -253,11 +299,9 @@ class Command(BaseCommand):
                     f"from previous import."
                 )
 
-            # Bulk create albums first
             albums_to_create = list(albums_cache.values())
             Album.objects.bulk_create(albums_to_create, ignore_conflicts=True)
 
-            # Refresh album PKs from DB
             album_by_spotify = {
                 a.spotify_id: a
                 for a in Album.objects.filter(
@@ -269,7 +313,6 @@ class Command(BaseCommand):
                 for a in Album.objects.filter(artista__font_descoberta="legacy")
             }
 
-            # Re-link cancons to persisted albums
             for canco in cancons_to_create:
                 if canco.album.spotify_id and canco.album.spotify_id in album_by_spotify:
                     canco.album = album_by_spotify[canco.album.spotify_id]

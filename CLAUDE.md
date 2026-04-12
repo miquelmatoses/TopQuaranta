@@ -1299,9 +1299,9 @@ phase, and update the following phase summary if scope has changed.
 | Algorithm extracted, not rewritten | Well-founded 14-CTE logic; port to Python, adapt inputs, keep math identical |
 | `ConfiguracioGlobal` as Django model | Version-controlled, editable via admin, testable — was raw table with no ORM |
 | Territory on artist (M2M), not track | Legacy duplicated tracks per territory (PK bloat). Territory is a property of the artist. Artists can belong to multiple territories (Marala → CAT+VAL+BAL). Tracks with collaborators appear in all artists' territories (Txarango CAT + La Fumiga VAL → track in both rankings) |
-| Territori model + data migration | Fixed set (CAT, VAL, BAL) created via data migration `0002_create_territoris`. No 'ALL' hack — artists simply have multiple M2M entries |
+| Territori model + data migration | 10 territories: CAT, VAL, BAL (always ranked), CNO, AND, FRA, ALG, CAR (ranked if ≥ threshold tracks), ALT (grouped), PPCC (global). Migrations `0002` + `0014` |
 | Canco.artistes_col M2M | Tracks can have collaborating artists. `artista` FK = main artist for display; `artistes_col` M2M = all collaborators. `Canco.get_territoris()` returns union of all artists' territories |
-| Territory codes `CAT`/`VAL`/`BAL` (3 chars) | Legacy used inconsistent full strings; codes are shorter, indexable, unambiguous |
+| Territory codes (max 4 chars) | CAT, VAL, BAL, CNO, AND, FRA, ALG, CAR, ALT, PPCC. Mapped from legacy `municipis` table via comarca |
 | Human approval for all auto-discovered artists | Prevents false positives (Marató, one-off collabs) |
 | ISRC on every Canco | Universal cross-system key; enables future integrations |
 | 12-month track cutoff | TopQuaranta tracks current music, not back-catalogue |

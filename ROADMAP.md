@@ -221,6 +221,17 @@
 - [x] `ingestar_metadata._upsert_track()` — reads contributors, creates collaborator Artista if needed
 - [x] `ingestar_metadata._resolve_deezer_id()` → populates `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
 
+### Territory expansion (2026-04-12) `DONE`
+
+- [x] Territori.codi expanded from max_length=3 to 4 (migration 0013)
+- [x] 7 new territories added (migration 0014): CNO, AND, FRA, ALG, CAR, ALT, PPCC
+- [x] `importar_legacy` updated: comarca → `municipis` table → territory code mapping
+- [x] Update-in-place instead of delete+recreate (preserves Deezer metadata)
+- [x] 2,313 artists reimported: CAT=1748, VAL=316, BAL=209, ALT=19, CNO=10, AND=9, FRA=1, ALG=1
+- [x] `ConfiguracioGlobal.min_cancons_ranking_propi` (default=20) for threshold
+- [x] `ranking/algorisme.py::territoris_amb_ranking_propi()`: CAT/VAL/BAL always, others if ≥ threshold
+- [x] `RankingSetmanal.territori` expanded to max_length=4
+
 ### Pending
 
 - [ ] Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
@@ -228,7 +239,7 @@
 - [ ] Add Wagtail approval queue admin (artists: `aprovat=False`)
 - [ ] Migrate CMS pages to read from new models
 - [ ] Clean up false positive `deezer_id` matches (Aion, Animal, etc.) — manual review
-- [ ] Populate `deezer_nb_fan`/`deezer_nb_album` for existing 1,894 artists with `deezer_id` (backfill)
+- [x] Populate `deezer_nb_fan`/`deezer_nb_album` for existing 1,894 artists with `deezer_id` (backfill)
 
 **Go/no-go:**
 - Discovery runs without crash

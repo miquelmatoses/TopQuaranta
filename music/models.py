@@ -4,10 +4,10 @@ from django.db import models
 class Territori(models.Model):
     """
     Territory for Catalan-language music rankings.
-    Fixed set: CAT, VAL, BAL. Managed via data migration, not admin.
+    Managed via data migration, not admin.
     """
 
-    codi = models.CharField(max_length=3, primary_key=True)
+    codi = models.CharField(max_length=4, primary_key=True)
     nom = models.CharField(max_length=50)
 
     class Meta:

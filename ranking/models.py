@@ -39,6 +39,7 @@ class ConfiguracioGlobal(models.Model):
         max_digits=5, decimal_places=3, default=0.0
     )
     suavitat = models.DecimalField(max_digits=5, decimal_places=2, default=5.0)
+    min_cancons_ranking_propi = models.IntegerField(default=20)
 
     class Meta:
         verbose_name = "Configuració global"
@@ -90,14 +91,8 @@ class IngestaDiari(models.Model):
 class RankingSetmanal(models.Model):
     """Weekly ranking result. setmana = Monday of the ranking week (ISO)."""
 
-    TERRITORI_CHOICES = [
-        ("CAT", "Catalunya"),
-        ("VAL", "País Valencià"),
-        ("BAL", "Illes Balears"),
-    ]
-
     canco = models.ForeignKey(Canco, on_delete=models.CASCADE, related_name="rankings")
-    territori = models.CharField(max_length=3, choices=TERRITORI_CHOICES)
+    territori = models.CharField(max_length=4)
     setmana = models.DateField()
     posicio = models.PositiveSmallIntegerField()
     score_setmanal = models.FloatField()
