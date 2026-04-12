@@ -153,6 +153,7 @@ class CancoAdmin(admin.ModelAdmin):
         "data_llancament",
         "deezer_track_link",
         "deezer_artista_link",
+        "viasona_link",
         "isrc",
         "verificada",
         "get_territoris_display",
@@ -196,6 +197,17 @@ class CancoAdmin(admin.ModelAdmin):
             return "-"
         url = f"https://www.deezer.com/artist/{obj.artista.deezer_id}"
         return format_html('<a href="{}" target="_blank" rel="noopener">&#x1F517;</a>', url)
+
+    @admin.display(description="Viasona")
+    def viasona_link(self, obj):
+        from django.utils.http import urlencode
+        q = f"{obj.artista.nom} {obj.nom}"
+        url = "https://www.viasona.cat/cerca?" + urlencode({"q": q})
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener" '
+            'style="font-size:12px">\U0001f50d</a>',
+            url,
+        )
 
     @admin.display(description="Territoris")
     def get_territoris_display(self, obj):
