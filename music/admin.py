@@ -1,7 +1,8 @@
 from django.contrib import admin
+from django.db import transaction
 from django.utils.html import format_html
 
-from .models import Artista, Canco, Territori
+from .models import Album, Artista, Canco, Territori
 
 
 
@@ -15,11 +16,13 @@ class TerritoriInline(admin.TabularInline):
 @admin.register(Artista)
 class ArtistaAdmin(admin.ModelAdmin):
     list_display = ("nom", "get_territoris_display", "deezer_id", "deezer_no_trobat", "aprovat")
+    list_editable = ("deezer_id",)
     list_filter = ("deezer_no_trobat", "aprovat", "territoris")
     search_fields = ("nom",)
     readonly_fields = ("deezer_link",)
     inlines = [TerritoriInline]
     exclude = ("territoris",)  # managed via inline instead
+    actions = ["marcar_sense_deezer_i_netejar"]
 
     @admin.display(description="Territoris")
     def get_territoris_display(self, obj):
@@ -31,6 +34,37 @@ class ArtistaAdmin(admin.ModelAdmin):
             return "-"
         url = f"https://www.deezer.com/artist/{obj.deezer_id}"
         return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
+
+    @admin.action(description="Marcar sense Deezer i netejar")
+    def marcar_sense_deezer_i_netejar(self, request, queryset):
+        total_cancons = 0
+        with transaction.atomic():
+            for artista in queryset:
+                deleted, _ = Canco.objects.filter(
+                    artista=artista, verificada=False
+                ).delete()
+                total_cancons += deleted
+            updated = queryset.update(deezer_id=None, deezer_no_trobat=True)
+        self.message_user(
+            request,
+            f"{updated} artistes marcats sense Deezer, "
+            f"{total_cancons} cançons no verificades esborrades.",
+        )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change and "deezer_id" in form.changed_data and obj.deezer_id is not None:
+            deleted, _ = Canco.objects.filter(
+                artista=obj, verificada=False
+            ).delete()
+            obj.deezer_no_trobat = False
+            obj.save(update_fields=["deezer_no_trobat"])
+            if deleted:
+                self.message_user(
+                    request,
+                    f"{obj.nom}: deezer_id canviat, {deleted} cançons antigues "
+                    f"(no verificades) esborrades, deezer_no_trobat=False.",
+                )
 
 
 class VerificadaFilter(admin.SimpleListFilter):
@@ -87,7 +121,7 @@ class CancoAdmin(admin.ModelAdmin):
     ordering = ("-data_llancament",)
     list_per_page = 50
     raw_id_fields = ("artista", "album")
-    actions = ["marcar_verificada", "rebutjar_esborrar"]
+    actions = ["marcar_verificada", "rebutjar_esborrar", "rebutjar_album_sencer"]
 
     class Media:
         js = ("music/js/deezer_player.js",)
@@ -135,3 +169,17 @@ class CancoAdmin(admin.ModelAdmin):
         count = queryset.count()
         queryset.delete()
         self.message_user(request, f"{count} cançons esborrades.")
+
+    @admin.action(description="Rebutjar àlbum sencer")
+    def rebutjar_album_sencer(self, request, queryset):
+        album_ids = set(
+            queryset.values_list("album_id", flat=True).distinct()
+        )
+        with transaction.atomic():
+            deleted, _ = Canco.objects.filter(
+                album_id__in=album_ids, verificada=False
+            ).delete()
+        self.message_user(
+            request,
+            f"{len(album_ids)} àlbums afectats, {deleted} cançons no verificades esborrades.",
+        )
