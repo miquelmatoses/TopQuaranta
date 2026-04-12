@@ -17,12 +17,20 @@ class ArtistaAdmin(admin.ModelAdmin):
     list_display = ("nom", "get_territoris_display", "deezer_id", "deezer_no_trobat", "aprovat")
     list_filter = ("deezer_no_trobat", "aprovat", "territoris")
     search_fields = ("nom",)
+    readonly_fields = ("deezer_link",)
     inlines = [TerritoriInline]
     exclude = ("territoris",)  # managed via inline instead
 
     @admin.display(description="Territoris")
     def get_territoris_display(self, obj):
         return ", ".join(obj.territoris.values_list("codi", flat=True))
+
+    @admin.display(description="Deezer")
+    def deezer_link(self, obj):
+        if not obj.deezer_id:
+            return "-"
+        url = f"https://www.deezer.com/artist/{obj.deezer_id}"
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
 
 
 class VerificadaFilter(admin.SimpleListFilter):
@@ -67,10 +75,13 @@ class CancoAdmin(admin.ModelAdmin):
         "artista",
         "album_nom",
         "data_llancament",
+        "deezer_track_link",
+        "deezer_artista_link",
         "isrc",
         "verificada",
         "get_territoris_display",
     )
+    list_display_links = ("nom",)
     list_filter = (VerificadaFilter, "data_llancament")
     search_fields = ("nom", "artista__nom")
     ordering = ("-data_llancament",)
@@ -95,6 +106,20 @@ class CancoAdmin(admin.ModelAdmin):
     @admin.display(description="Àlbum")
     def album_nom(self, obj):
         return obj.album.nom
+
+    @admin.display(description="Deezer track")
+    def deezer_track_link(self, obj):
+        if not obj.deezer_id:
+            return "-"
+        url = f"https://www.deezer.com/track/{obj.deezer_id}"
+        return format_html('<a href="{}" target="_blank" rel="noopener">&#x1F517;</a>', url)
+
+    @admin.display(description="Deezer artista")
+    def deezer_artista_link(self, obj):
+        if not obj.artista.deezer_id:
+            return "-"
+        url = f"https://www.deezer.com/artist/{obj.artista.deezer_id}"
+        return format_html('<a href="{}" target="_blank" rel="noopener">&#x1F517;</a>', url)
 
     @admin.display(description="Territoris")
     def get_territoris_display(self, obj):
