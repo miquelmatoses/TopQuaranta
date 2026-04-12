@@ -11,17 +11,36 @@ API_BASE = "https://api.deezer.com"
 RATE_LIMIT_SLEEP = 0.1
 MAX_RETRIES = 3
 
+# Deezer quota error: code 4, "Quota limit exceeded".
+# No rate-limit headers are returned — the only signal is the error response.
+# Once hit, all subsequent calls fail until the quota resets (~next day).
+# This flag stops wasting requests after the first quota error.
+_quota_exhausted = False
+
+# Deezer error codes that mean "stop calling":
+# 4 = Quota limit exceeded (daily IP-based limit, undocumented exact number)
+_QUOTA_ERROR_CODES = {4}
+
+
+def quota_exhausted() -> bool:
+    """Check if Deezer quota has been hit this session."""
+    return _quota_exhausted
+
 
 def _normalize(name: str) -> str:
     """Lowercase, strip accents, strip whitespace."""
     name = name.strip().lower()
-    # Decompose unicode, remove combining marks (accents)
     nfkd = unicodedata.normalize("NFKD", name)
     return "".join(c for c in nfkd if not unicodedata.combining(c))
 
 
 def _get(url: str, params: dict | None = None) -> dict | None:
     """GET with retry and rate limiting. Returns parsed JSON or None."""
+    global _quota_exhausted
+
+    if _quota_exhausted:
+        return None
+
     for attempt in range(MAX_RETRIES):
         try:
             time.sleep(RATE_LIMIT_SLEEP)
@@ -29,9 +48,18 @@ def _get(url: str, params: dict | None = None) -> dict | None:
             resp.raise_for_status()
             data = resp.json()
 
-            # Deezer returns {"error": {...}} on some failures
             if "error" in data:
-                logger.warning("Deezer error for %s: %s", url, data["error"])
+                error = data["error"]
+                error_code = error.get("code")
+                if error_code in _QUOTA_ERROR_CODES:
+                    _quota_exhausted = True
+                    logger.error(
+                        "Quota Deezer exhaurida — reintenta demà "
+                        "(error code=%s, message='%s')",
+                        error_code, error.get("message", ""),
+                    )
+                    return None
+                logger.warning("Deezer error for %s: %s", url, error)
                 return None
 
             return data

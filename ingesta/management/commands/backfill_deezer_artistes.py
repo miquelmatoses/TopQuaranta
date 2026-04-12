@@ -45,6 +45,11 @@ class Command(BaseCommand):
 
         for i, artista in enumerate(iterable, 1):
             info = deezer.get_artist_info(artista.deezer_id)
+            if deezer.quota_exhausted():
+                self.stderr.write(
+                    self.style.ERROR("Quota Deezer exhaurida — reintenta demà.")
+                )
+                break
             if not info:
                 logger.warning("No Deezer info for %s (id=%d)", artista.nom, artista.deezer_id)
                 errors += 1
