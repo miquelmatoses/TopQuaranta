@@ -377,7 +377,7 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
         "territori_select",
         "comarca_select",
         "localitat_select",
-        "font_descoberta",
+        "accions_inline",
     )
     search_fields = ("nom",)
     actions = ["aprovar_artista", "descartar_artista"]
@@ -417,6 +417,16 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
                 "municipis/municipis/",
                 self.admin_site.admin_view(self._api_municipis),
                 name="artista_pendent_municipis",
+            ),
+            path(
+                "<int:pk>/aprovar/",
+                self.admin_site.admin_view(self._api_aprovar),
+                name="artista_pendent_aprovar",
+            ),
+            path(
+                "<int:pk>/descartar/",
+                self.admin_site.admin_view(self._api_descartar),
+                name="artista_pendent_descartar",
             ),
         ]
         return custom + urls
@@ -507,6 +517,72 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
             '<option value="">-- Localitat --</option></select>',
             obj.pk,
         )
+
+    @admin.display(description="")
+    def accions_inline(self, obj):
+        return format_html(
+            '<button type="button" class="tq-aprovar" data-id="{}" disabled '
+            'style="background:#28a745;color:#fff;border:none;padding:4px 8px;'
+            'border-radius:3px;cursor:pointer;opacity:0.4;margin-right:4px"'
+            '>\u2713</button>'
+            '<button type="button" class="tq-descartar" data-id="{}" '
+            'style="background:#dc3545;color:#fff;border:none;padding:4px 8px;'
+            'border-radius:3px;cursor:pointer"'
+            '>\u2717</button>',
+            obj.pk, obj.pk,
+        )
+
+    def _api_aprovar(self, request, pk):
+        from django.http import JsonResponse
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
+        try:
+            artista = Artista.objects.get(pk=pk)
+        except Artista.DoesNotExist:
+            return JsonResponse({"error": "Artista not found"}, status=404)
+
+        import json
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = {}
+        comarca = data.get("comarca", "").strip()
+        localitat = data.get("localitat", "").strip()
+        if not comarca or not localitat:
+            return JsonResponse({"error": "Cal comarca i localitat"}, status=400)
+
+        artista.comarca = comarca
+        artista.localitat = localitat
+        artista.aprovat = True
+        artista.save(update_fields=["aprovat", "localitat", "comarca"])
+
+        comarca_map = _get_comarca_map()
+        codi = comarca_map.get(comarca)
+        territori = ""
+        if codi:
+            t = Territori.objects.filter(codi=codi).first()
+            if t:
+                artista.territoris.set([t])
+                territori = codi
+        return JsonResponse({"ok": True, "territori": territori})
+
+    def _api_descartar(self, request, pk):
+        from django.http import JsonResponse
+        if request.method != "POST":
+            return JsonResponse({"error": "POST required"}, status=405)
+        try:
+            artista = Artista.objects.get(pk=pk)
+        except Artista.DoesNotExist:
+            return JsonResponse({"error": "Artista not found"}, status=404)
+
+        has_verified = artista.cancons.filter(verificada=True).exists()
+        if has_verified:
+            artista.auto_descobert = False
+            artista.save(update_fields=["auto_descobert"])
+            return JsonResponse({"ok": True, "action": "kept"})
+        else:
+            artista.delete()
+            return JsonResponse({"ok": True, "action": "deleted"})
 
     @admin.action(description="Aprovar artista")
     def aprovar_artista(self, request, queryset):
