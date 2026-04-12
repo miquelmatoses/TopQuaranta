@@ -37,6 +37,9 @@ FEATURE_NAMES = [
     "mes_llancament",
     "any_llancament",
     "nb_cancons_aprovades_artista",
+    "isrc_registrant_hash",
+    "isrc_any",
+    "isrc_prefix_q",
 ]
 
 
@@ -105,6 +108,9 @@ def _build_features(canco) -> list[float]:
         float(canco.data_llancament.month if canco.data_llancament else 0),
         float(canco.data_llancament.year if canco.data_llancament else 0),
         float(nb_approved),
+        float(hash(isrc[2:5]) % 10000 if len(isrc) >= 5 else 0),
+        float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
+        float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
     ]
 
 
@@ -147,6 +153,9 @@ def _build_features_from_historial(rec) -> list[float]:
         float(rec.data_llancament.month if rec.data_llancament else 0),
         float(rec.data_llancament.year if rec.data_llancament else 0),
         0.0,  # nb_cancons_aprovades not available in historial
+        float(hash(isrc[2:5]) % 10000 if len(isrc) >= 5 else 0),
+        float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
+        float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
     ]
 
 
