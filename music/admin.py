@@ -215,14 +215,22 @@ class CancoAdmin(admin.ModelAdmin):
 
     @admin.display(description="\u25b6")
     def deezer_player(self, obj):
-        if not obj.deezer_id:
-            return "-"
-        return format_html(
-            '<a href="#" class="dz-play-btn" data-deezer-id="{}" '
-            'style="font-size:18px;text-decoration:none;cursor:pointer">'
-            "\u25b6</a>",
-            obj.deezer_id,
-        )
+        if obj.preview_url:
+            return format_html(
+                '<a href="#" class="dz-play-btn" data-preview="{}" '
+                'style="font-size:18px;text-decoration:none;cursor:pointer">'
+                "\u25b6</a>",
+                obj.preview_url,
+            )
+        if obj.deezer_id:
+            url = f"https://www.deezer.com/track/{obj.deezer_id}"
+            return format_html(
+                '<a href="{}" target="_blank" rel="noopener" '
+                'style="font-size:14px;text-decoration:none">'
+                "\u25b6</a>",
+                url,
+            )
+        return "-"
 
     @admin.display(description="Àlbum")
     def album_nom(self, obj):

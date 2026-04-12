@@ -153,6 +153,7 @@ class Canco(models.Model):
     lastfm_mbid = models.CharField(max_length=50, blank=True)
     lastfm_verificat = models.BooleanField(default=False)
     durada_ms = models.IntegerField(null=True, blank=True)
+    preview_url = models.URLField(blank=True)
     data_llancament = models.DateField(
         null=True,
         blank=True,

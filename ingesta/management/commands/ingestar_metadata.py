@@ -312,6 +312,7 @@ class Command(BaseCommand):
             "artista": artista,
             "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
             "isrc": data.get("isrc", ""),
+            "preview_url": data.get("preview", ""),
             "data_llancament": album.data_llancament,
             "verificada": False,
         }

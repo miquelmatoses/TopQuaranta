@@ -184,9 +184,10 @@ def get_album_tracks(album_id: int) -> list[dict]:
     for item in data.get("data", []):
         track_id = item["id"]
 
-        # Fetch full track to get ISRC and contributors
+        # Fetch full track to get ISRC, contributors, and preview
         full = _get(f"{API_BASE}/track/{track_id}")
         isrc = full.get("isrc", "") if full else ""
+        preview = full.get("preview", "") if full else ""
         contributors = []
         if full:
             for c in full.get("contributors", []):
@@ -200,6 +201,7 @@ def get_album_tracks(album_id: int) -> list[dict]:
             "isrc": isrc,
             "artist_id": artist.get("id"),
             "artist_name": artist.get("name", ""),
+            "preview": preview,
             "contributors": contributors,
         })
 
