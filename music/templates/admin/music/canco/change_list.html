@@ -1,0 +1,90 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+#rebuig-motiu-wrapper {
+    display: none;
+    margin-left: 8px;
+}
+#rebuig-motiu-wrapper.visible {
+    display: inline;
+}
+#rebuig-motiu {
+    padding: 4px 6px;
+    height: 26px;
+}
+</style>
+{% endblock %}
+
+{% block result_list %}
+{{ block.super }}
+<script>
+(function() {
+    var REJECT_ACTIONS = ['rebutjar_esborrar', 'rebutjar_album_sencer'];
+    var actionSelect = document.querySelector('select[name="action"]');
+    if (!actionSelect) return;
+
+    // Create motiu selector
+    var wrapper = document.createElement('span');
+    wrapper.id = 'rebuig-motiu-wrapper';
+
+    var label = document.createElement('label');
+    label.textContent = ' Motiu: ';
+    label.style.marginLeft = '8px';
+    label.style.fontWeight = 'bold';
+
+    var select = document.createElement('select');
+    select.id = 'rebuig-motiu';
+    select.name = 'motiu';
+
+    var motius = [
+        ['', '-- Motiu --'],
+        ['no_catala', 'No és en català'],
+        ['artista_incorrecte', 'Artista incorrecte (esborra tot)'],
+        ['album_incorrecte', 'Àlbum incorrecte (esborra àlbum)'],
+        ['no_musica', 'No és música']
+    ];
+    motius.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m[0];
+        opt.textContent = m[1];
+        select.appendChild(opt);
+    });
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(select);
+
+    // Insert after action select
+    var actionBar = actionSelect.parentNode;
+    var goButton = actionBar.querySelector('button[type="submit"]');
+    if (goButton) {
+        actionBar.insertBefore(wrapper, goButton);
+    } else {
+        actionBar.appendChild(wrapper);
+    }
+
+    // Show/hide based on selected action
+    function toggleMotiu() {
+        var action = actionSelect.value;
+        var isReject = REJECT_ACTIONS.indexOf(action) !== -1;
+        wrapper.className = isReject ? 'visible' : '';
+    }
+    actionSelect.addEventListener('change', toggleMotiu);
+    toggleMotiu();
+
+    // Validate on form submit
+    var form = actionSelect.closest('form');
+    form.addEventListener('submit', function(e) {
+        var action = actionSelect.value;
+        if (REJECT_ACTIONS.indexOf(action) !== -1) {
+            if (!select.value) {
+                e.preventDefault();
+                alert('Has de seleccionar un motiu de rebuig.');
+                return false;
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

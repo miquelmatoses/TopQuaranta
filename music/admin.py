@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib import messages
 from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
@@ -8,17 +9,7 @@ from .models import Album, Artista, Canco, HistorialRevisio, Territori
 from .verificacio import crear_historial
 
 
-MOTIUS_REBUIG_CANCO = [
-    ("no_catala", "La cançó no és en català"),
-    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
-    ("album_incorrecte", "L'àlbum sencer no pertany al nostre artista"),
-    ("no_musica", "No és música (podcast, audiollibre...)"),
-]
-
-MOTIUS_REBUIG_ALBUM = [
-    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
-    ("album_incorrecte", "L'àlbum sencer no pertany al nostre artista"),
-]
+MOTIUS_VALIDS = {"no_catala", "artista_incorrecte", "album_incorrecte", "no_musica"}
 
 MOTIUS_REBUIG_ARTISTA = [
     ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
@@ -224,24 +215,17 @@ class CancoAdmin(admin.ModelAdmin):
 
     @admin.action(description="Rebutjar (esborrar)")
     def rebutjar_esborrar(self, request, queryset):
-        if "confirmar" not in request.POST:
-            return TemplateResponse(
+        motiu = request.POST.get("motiu", "")
+        if motiu not in MOTIUS_VALIDS:
+            self.message_user(
                 request,
-                "admin/music/confirmar_rebuig.html",
-                {
-                    "action_name": "rebutjar_esborrar",
-                    "queryset": queryset,
-                    "total_cancons": queryset.count(),
-                    "total_albums": queryset.values("album_id").distinct().count(),
-                    "motius": MOTIUS_REBUIG_CANCO,
-                    "cancel_url": request.get_full_path(),
-                },
+                "Has de seleccionar un motiu de rebuig.",
+                level=messages.ERROR,
             )
+            return
 
-        motiu = request.POST.get("motiu", "no_catala")
         msgs = []
         with transaction.atomic():
-            # Record historial for selected cancons
             for canco in queryset.select_related("artista", "album"):
                 crear_historial(canco, "rebutjada", motiu)
 
@@ -271,27 +255,20 @@ class CancoAdmin(admin.ModelAdmin):
 
     @admin.action(description="Rebutjar àlbum sencer")
     def rebutjar_album_sencer(self, request, queryset):
+        motiu = request.POST.get("motiu", "")
+        if motiu not in MOTIUS_VALIDS:
+            self.message_user(
+                request,
+                "Has de seleccionar un motiu de rebuig.",
+                level=messages.ERROR,
+            )
+            return
+
         album_ids = set(queryset.values_list("album_id", flat=True).distinct())
         cancons = Canco.objects.filter(album_id__in=album_ids, verificada=False)
 
-        if "confirmar" not in request.POST:
-            return TemplateResponse(
-                request,
-                "admin/music/confirmar_rebuig.html",
-                {
-                    "action_name": "rebutjar_album_sencer",
-                    "queryset": queryset,
-                    "total_cancons": cancons.count(),
-                    "total_albums": len(album_ids),
-                    "motius": MOTIUS_REBUIG_ALBUM,
-                    "cancel_url": request.get_full_path(),
-                },
-            )
-
-        motiu = request.POST.get("motiu", "album_incorrecte")
         msgs = []
         with transaction.atomic():
-            # Record historial for selected cancons
             for canco in cancons.select_related("artista", "album"):
                 crear_historial(canco, "rebutjada", motiu)
 
