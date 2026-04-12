@@ -153,8 +153,11 @@ def recalcular_ml(qs: QuerySet | None = None, limit: int | None = None) -> int:
         result = pre_classificar(canco)
         canco.ml_classe = result["classe"]
         canco.ml_confianca = result["confiança"]
-        canco.save(update_fields=["ml_classe", "ml_confianca"])
-        updated += 1
+        try:
+            canco.save(update_fields=["ml_classe", "ml_confianca"])
+            updated += 1
+        except Exception:
+            pass  # canco was deleted between query and save
 
     # Update timestamp
     try:
