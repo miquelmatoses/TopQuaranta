@@ -173,8 +173,9 @@ def get_artist_albums(deezer_id: int, min_date: date | None = None) -> list[dict
 def get_album_tracks(album_id: int) -> list[dict]:
     """
     Fetch tracks for a Deezer album.
-    For each track, fetches the full track endpoint to get ISRC.
-    Returns list of dicts: {id, title, duration, isrc, artist_id, artist_name}.
+    For each track, fetches the full track endpoint to get ISRC, preview,
+    album_release_date (prefers album.release_date over track.release_date),
+    and contributors.
     """
     data = _get(f"{API_BASE}/album/{album_id}/tracks")
     if not data:
@@ -184,10 +185,15 @@ def get_album_tracks(album_id: int) -> list[dict]:
     for item in data.get("data", []):
         track_id = item["id"]
 
-        # Fetch full track to get ISRC, contributors, and preview
+        # Fetch full track to get ISRC, contributors, preview, and album release date
         full = _get(f"{API_BASE}/track/{track_id}")
         isrc = full.get("isrc", "") if full else ""
         preview = full.get("preview", "") if full else ""
+        # Use album.release_date (original), not track.release_date (may be re-release)
+        album_release = (
+            full.get("album", {}).get("release_date")
+            or full.get("release_date", "")
+        ) if full else ""
         contributors = []
         if full:
             for c in full.get("contributors", []):
@@ -202,6 +208,7 @@ def get_album_tracks(album_id: int) -> list[dict]:
             "artist_id": artist.get("id"),
             "artist_name": artist.get("name", ""),
             "preview": preview,
+            "album_release_date": album_release,
             "contributors": contributors,
         })
 
