@@ -353,4 +353,8 @@ class Command(BaseCommand):
                     )
                 canco.artistes_col.add(collab)
 
+        if created or force:
+            from music.ml import classificar_i_guardar
+            classificar_i_guardar(canco)
+
         return created

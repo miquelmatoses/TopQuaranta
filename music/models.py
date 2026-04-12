@@ -164,6 +164,8 @@ class Canco(models.Model):
         default=False,
         help_text="False = pending admin review. Only verified tracks enter the ranking.",
     )
+    ml_classe = models.CharField(max_length=1, blank=True, db_index=True)
+    ml_confianca = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -3,7 +3,7 @@ from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
-from .ml import pre_classificar
+from .ml import classificar_i_guardar, recalcular_ml_si_cal
 from .models import Artista, Canco, HistorialRevisio, Territori
 from .verificacio import crear_historial
 
@@ -86,6 +86,7 @@ class ArtistaAdmin(admin.ModelAdmin):
                 cancons.delete()
                 total_cancons += deleted
             updated = queryset.update(deezer_id=None, deezer_no_trobat=True)
+        recalcular_ml_si_cal()
         self.message_user(
             request,
             f"{updated} artistes marcats sense Deezer, "
@@ -142,22 +143,9 @@ class VerificadaFilter(admin.SimpleListFilter):
         return val
 
 
-class MLClasseFilter(admin.SimpleListFilter):
-    title = "Classe ML"
-    parameter_name = "ml_classe"
-
-    def lookups(self, request, model_admin):
-        return [("C", "C — Probablement rebutjar"), ("B", "B — Dubtosa"), ("A", "A — Probablement vàlida")]
-
-    def queryset(self, request, queryset):
-        # Filtering happens in get_queryset; this just stores the value
-        return queryset
-
-
 @admin.register(Canco)
 class CancoAdmin(admin.ModelAdmin):
     list_display = (
-        "deezer_player",
         "ml_display",
         "nom",
         "artista",
@@ -170,67 +158,26 @@ class CancoAdmin(admin.ModelAdmin):
         "get_territoris_display",
     )
     list_display_links = ("nom",)
-    list_filter = (VerificadaFilter, MLClasseFilter, "data_llancament")
+    list_filter = (VerificadaFilter, "ml_classe", "data_llancament")
     search_fields = ("nom", "artista__nom")
-    ordering = ("-data_llancament",)
+    ordering = ("ml_classe", "-data_llancament")
     list_per_page = 50
     raw_id_fields = ("artista", "album")
     actions = ["marcar_verificada", "rebutjar_esborrar", "rebutjar_album_sencer"]
 
-    class Media:
-        js = ("music/js/deezer_player.js",)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Store ML filter value for use in changelist
-        self._ml_filter = request.GET.get("ml_classe")
-        return qs
-
-    def get_changelist_instance(self, request):
-        cl = super().get_changelist_instance(request)
-        if self._ml_filter:
-            filtered_pks = []
-            for obj in cl.queryset:
-                result = pre_classificar(obj)
-                if result["classe"] == self._ml_filter:
-                    filtered_pks.append(obj.pk)
-            cl.queryset = cl.queryset.filter(pk__in=filtered_pks)
-        return cl
-
-    @admin.display(description="ML")
+    @admin.display(description="ML", ordering="ml_classe")
     def ml_display(self, obj):
-        result = pre_classificar(obj)
+        if not obj.ml_classe:
+            return "-"
         colors = {"A": "#28a745", "B": "#fd7e14", "C": "#dc3545"}
-        color = colors.get(result["classe"], "#666")
-        tooltip = "; ".join(result["raons"]) if result["raons"] else "Cap senyal"
-        pct = f"{float(result['confiança']) * 100:.0f}"
+        color = colors.get(obj.ml_classe, "#666")
+        pct = f"{obj.ml_confianca * 100:.0f}" if obj.ml_confianca is not None else "?"
         return format_html(
-            '<span style="color:{};font-weight:bold;cursor:help" title="{}">'
-            "{} ({}%)</span>",
+            '<span style="color:{};font-weight:bold">{} ({}%)</span>',
             color,
-            tooltip,
-            result["classe"],
+            obj.ml_classe,
             pct,
         )
-
-    @admin.display(description="\u25b6")
-    def deezer_player(self, obj):
-        if obj.preview_url:
-            return format_html(
-                '<a href="#" class="dz-play-btn" data-preview="{}" '
-                'style="font-size:18px;text-decoration:none;cursor:pointer">'
-                "\u25b6</a>",
-                obj.preview_url,
-            )
-        if obj.deezer_id:
-            url = f"https://www.deezer.com/track/{obj.deezer_id}"
-            return format_html(
-                '<a href="{}" target="_blank" rel="noopener" '
-                'style="font-size:14px;text-decoration:none">'
-                "\u25b6</a>",
-                url,
-            )
-        return "-"
 
     @admin.display(description="Àlbum")
     def album_nom(self, obj):
@@ -260,6 +207,7 @@ class CancoAdmin(admin.ModelAdmin):
             for canco in queryset.iterator():
                 crear_historial(canco, "aprovada", "ok")
             updated = queryset.update(verificada=True)
+        recalcular_ml_si_cal()
         self.message_user(request, f"{updated} cançons marcades com a verificades.")
 
     @admin.action(description="Rebutjar (esborrar)")
@@ -285,6 +233,7 @@ class CancoAdmin(admin.ModelAdmin):
                 crear_historial(canco, "rebutjada", motiu)
                 count += 1
             queryset.delete()
+        recalcular_ml_si_cal()
         self.message_user(request, f"{count} cançons esborrades (motiu: {motiu}).")
 
     @admin.action(description="Rebutjar àlbum sencer")
@@ -314,6 +263,7 @@ class CancoAdmin(admin.ModelAdmin):
             for canco in cancons_to_delete.iterator():
                 crear_historial(canco, "rebutjada", motiu)
             deleted, _ = cancons_to_delete.delete()
+        recalcular_ml_si_cal()
         self.message_user(
             request,
             f"{len(album_ids)} àlbums afectats, {deleted} cançons esborrades (motiu: {motiu}).",
