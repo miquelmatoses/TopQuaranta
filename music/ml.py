@@ -182,8 +182,7 @@ def recalcular_ml_si_cal() -> int:
     except (OSError, ValueError):
         pass
 
-    from django.utils import timezone
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     last_dt = datetime.fromtimestamp(last_recalc, tz=timezone.utc)
     new_decisions = HistorialRevisio.objects.filter(created_at__gt=last_dt).count()

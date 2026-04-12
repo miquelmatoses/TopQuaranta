@@ -4,7 +4,7 @@ from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
 from .ml import classificar_i_guardar, recalcular_ml_si_cal
-from .models import Artista, Canco, HistorialRevisio, Territori
+from .models import Album, Artista, Canco, HistorialRevisio, Territori
 from .verificacio import crear_historial
 
 
@@ -227,14 +227,35 @@ class CancoAdmin(admin.ModelAdmin):
             )
 
         motiu = request.POST.get("motiu", "no_catala")
+        msgs = []
         with transaction.atomic():
-            count = 0
-            for canco in queryset.iterator():
+            # Record historial for selected cancons
+            for canco in queryset.select_related("artista", "album"):
                 crear_historial(canco, "rebutjada", motiu)
-                count += 1
-            queryset.delete()
+
+            if motiu == "artista_incorrecte":
+                artista_ids = set(queryset.values_list("artista_id", flat=True))
+                for artista in Artista.objects.filter(pk__in=artista_ids):
+                    to_delete = Canco.objects.filter(artista=artista, verificada=False)
+                    count = to_delete.count()
+                    to_delete.delete()
+                    artista.deezer_no_trobat = True
+                    artista.deezer_id = None
+                    artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
+                    msgs.append(f"{count} cançons esborrades de l'artista {artista.nom}")
+            elif motiu == "album_incorrecte":
+                album_ids = set(queryset.values_list("album_id", flat=True))
+                for album in Album.objects.filter(pk__in=album_ids):
+                    to_delete = Canco.objects.filter(album=album, verificada=False)
+                    count = to_delete.count()
+                    to_delete.delete()
+                    msgs.append(f"{count} cançons esborrades de l'àlbum {album.nom}")
+            else:
+                count = queryset.count()
+                queryset.delete()
+                msgs.append(f"{count} cançons esborrades")
         recalcular_ml_si_cal()
-        self.message_user(request, f"{count} cançons esborrades (motiu: {motiu}).")
+        self.message_user(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
 
     @admin.action(description="Rebutjar àlbum sencer")
     def rebutjar_album_sencer(self, request, queryset):
@@ -256,18 +277,29 @@ class CancoAdmin(admin.ModelAdmin):
             )
 
         motiu = request.POST.get("motiu", "album_incorrecte")
+        msgs = []
         with transaction.atomic():
-            cancons_to_delete = Canco.objects.filter(
-                album_id__in=album_ids, verificada=False
-            )
-            for canco in cancons_to_delete.iterator():
+            # Record historial for selected cancons
+            for canco in cancons.select_related("artista", "album"):
                 crear_historial(canco, "rebutjada", motiu)
-            deleted, _ = cancons_to_delete.delete()
+
+            if motiu == "artista_incorrecte":
+                artista_ids = set(cancons.values_list("artista_id", flat=True))
+                for artista in Artista.objects.filter(pk__in=artista_ids):
+                    to_delete = Canco.objects.filter(artista=artista, verificada=False)
+                    count = to_delete.count()
+                    to_delete.delete()
+                    artista.deezer_no_trobat = True
+                    artista.deezer_id = None
+                    artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
+                    msgs.append(f"{count} cançons de l'artista {artista.nom}")
+            else:
+                deleted, _ = Canco.objects.filter(
+                    album_id__in=album_ids, verificada=False
+                ).delete()
+                msgs.append(f"{deleted} cançons de {len(album_ids)} àlbums")
         recalcular_ml_si_cal()
-        self.message_user(
-            request,
-            f"{len(album_ids)} àlbums afectats, {deleted} cançons esborrades (motiu: {motiu}).",
-        )
+        self.message_user(request, f"Motiu: {motiu}. Esborrades: " + "; ".join(msgs) + ".")
 
 
 @admin.register(HistorialRevisio)
