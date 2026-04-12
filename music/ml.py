@@ -37,7 +37,7 @@ FEATURE_NAMES = [
     "mes_llancament",
     "any_llancament",
     "nb_cancons_aprovades_artista",
-    "isrc_registrant_hash",
+    "ratio_rebuig_registrant",
     "isrc_any",
     "isrc_prefix_q",
 ]
@@ -80,6 +80,34 @@ def _get_isrc_prefix_rejection_ratio(isrc: str) -> float:
     return rej / total
 
 
+def _get_registrant_rejection_ratio(isrc: str) -> float:
+    from music.models import HistorialRevisio
+    registrant = isrc[2:5] if len(isrc) >= 5 else ""
+    if not registrant:
+        return 0.5
+    decs = HistorialRevisio.objects.filter(
+        canco_isrc__regex=r"^.{2}" + registrant
+    )
+    total = decs.count()
+    if total < 3:
+        return 0.5
+    return decs.filter(decisio="rebutjada").count() / total
+
+
+def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> float:
+    from music.models import HistorialRevisio
+    registrant = isrc[2:5] if len(isrc) >= 5 else ""
+    if not registrant:
+        return 0.5
+    decs = HistorialRevisio.objects.filter(
+        canco_isrc__regex=r"^.{2}" + registrant
+    ).exclude(pk=exclude_pk)
+    total = decs.count()
+    if total < 3:
+        return 0.5
+    return decs.filter(decisio="rebutjada").count() / total
+
+
 def _build_features(canco) -> list[float]:
     """Extract feature vector from a Canco."""
     artista = canco.artista
@@ -108,7 +136,7 @@ def _build_features(canco) -> list[float]:
         float(canco.data_llancament.month if canco.data_llancament else 0),
         float(canco.data_llancament.year if canco.data_llancament else 0),
         float(nb_approved),
-        float(hash(isrc[2:5]) % 10000 if len(isrc) >= 5 else 0),
+        float(_get_registrant_rejection_ratio(isrc)),
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
     ]
@@ -153,7 +181,7 @@ def _build_features_from_historial(rec) -> list[float]:
         float(rec.data_llancament.month if rec.data_llancament else 0),
         float(rec.data_llancament.year if rec.data_llancament else 0),
         0.0,  # nb_cancons_aprovades not available in historial
-        float(hash(isrc[2:5]) % 10000 if len(isrc) >= 5 else 0),
+        float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
     ]
