@@ -202,7 +202,7 @@ class CancoAdmin(admin.ModelAdmin):
     def viasona_link(self, obj):
         from django.utils.http import urlencode
         q = f"{obj.artista.nom} {obj.nom}"
-        url = "https://www.viasona.cat/cerca?" + urlencode({"q": q})
+        url = "https://www.viasona.cat/cerca?" + urlencode({"que": q})
         return format_html(
             '<a href="{}" target="_blank" rel="noopener" '
             'style="font-size:12px">\U0001f50d</a>',
