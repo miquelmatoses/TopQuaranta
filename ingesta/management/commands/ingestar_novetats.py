@@ -1,0 +1,302 @@
+import difflib
+import logging
+from datetime import date, timedelta
+
+from django.core.management.base import BaseCommand
+from django.db import IntegrityError, transaction
+from django.db.models import F
+from django.utils import timezone
+
+from ingesta.clients import deezer
+from ingesta.clients.deezer import _parse_date
+from music.ml import classificar_i_guardar
+from music.models import Album, Artista, Canco
+
+logger = logging.getLogger(__name__)
+
+RECORD_TYPE_MAP = {
+    "album": "album",
+    "single": "single",
+    "ep": "ep",
+    "compile": "album",
+}
+
+
+def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
+    try:
+        return Artista.objects.get(deezer_id=deezer_id)
+    except Artista.DoesNotExist:
+        pass
+    try:
+        return Artista.objects.create(
+            nom=name,
+            lastfm_nom=name,
+            deezer_id=deezer_id,
+            aprovat=False,
+            auto_descobert=True,
+            font_descoberta="deezer_contributor",
+        )
+    except IntegrityError:
+        return Artista.objects.filter(deezer_id=deezer_id).first()
+
+
+class Command(BaseCommand):
+    help = "Incremental Deezer ingestion with priority queue: P1=ISRC backfill, P2=album tracks, P3=new albums."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--limit", type=int, default=None, help="Max API calls.")
+        parser.add_argument("--dry-run", action="store_true")
+
+    def handle(self, *args, **options):
+        limit = options["limit"]
+        dry_run = options["dry_run"]
+
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN — no DB writes."))
+
+        calls = 0
+        p1 = 0
+        p2 = 0
+        p3 = 0
+        cutoff = date.today() - timedelta(days=365)
+        # Track seen IDs in dry-run to avoid infinite loops
+        seen_p1: set[int] = set()
+        seen_p2: set[int] = set()
+        seen_p3: set[int] = set()
+
+        while True:
+            if deezer.quota_exhausted():
+                self.stdout.write(self.style.ERROR("Quota Deezer exhaurida."))
+                break
+
+            if limit and calls >= limit:
+                break
+
+            # --- P1: tracks with deezer_id but no ISRC ---
+            p1_qs = Canco.objects.filter(
+                deezer_id__isnull=False, isrc=""
+            ).select_related("artista", "album")
+            if seen_p1:
+                p1_qs = p1_qs.exclude(pk__in=seen_p1)
+            canco = p1_qs.first()
+            if canco:
+                calls += 1
+                p1 += 1
+                if dry_run:
+                    self.stdout.write(f"  P1 track {canco.deezer_id} ({canco.nom})")
+                    seen_p1.add(canco.pk)
+                    continue
+
+                data = deezer._get(f"{deezer.API_BASE}/track/{canco.deezer_id}")
+                if deezer.quota_exhausted():
+                    break
+                if data:
+                    self._process_track_data(canco, data)
+                    self.stdout.write(f"  P1 track {canco.deezer_id} → ISRC={canco.isrc}")
+                continue
+
+            # --- P2: albums with deezer_id but cancons_ingerades=False ---
+            p2_qs = Album.objects.filter(
+                deezer_id__isnull=False, cancons_ingerades=False
+            ).select_related("artista")
+            if seen_p2:
+                p2_qs = p2_qs.exclude(pk__in=seen_p2)
+            album = p2_qs.first()
+            if album:
+                calls += 1
+                p2 += 1
+                if dry_run:
+                    self.stdout.write(f"  P2 album {album.deezer_id} ({album.nom})")
+                    seen_p2.add(album.pk)
+                    continue
+
+                tracks = deezer.get_album_tracks(album.deezer_id)
+                if deezer.quota_exhausted():
+                    break
+                created = 0
+                for track_data in tracks:
+                    was_new = self._create_track(album, track_data)
+                    if was_new:
+                        created += 1
+                    calls += 1  # each track = 1 API call in get_album_tracks
+                album.cancons_ingerades = True
+                album.save(update_fields=["cancons_ingerades"])
+                self.stdout.write(
+                    f"  P2 album {album.deezer_id} ({album.nom}) → {created} cançons creades"
+                )
+                continue
+
+            # --- P3: approved artists, oldest checked first ---
+            p3_qs = Artista.objects.filter(
+                aprovat=True,
+                deezer_id__isnull=False,
+                deezer_no_trobat=False,
+            ).order_by(
+                F("last_checked_deezer").asc(nulls_first=True)
+            )
+            if seen_p3:
+                p3_qs = p3_qs.exclude(pk__in=seen_p3)
+            artista = p3_qs.first()
+            if not artista:
+                self.stdout.write("  No more work to do.")
+                break
+
+            calls += 1
+            p3 += 1
+            if dry_run:
+                self.stdout.write(
+                    f"  P3 artista {artista.nom} (dz={artista.deezer_id}, "
+                    f"last_checked={artista.last_checked_deezer})"
+                )
+                seen_p3.add(artista.pk)
+                continue
+
+            albums_data = deezer.get_artist_albums(artista.deezer_id, min_date=cutoff)
+            if deezer.quota_exhausted():
+                break
+            new_albums = 0
+            for album_data in albums_data:
+                was_new = self._create_album(artista, album_data)
+                if was_new:
+                    new_albums += 1
+            artista.last_checked_deezer = timezone.now()
+            artista.save(update_fields=["last_checked_deezer"])
+            self.stdout.write(
+                f"  P3 artista {artista.nom} → {new_albums} àlbums nous "
+                f"(de {len(albums_data)} totals)"
+            )
+
+            if calls % 100 == 0:
+                self.stdout.write(
+                    f"  ... {calls} crides (P1={p1}, P2={p2}, P3={p3})"
+                )
+
+        quota_msg = "Sí" if deezer.quota_exhausted() else "No"
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"\nTotal crides: {calls} | P1: {p1} | P2: {p2} | P3: {p3} | "
+                f"Quota exhaurida: {quota_msg}"
+            )
+        )
+
+    def _process_track_data(self, canco: Canco, data: dict) -> None:
+        """Update a Canco with full track data from Deezer."""
+        canco.isrc = data.get("isrc", "") or canco.isrc
+        canco.preview_url = data.get("preview", "") or canco.preview_url
+
+        # Fix album date if track.album.release_date is earlier
+        album_date_str = data.get("album", {}).get("release_date", "")
+        if album_date_str:
+            album_date = _parse_date(album_date_str)
+            if album_date and (
+                not canco.album.data_llancament
+                or album_date < canco.album.data_llancament
+            ):
+                canco.album.data_llancament = album_date
+                canco.album.save(update_fields=["data_llancament"])
+                canco.data_llancament = album_date
+
+        # Resolve main artist from contributors
+        contributors = data.get("contributors", [])
+        if contributors:
+            main = contributors[0]
+            main_id = main.get("id")
+            main_name = main.get("name", "")
+            if main_id and main_id != canco.artista.deezer_id:
+                real_artista = _get_or_create_artista(main_id, main_name)
+                if real_artista:
+                    canco.artista = real_artista
+
+            # Add secondary contributors
+            for c in contributors[1:]:
+                c_id = c.get("id")
+                c_name = c.get("name", "")
+                if c_id and c_id != canco.artista.deezer_id:
+                    collab = _get_or_create_artista(c_id, c_name)
+                    if collab:
+                        canco.artistes_col.add(collab)
+
+        canco.save(update_fields=["isrc", "preview_url", "artista_id", "data_llancament"])
+        classificar_i_guardar(canco)
+
+    def _create_track(self, album: Album, track_data: dict) -> bool:
+        """Create a Canco from track data if it doesn't exist. Returns True if new."""
+        dz_id = track_data["id"]
+        isrc = track_data.get("isrc", "")
+
+        # Skip if already exists
+        if Canco.objects.filter(deezer_id=dz_id).exists():
+            return False
+        if isrc and Canco.objects.filter(isrc=isrc).exists():
+            return False
+
+        # Resolve main artist
+        contributors = track_data.get("contributors", [])
+        artista = album.artista
+        if contributors:
+            main = contributors[0]
+            main_id = main.get("id")
+            main_name = main.get("name", "")
+            if main_id and main_id != artista.deezer_id:
+                resolved = _get_or_create_artista(main_id, main_name)
+                if resolved:
+                    artista = resolved
+
+        # Fix album date
+        album_date_str = track_data.get("album_release_date", "")
+        if album_date_str:
+            album_date = _parse_date(album_date_str)
+            if album_date and (
+                not album.data_llancament or album_date < album.data_llancament
+            ):
+                album.data_llancament = album_date
+                album.save(update_fields=["data_llancament"])
+
+        try:
+            canco = Canco.objects.create(
+                deezer_id=dz_id,
+                nom=track_data["title"],
+                album=album,
+                artista=artista,
+                durada_ms=track_data.get("duration", 0) * 1000 if track_data.get("duration") else None,
+                isrc=isrc,
+                preview_url=track_data.get("preview", ""),
+                data_llancament=album.data_llancament,
+                verificada=False,
+            )
+        except IntegrityError:
+            return False
+
+        # Add collaborators
+        if contributors:
+            for c in contributors[1:]:
+                c_id = c.get("id")
+                c_name = c.get("name", "")
+                if c_id and c_id != artista.deezer_id:
+                    collab = _get_or_create_artista(c_id, c_name)
+                    if collab:
+                        canco.artistes_col.add(collab)
+
+        classificar_i_guardar(canco)
+        return True
+
+    def _create_album(self, artista: Artista, album_data: dict) -> bool:
+        """Create an Album if it doesn't exist. Returns True if new."""
+        dz_id = album_data["id"]
+        if Album.objects.filter(deezer_id=dz_id).exists():
+            return False
+
+        tipus = RECORD_TYPE_MAP.get(album_data.get("record_type", "album"), "album")
+        try:
+            Album.objects.create(
+                deezer_id=dz_id,
+                nom=album_data["title"],
+                artista=artista,
+                data_llancament=album_data.get("release_date"),
+                tipus=tipus,
+                imatge_url=album_data.get("cover_xl", ""),
+                cancons_ingerades=False,
+            )
+        except IntegrityError:
+            return False
+        return True

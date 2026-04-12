@@ -75,6 +75,10 @@ class Artista(models.Model):
     comarca = models.CharField(max_length=255, blank=True)
     provincia = models.CharField(max_length=255, blank=True)
 
+    last_checked_deezer = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Last time Deezer was queried for new albums.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -111,6 +115,10 @@ class Album(models.Model):
     data_llancament = models.DateField(null=True, blank=True)
     tipus = models.CharField(max_length=10, choices=TIPUS_CHOICES, default="album")
     imatge_url = models.URLField(blank=True)
+    cancons_ingerades = models.BooleanField(
+        default=False,
+        help_text="True when tracks have been fetched from Deezer.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

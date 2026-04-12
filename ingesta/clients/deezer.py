@@ -8,7 +8,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 API_BASE = "https://api.deezer.com"
-RATE_LIMIT_SLEEP = 0.1
+RATE_LIMIT_SLEEP = 1.0
 MAX_RETRIES = 3
 
 # Deezer quota error: code 4, "Quota limit exceeded".

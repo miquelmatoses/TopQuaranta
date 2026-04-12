@@ -232,11 +232,21 @@
 - [x] `ranking/algorisme.py::territoris_amb_ranking_propi()`: CAT/VAL/BAL always, others if ≥ threshold
 - [x] `RankingSetmanal.territori` expanded to max_length=4
 
+### Incremental Deezer ingestion (2026-04-12) `DONE`
+
+- [x] `Artista.last_checked_deezer` and `Album.cancons_ingerades` fields (migration 0015)
+- [x] `ingestar_novetats` command with priority queue:
+  - P1: backfill ISRC + preview for tracks missing them
+  - P2: fetch tracks for albums with `cancons_ingerades=False`
+  - P3: check approved artists for new albums (oldest-checked first)
+- [x] Cron: daily at 05:00 (`/etc/cron.d/topquaranta`)
+- [x] Deezer rate limit increased: 0.1s → 1.0s to avoid quota exhaustion
+- [x] `fix_artista_principal` complete: 10,638 tracks checked, 1,316 main artists fixed, 5,063 collaborators added
+
 ### Pending
 
 - [ ] Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
 - [ ] Implement `descobrir_artistes` command
-- [ ] Add Wagtail approval queue admin (artists: `aprovat=False`)
 - [ ] Migrate CMS pages to read from new models
 - [ ] Clean up false positive `deezer_id` matches (Aion, Animal, etc.) — manual review
 - [x] Populate `deezer_nb_fan`/`deezer_nb_album` for existing 1,894 artists with `deezer_id` (backfill)

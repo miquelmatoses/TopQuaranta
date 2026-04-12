@@ -1142,6 +1142,9 @@ File: `/etc/cron.d/topquaranta` — runs as user `topquaranta`
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
+# Daily Deezer novelty ingestion — 05:00 (priority queue: P1=ISRC, P2=album tracks, P3=new albums)
+0 5 * * *   topquaranta   cd /home/topquaranta/app && python manage.py ingestar_novetats >> /var/log/topquaranta/novetats.log 2>&1
+
 # Daily signal ingestion — 06:00
 0 6 * * *   topquaranta   cd /home/topquaranta/app && python manage.py ingestar_senyal >> /var/log/topquaranta/ingestar.log 2>&1
 
