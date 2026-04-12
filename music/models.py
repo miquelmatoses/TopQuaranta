@@ -63,6 +63,12 @@ class Artista(models.Model):
         help_text="False = pending human review in Wagtail admin.",
     )
 
+    # Deezer metadata (populated by ingestar_metadata)
+    deezer_nb_fan = models.IntegerField(null=True, blank=True)
+    deezer_nb_album = models.IntegerField(null=True, blank=True)
+    deezer_nom = models.CharField(max_length=255, blank=True)
+    deezer_nom_similitud = models.FloatField(null=True, blank=True)
+
     # Location (from legacy artistes table)
     localitat = models.CharField(max_length=255, blank=True)
     comarca = models.CharField(max_length=255, blank=True)
@@ -184,3 +190,51 @@ class Canco(models.Model):
             ).values_list("codi", flat=True)
         )
         return codis
+
+
+class HistorialRevisio(models.Model):
+    DECISIONS = [
+        ("aprovada", "Aprovada"),
+        ("rebutjada", "Rebutjada"),
+    ]
+    MOTIUS = [
+        ("ok", "En català i correcte"),
+        ("no_catala", "La cançó no és en català"),
+        ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
+        ("album_incorrecte", "L'àlbum sencer no pertany al nostre artista"),
+        ("no_musica", "No és música (podcast, audiollibre...)"),
+    ]
+
+    canco_deezer_id = models.BigIntegerField(null=True, blank=True)
+    canco_spotify_id = models.CharField(max_length=50, blank=True)
+    canco_isrc = models.CharField(max_length=20, blank=True)
+
+    canco_nom = models.CharField(max_length=500)
+    artista_nom = models.CharField(max_length=255)
+    artista_territori = models.CharField(max_length=10, blank=True)
+    album_nom = models.CharField(max_length=500, blank=True)
+    data_llancament = models.DateField(null=True, blank=True)
+    isrc_prefix = models.CharField(max_length=5, blank=True)
+
+    artista_deezer_id = models.BigIntegerField(null=True, blank=True)
+    artista_deezer_nb_fan = models.IntegerField(null=True, blank=True)
+    artista_deezer_nb_album = models.IntegerField(null=True, blank=True)
+    artista_nom_deezer = models.CharField(max_length=255, blank=True)
+    artista_nom_similitud = models.FloatField(null=True, blank=True)
+
+    decisio = models.CharField(max_length=20, choices=DECISIONS)
+    motiu = models.CharField(max_length=50, choices=MOTIUS)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Historial de revisió"
+        verbose_name_plural = "Historial de revisions"
+        indexes = [
+            models.Index(fields=["decisio", "motiu"]),
+            models.Index(fields=["canco_isrc"]),
+            models.Index(fields=["artista_deezer_id"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.canco_nom} — {self.decisio} ({self.motiu})"

@@ -1067,6 +1067,73 @@ collabs from non-Catalan artists).
 
 ---
 
+## 10b. Track Verification System (2026-04-12)
+
+### HistorialRevisio model (music/models.py)
+
+Records every approve/reject decision as a snapshot. Fields:
+
+- **Identifiers:** `canco_deezer_id`, `canco_spotify_id`, `canco_isrc`
+- **Snapshot:** `canco_nom`, `artista_nom`, `artista_territori`, `album_nom`,
+  `data_llancament`, `isrc_prefix`
+- **Deezer features:** `artista_deezer_id`, `artista_deezer_nb_fan`,
+  `artista_deezer_nb_album`, `artista_nom_deezer`, `artista_nom_similitud`
+- **Decision:** `decisio` (aprovada/rebutjada), `motiu` (ok/no_catala/
+  artista_incorrecte/album_incorrecte/no_musica)
+
+Read-only in admin. Created via `music/verificacio.py::crear_historial()`.
+
+### Artista Deezer metadata fields
+
+Added to `Artista`: `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`,
+`deezer_nom_similitud`. Populated by `ingestar_metadata` when resolving
+`deezer_id` (calls `deezer.get_artist_info()` + `difflib.SequenceMatcher`).
+
+### Admin actions with motiu
+
+All reject actions show an intermediate confirmation page with a required
+motiu dropdown. Approvals record motiu='ok' automatically. Every action calls
+`crear_historial()` before modifying/deleting records.
+
+Actions:
+- **Aprovar cançó:** `verificada=True`, records historial with motiu='ok'
+- **Rebutjar (esborrar):** intermediate page, motius: no_catala,
+  artista_incorrecte, album_incorrecte, no_musica
+- **Rebutjar àlbum sencer:** intermediate page, motius: artista_incorrecte,
+  album_incorrecte
+- **Marcar sense Deezer i netejar:** intermediate page, motiu:
+  artista_incorrecte
+
+### ML pre-classification (music/ml.py)
+
+Heuristic classifier `pre_classificar(canco)` returns class A/B/C:
+
+| Signal | Effect |
+|---|---|
+| Artist in legacy Spotify | +0.3 (curated) |
+| Deezer fans > 50K | -0.3 (international) |
+| Deezer albums > 20 | -0.2 (international) |
+| Artist name ≤ 3 chars | -0.2 (generic name risk) |
+| Name similarity < 0.6 | -0.3 (bad match) |
+| Name similarity > 0.9 | +0.2 (good match) |
+| ISRC starts with ES | +0.2 (Spanish origin) |
+| Rejection history > 70% | -0.3 |
+| Rejection history < 30% | +0.2 |
+
+Classes: A (≥0.65, green), B (0.35–0.65, orange), C (<0.35, red).
+Shown as column in CancoAdmin with tooltip showing reasons.
+Filterable via MLClasseFilter.
+
+### Collaborator extraction (ingestar_metadata)
+
+`_upsert_track` reads `track["contributors"]` from Deezer full track endpoint.
+For each contributor (excluding the main artist):
+- If exists in DB by `deezer_id` → add to `artistes_col`
+- If not → create `Artista(aprovat=False, auto_descobert=True,
+  font_descoberta='collaborador')` and add to `artistes_col`
+
+---
+
 ## 11. Cron Schedule (production — after full migration)
 
 File: `/etc/cron.d/topquaranta` — runs as user `topquaranta`

@@ -1,9 +1,28 @@
 from django.contrib import admin
 from django.db import transaction
+from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
-from .models import Album, Artista, Canco, Territori
+from .ml import pre_classificar
+from .models import Artista, Canco, HistorialRevisio, Territori
+from .verificacio import crear_historial
 
+
+MOTIUS_REBUIG_CANCO = [
+    ("no_catala", "La cançó no és en català"),
+    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
+    ("album_incorrecte", "L'àlbum sencer no pertany al nostre artista"),
+    ("no_musica", "No és música (podcast, audiollibre...)"),
+]
+
+MOTIUS_REBUIG_ALBUM = [
+    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
+    ("album_incorrecte", "L'àlbum sencer no pertany al nostre artista"),
+]
+
+MOTIUS_REBUIG_ARTISTA = [
+    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
+]
 
 
 class TerritoriInline(admin.TabularInline):
@@ -21,7 +40,7 @@ class ArtistaAdmin(admin.ModelAdmin):
     search_fields = ("nom",)
     readonly_fields = ("deezer_link",)
     inlines = [TerritoriInline]
-    exclude = ("territoris",)  # managed via inline instead
+    exclude = ("territoris",)
     actions = ["marcar_sense_deezer_i_netejar"]
 
     @admin.display(description="Territoris")
@@ -37,12 +56,34 @@ class ArtistaAdmin(admin.ModelAdmin):
 
     @admin.action(description="Marcar sense Deezer i netejar")
     def marcar_sense_deezer_i_netejar(self, request, queryset):
+        if "confirmar" not in request.POST:
+            cancons = Canco.objects.filter(
+                artista__in=queryset, verificada=False
+            )
+            return TemplateResponse(
+                request,
+                "admin/music/confirmar_rebuig.html",
+                {
+                    "action_name": "marcar_sense_deezer_i_netejar",
+                    "queryset": queryset,
+                    "total_cancons": cancons.count(),
+                    "total_albums": 0,
+                    "motius": MOTIUS_REBUIG_ARTISTA,
+                    "cancel_url": request.get_full_path(),
+                },
+            )
+
+        motiu = request.POST.get("motiu", "artista_incorrecte")
         total_cancons = 0
         with transaction.atomic():
             for artista in queryset:
-                deleted, _ = Canco.objects.filter(
+                cancons = Canco.objects.filter(
                     artista=artista, verificada=False
-                ).delete()
+                )
+                for canco in cancons.iterator():
+                    crear_historial(canco, "rebutjada", motiu)
+                deleted = cancons.count()
+                cancons.delete()
                 total_cancons += deleted
             updated = queryset.update(deezer_id=None, deezer_no_trobat=True)
         self.message_user(
@@ -101,10 +142,23 @@ class VerificadaFilter(admin.SimpleListFilter):
         return val
 
 
+class MLClasseFilter(admin.SimpleListFilter):
+    title = "Classe ML"
+    parameter_name = "ml_classe"
+
+    def lookups(self, request, model_admin):
+        return [("C", "C — Probablement rebutjar"), ("B", "B — Dubtosa"), ("A", "A — Probablement vàlida")]
+
+    def queryset(self, request, queryset):
+        # Filtering happens in get_queryset; this just stores the value
+        return queryset
+
+
 @admin.register(Canco)
 class CancoAdmin(admin.ModelAdmin):
     list_display = (
         "deezer_player",
+        "ml_display",
         "nom",
         "artista",
         "album_nom",
@@ -116,7 +170,7 @@ class CancoAdmin(admin.ModelAdmin):
         "get_territoris_display",
     )
     list_display_links = ("nom",)
-    list_filter = (VerificadaFilter, "data_llancament")
+    list_filter = (VerificadaFilter, MLClasseFilter, "data_llancament")
     search_fields = ("nom", "artista__nom")
     ordering = ("-data_llancament",)
     list_per_page = 50
@@ -126,14 +180,46 @@ class CancoAdmin(admin.ModelAdmin):
     class Media:
         js = ("music/js/deezer_player.js",)
 
-    @admin.display(description="▶")
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Store ML filter value for use in changelist
+        self._ml_filter = request.GET.get("ml_classe")
+        return qs
+
+    def get_changelist_instance(self, request):
+        cl = super().get_changelist_instance(request)
+        if self._ml_filter:
+            filtered_pks = []
+            for obj in cl.queryset:
+                result = pre_classificar(obj)
+                if result["classe"] == self._ml_filter:
+                    filtered_pks.append(obj.pk)
+            cl.queryset = cl.queryset.filter(pk__in=filtered_pks)
+        return cl
+
+    @admin.display(description="ML")
+    def ml_display(self, obj):
+        result = pre_classificar(obj)
+        colors = {"A": "#28a745", "B": "#fd7e14", "C": "#dc3545"}
+        color = colors.get(result["classe"], "#666")
+        tooltip = "; ".join(result["raons"]) if result["raons"] else "Cap senyal"
+        return format_html(
+            '<span style="color:{};font-weight:bold;cursor:help" title="{}">'
+            "{} ({:.0f}%)</span>",
+            color,
+            tooltip,
+            result["classe"],
+            result["confiança"] * 100,
+        )
+
+    @admin.display(description="\u25b6")
     def deezer_player(self, obj):
         if not obj.deezer_id:
             return "-"
         return format_html(
             '<a href="#" class="dz-play-btn" data-deezer-id="{}" '
             'style="font-size:18px;text-decoration:none;cursor:pointer">'
-            '\u25B6</a>',
+            "\u25b6</a>",
             obj.deezer_id,
         )
 
@@ -159,27 +245,82 @@ class CancoAdmin(admin.ModelAdmin):
     def get_territoris_display(self, obj):
         return ", ".join(obj.artista.territoris.values_list("codi", flat=True))
 
-    @admin.action(description="Marcar com a verificada")
+    @admin.action(description="Aprovar cançó")
     def marcar_verificada(self, request, queryset):
-        updated = queryset.update(verificada=True)
+        with transaction.atomic():
+            for canco in queryset.iterator():
+                crear_historial(canco, "aprovada", "ok")
+            updated = queryset.update(verificada=True)
         self.message_user(request, f"{updated} cançons marcades com a verificades.")
 
     @admin.action(description="Rebutjar (esborrar)")
     def rebutjar_esborrar(self, request, queryset):
-        count = queryset.count()
-        queryset.delete()
-        self.message_user(request, f"{count} cançons esborrades.")
+        if "confirmar" not in request.POST:
+            return TemplateResponse(
+                request,
+                "admin/music/confirmar_rebuig.html",
+                {
+                    "action_name": "rebutjar_esborrar",
+                    "queryset": queryset,
+                    "total_cancons": queryset.count(),
+                    "total_albums": queryset.values("album_id").distinct().count(),
+                    "motius": MOTIUS_REBUIG_CANCO,
+                    "cancel_url": request.get_full_path(),
+                },
+            )
+
+        motiu = request.POST.get("motiu", "no_catala")
+        with transaction.atomic():
+            count = 0
+            for canco in queryset.iterator():
+                crear_historial(canco, "rebutjada", motiu)
+                count += 1
+            queryset.delete()
+        self.message_user(request, f"{count} cançons esborrades (motiu: {motiu}).")
 
     @admin.action(description="Rebutjar àlbum sencer")
     def rebutjar_album_sencer(self, request, queryset):
-        album_ids = set(
-            queryset.values_list("album_id", flat=True).distinct()
-        )
+        album_ids = set(queryset.values_list("album_id", flat=True).distinct())
+        cancons = Canco.objects.filter(album_id__in=album_ids, verificada=False)
+
+        if "confirmar" not in request.POST:
+            return TemplateResponse(
+                request,
+                "admin/music/confirmar_rebuig.html",
+                {
+                    "action_name": "rebutjar_album_sencer",
+                    "queryset": queryset,
+                    "total_cancons": cancons.count(),
+                    "total_albums": len(album_ids),
+                    "motius": MOTIUS_REBUIG_ALBUM,
+                    "cancel_url": request.get_full_path(),
+                },
+            )
+
+        motiu = request.POST.get("motiu", "album_incorrecte")
         with transaction.atomic():
-            deleted, _ = Canco.objects.filter(
+            cancons_to_delete = Canco.objects.filter(
                 album_id__in=album_ids, verificada=False
-            ).delete()
+            )
+            for canco in cancons_to_delete.iterator():
+                crear_historial(canco, "rebutjada", motiu)
+            deleted, _ = cancons_to_delete.delete()
         self.message_user(
             request,
-            f"{len(album_ids)} àlbums afectats, {deleted} cançons no verificades esborrades.",
+            f"{len(album_ids)} àlbums afectats, {deleted} cançons esborrades (motiu: {motiu}).",
         )
+
+
+@admin.register(HistorialRevisio)
+class HistorialRevisioAdmin(admin.ModelAdmin):
+    list_display = ("canco_nom", "artista_nom", "decisio", "motiu", "created_at")
+    list_filter = ("decisio", "motiu")
+    search_fields = ("canco_nom", "artista_nom")
+    readonly_fields = [f.name for f in HistorialRevisio._meta.get_fields()]
+    ordering = ("-created_at",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

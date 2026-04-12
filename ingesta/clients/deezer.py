@@ -85,6 +85,22 @@ def search_artist(nom: str) -> dict | None:
     return None
 
 
+def get_artist_info(deezer_id: int) -> dict | None:
+    """
+    Fetch artist details from Deezer.
+    Returns {"id": int, "name": str, "nb_fan": int, "nb_album": int} or None.
+    """
+    data = _get(f"{API_BASE}/artist/{deezer_id}")
+    if not data:
+        return None
+    return {
+        "id": data.get("id"),
+        "name": data.get("name", ""),
+        "nb_fan": data.get("nb_fan", 0),
+        "nb_album": data.get("nb_album", 0),
+    }
+
+
 def get_artist_albums(deezer_id: int, min_date: date | None = None) -> list[dict]:
     """
     Fetch albums for a Deezer artist, optionally filtered by release date.
@@ -140,9 +156,13 @@ def get_album_tracks(album_id: int) -> list[dict]:
     for item in data.get("data", []):
         track_id = item["id"]
 
-        # Fetch full track to get ISRC
+        # Fetch full track to get ISRC and contributors
         full = _get(f"{API_BASE}/track/{track_id}")
         isrc = full.get("isrc", "") if full else ""
+        contributors = []
+        if full:
+            for c in full.get("contributors", []):
+                contributors.append({"id": c.get("id"), "name": c.get("name", "")})
 
         artist = item.get("artist", {})
         tracks.append({
@@ -152,6 +172,7 @@ def get_album_tracks(album_id: int) -> list[dict]:
             "isrc": isrc,
             "artist_id": artist.get("id"),
             "artist_name": artist.get("name", ""),
+            "contributors": contributors,
         })
 
     return tracks

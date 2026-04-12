@@ -1,3 +1,4 @@
+import difflib
 import logging
 from datetime import date, timedelta
 
@@ -225,11 +226,18 @@ class Command(BaseCommand):
                 artista.nom, candidate_name, candidate_id,
             )
 
+        # Populate Deezer metadata
+        self._populate_deezer_metadata(artista, candidate_id, candidate_name)
+
         try:
             with transaction.atomic():
                 artista.deezer_id = candidate_id
                 artista.deezer_no_trobat = False
-                artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
+                artista.save(update_fields=[
+                    "deezer_id", "deezer_no_trobat",
+                    "deezer_nb_fan", "deezer_nb_album",
+                    "deezer_nom", "deezer_nom_similitud",
+                ])
         except IntegrityError:
             logger.warning(
                 "Deezer ID %d already assigned to another artist — "
@@ -252,6 +260,19 @@ class Command(BaseCommand):
                 if track.get("isrc", "").upper() == expected_isrc.upper():
                     return True
         return False
+
+    def _populate_deezer_metadata(
+        self, artista: Artista, deezer_id: int, deezer_name: str
+    ) -> None:
+        """Fetch and set Deezer metadata fields on the artista (not saved yet)."""
+        info = deezer.get_artist_info(deezer_id)
+        if info:
+            artista.deezer_nb_fan = info["nb_fan"]
+            artista.deezer_nb_album = info["nb_album"]
+        artista.deezer_nom = deezer_name
+        artista.deezer_nom_similitud = difflib.SequenceMatcher(
+            None, artista.nom.lower(), deezer_name.lower()
+        ).ratio()
 
     def _upsert_album(
         self, artista: Artista, data: dict, force: bool
@@ -307,12 +328,28 @@ class Command(BaseCommand):
                     defaults=defaults,
                 )
 
-        # Link collaborators if this track has a different main artist on Deezer
-        if (created or force) and data.get("artist_id"):
-            deezer_artist_id = data["artist_id"]
-            if deezer_artist_id != artista.deezer_id:
-                collabs = Artista.objects.filter(deezer_id=deezer_artist_id)
-                if collabs.exists():
-                    canco.artistes_col.add(*collabs)
+        # Link collaborators from Deezer contributors
+        if (created or force) and data.get("contributors"):
+            for contributor in data["contributors"]:
+                c_id = contributor.get("id")
+                c_name = contributor.get("name", "")
+                if not c_id or c_id == artista.deezer_id:
+                    continue
+                try:
+                    collab = Artista.objects.get(deezer_id=c_id)
+                except Artista.DoesNotExist:
+                    collab = Artista.objects.create(
+                        nom=c_name,
+                        lastfm_nom=c_name,
+                        deezer_id=c_id,
+                        aprovat=False,
+                        auto_descobert=True,
+                        font_descoberta="collaborador",
+                    )
+                    logger.info(
+                        "Created collaborator Artista '%s' (deezer_id=%d)",
+                        c_name, c_id,
+                    )
+                canco.artistes_col.add(collab)
 
         return created

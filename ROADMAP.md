@@ -203,18 +203,32 @@
 - Admin must review and approve before tracks enter the pipeline
 - Prevents false positives (Aion metal, anime, etc.) from polluting rankings
 
+### Track verification system (2026-04-12) `DONE`
+
+- [x] `HistorialRevisio` model — records every approve/reject with motiu and snapshot (migration 0009)
+- [x] Artista Deezer metadata: `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
+- [x] `music/verificacio.py::crear_historial()` — snapshot helper called before delete/modify
+- [x] Admin actions with intermediate confirmation page and required motiu
+- [x] ML heuristic classifier `music/ml.py::pre_classificar()` — classes A/B/C
+- [x] ML column in CancoAdmin with color and tooltip, MLClasseFilter
+- [x] `HistorialRevisioAdmin` — read-only admin for review history
+- [x] 50 initial decisions imported via `scripts/importar_decisions_inicials.py`
+
+### Collaborator extraction from Deezer (2026-04-12) `DONE`
+
+- [x] `deezer.get_artist_info()` — fetches nb_fan, nb_album for metadata
+- [x] `deezer.get_album_tracks()` — now returns `contributors` list from full track endpoint
+- [x] `ingestar_metadata._upsert_track()` — reads contributors, creates collaborator Artista if needed
+- [x] `ingestar_metadata._resolve_deezer_id()` → populates `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
+
 ### Pending
 
 - [ ] Audit `scripts/update_from_viasona.py` → rebuild in `ingesta/clients/viasona.py`
-- [ ] Implement collaborator detection in `ingesta/pipeline.py`
 - [ ] Implement `descobrir_artistes` command
 - [ ] Add Wagtail approval queue admin (artists: `aprovat=False`)
-- [ ] Add Wagtail track verification queue UI
-  - Weekly queue of pending new tracks (`verificada=False`, ~30 max)
-  - One-click approve/reject by admin
-  - Replaces legacy workflow: Spotify playlists reviewed manually a few days/week
 - [ ] Migrate CMS pages to read from new models
 - [ ] Clean up false positive `deezer_id` matches (Aion, Animal, etc.) — manual review
+- [ ] Populate `deezer_nb_fan`/`deezer_nb_album` for existing 1,894 artists with `deezer_id` (backfill)
 
 **Go/no-go:**
 - Discovery runs without crash
