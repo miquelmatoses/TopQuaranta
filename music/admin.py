@@ -1,10 +1,9 @@
 from django.contrib import admin
 from django.contrib import messages
-from django.db import transaction
+from django.db import connection, transaction
+from django.db.models import Count, Q
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
-
-from django.db import connection
 
 from .ml import classificar_i_guardar, recalcular_ml_si_cal
 from .models import Album, Artista, Canco, HistorialRevisio, Territori
@@ -394,6 +393,10 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
             super()
             .get_queryset(request)
             .filter(aprovat=False, auto_descobert=True)
+            .annotate(
+                nb_verif=Count("cancons", filter=Q(cancons__verificada=True))
+            )
+            .order_by("-nb_verif")
         )
 
     def get_urls(self):
@@ -460,9 +463,9 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
             result = [row[0] for row in cursor.fetchall()]
         return JsonResponse(result, safe=False)
 
-    @admin.display(description="Cançons verif.")
+    @admin.display(description="Cançons verif.", ordering="nb_verif")
     def nb_cancons_verificades(self, obj):
-        return obj.cancons.filter(verificada=True).count()
+        return getattr(obj, "nb_verif", 0)
 
     @admin.display(description="Deezer")
     def deezer_artista_link(self, obj):
