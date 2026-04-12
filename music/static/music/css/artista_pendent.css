@@ -1,0 +1,7 @@
+.tq-territori,
+.tq-comarca,
+.tq-localitat {
+    padding: 3px 4px;
+    min-width: 140px;
+    font-size: 12px;
+}

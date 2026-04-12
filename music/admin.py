@@ -370,11 +370,24 @@ class ArtistaPendent(Artista):
 
 @admin.register(ArtistaPendent)
 class ArtistaPendentAdmin(admin.ModelAdmin):
-    list_display = ("nom", "deezer_id", "nb_cancons_verificades", "localitat", "comarca", "font_descoberta")
-    list_editable = ("localitat", "comarca")
+    list_display = (
+        "nom",
+        "deezer_artista_link",
+        "viasona_link",
+        "nb_cancons_verificades",
+        "territori_select",
+        "comarca_select",
+        "localitat_select",
+        "font_descoberta",
+    )
     search_fields = ("nom",)
-    readonly_fields = ("deezer_link",)
     actions = ["aprovar_artista", "descartar_artista"]
+
+    # Keep localitat/comarca in list_editable for Django form handling,
+    # but hide them visually — the cascading selects replace them.
+    class Media:
+        js = ("music/js/artista_pendent.js",)
+        css = {"all": ("music/css/artista_pendent.css",)}
 
     def get_queryset(self, request):
         return (
@@ -383,16 +396,114 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
             .filter(aprovat=False, auto_descobert=True)
         )
 
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [
+            path(
+                "municipis/territoris/",
+                self.admin_site.admin_view(self._api_territoris),
+                name="artista_pendent_territoris",
+            ),
+            path(
+                "municipis/comarques/",
+                self.admin_site.admin_view(self._api_comarques),
+                name="artista_pendent_comarques",
+            ),
+            path(
+                "municipis/municipis/",
+                self.admin_site.admin_view(self._api_municipis),
+                name="artista_pendent_municipis",
+            ),
+        ]
+        return custom + urls
+
+    def _api_territoris(self, request):
+        from django.http import JsonResponse
+        result = []
+        seen = set()
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT DISTINCT "Territori" FROM municipis ORDER BY 1')
+            for (territori,) in cursor.fetchall():
+                codi = _MUNICIPIS_TERRITORI_MAP.get(territori)
+                if codi and codi not in seen:
+                    result.append({"codi": codi, "nom": territori})
+                    seen.add(codi)
+        return JsonResponse(result, safe=False)
+
+    def _api_comarques(self, request):
+        from django.http import JsonResponse
+        territori_codi = request.GET.get("territori", "")
+        # Reverse-map codi → municipis.Territori name
+        reverse_map = {v: k for k, v in _MUNICIPIS_TERRITORI_MAP.items()}
+        territori_nom = reverse_map.get(territori_codi, "")
+        if not territori_nom:
+            return JsonResponse([], safe=False)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT DISTINCT "Comarca" FROM municipis WHERE "Territori" = %s ORDER BY 1',
+                [territori_nom],
+            )
+            result = [row[0] for row in cursor.fetchall()]
+        return JsonResponse(result, safe=False)
+
+    def _api_municipis(self, request):
+        from django.http import JsonResponse
+        comarca = request.GET.get("comarca", "")
+        if not comarca:
+            return JsonResponse([], safe=False)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT "Municipi" FROM municipis WHERE "Comarca" = %s ORDER BY 1',
+                [comarca],
+            )
+            result = [row[0] for row in cursor.fetchall()]
+        return JsonResponse(result, safe=False)
+
     @admin.display(description="Cançons verif.")
     def nb_cancons_verificades(self, obj):
         return obj.cancons.filter(verificada=True).count()
 
     @admin.display(description="Deezer")
-    def deezer_link(self, obj):
+    def deezer_artista_link(self, obj):
         if not obj.deezer_id:
             return "-"
         url = f"https://www.deezer.com/artist/{obj.deezer_id}"
-        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">\U0001f517</a>', url
+        )
+
+    @admin.display(description="Viasona")
+    def viasona_link(self, obj):
+        from django.utils.http import urlencode
+        url = "https://www.viasona.cat/cerca?" + urlencode({"que": obj.nom})
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">\U0001f50d</a>', url
+        )
+
+    @admin.display(description="Territori")
+    def territori_select(self, obj):
+        return format_html(
+            '<select class="tq-territori" data-artista-id="{}" data-field="territori">'
+            '<option value="">-- Territori --</option></select>',
+            obj.pk,
+        )
+
+    @admin.display(description="Comarca")
+    def comarca_select(self, obj):
+        return format_html(
+            '<select class="tq-comarca" data-artista-id="{}" data-field="comarca">'
+            '<option value="">-- Comarca --</option></select>',
+            obj.pk,
+        )
+
+    @admin.display(description="Localitat")
+    def localitat_select(self, obj):
+        return format_html(
+            '<select class="tq-localitat" data-artista-id="{}" data-field="localitat">'
+            '<option value="">-- Localitat --</option></select>',
+            obj.pk,
+        )
 
     @admin.action(description="Aprovar artista")
     def aprovar_artista(self, request, queryset):
@@ -400,11 +511,18 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
         errs = []
         comarca_map = _get_comarca_map()
         for artista in queryset:
+            # Read values from cascading selects (hidden fields injected by JS)
+            comarca = request.POST.get(f"pendent_comarca_{artista.pk}", "") or artista.comarca
+            localitat = request.POST.get(f"pendent_localitat_{artista.pk}", "") or artista.localitat
+            if comarca:
+                artista.comarca = comarca
+            if localitat:
+                artista.localitat = localitat
             if not artista.localitat or not artista.comarca:
                 errs.append(f"{artista.nom}: falta localitat o comarca")
                 continue
             artista.aprovat = True
-            artista.save(update_fields=["aprovat"])
+            artista.save(update_fields=["aprovat", "localitat", "comarca"])
             codi = comarca_map.get(artista.comarca.strip())
             if codi:
                 t = Territori.objects.filter(codi=codi).first()
@@ -423,7 +541,6 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
         for artista in queryset:
             has_verified = artista.cancons.filter(verificada=True).exists()
             if has_verified:
-                # Keep but mark permanently not approved
                 artista.auto_descobert = False
                 artista.save(update_fields=["auto_descobert"])
                 kept += 1
