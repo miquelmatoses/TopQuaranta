@@ -203,13 +203,14 @@ class CancoAdmin(admin.ModelAdmin):
         colors = {"A": "#28a745", "B": "#fd7e14", "C": "#dc3545"}
         color = colors.get(result["classe"], "#666")
         tooltip = "; ".join(result["raons"]) if result["raons"] else "Cap senyal"
+        pct = f"{float(result['confiança']) * 100:.0f}"
         return format_html(
             '<span style="color:{};font-weight:bold;cursor:help" title="{}">'
-            "{} ({:.0f}%)</span>",
+            "{} ({}%)</span>",
             color,
             tooltip,
             result["classe"],
-            result["confiança"] * 100,
+            pct,
         )
 
     @admin.display(description="\u25b6")
