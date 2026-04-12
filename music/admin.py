@@ -4,6 +4,8 @@ from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
+from django.db import connection
+
 from .ml import classificar_i_guardar, recalcular_ml_si_cal
 from .models import Album, Artista, Canco, HistorialRevisio, Territori
 from .verificacio import crear_historial
@@ -15,6 +17,32 @@ MOTIUS_REBUIG_ARTISTA = [
     ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
 ]
 
+# comarca → territory code from municipis table (cached at module level)
+_COMARCA_MAP: dict[str, str] | None = None
+_MUNICIPIS_TERRITORI_MAP = {
+    "Catalunya": "CAT",
+    "País Valencià": "VAL",
+    "Illes": "BAL",
+    "Catalunya del Nord": "CNO",
+    "Andorra": "AND",
+    "Franja de Ponent": "FRA",
+    "L'Alguer": "ALG",
+    "El Carxe": "CAR",
+}
+
+
+def _get_comarca_map() -> dict[str, str]:
+    global _COMARCA_MAP
+    if _COMARCA_MAP is None:
+        _COMARCA_MAP = {}
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT DISTINCT "Comarca", "Territori" FROM municipis')
+            for comarca, territori in cursor.fetchall():
+                codi = _MUNICIPIS_TERRITORI_MAP.get(territori)
+                if codi and comarca:
+                    _COMARCA_MAP[comarca.strip()] = codi
+    return _COMARCA_MAP
+
 
 class TerritoriInline(admin.TabularInline):
     model = Artista.territoris.through
@@ -25,14 +53,14 @@ class TerritoriInline(admin.TabularInline):
 
 @admin.register(Artista)
 class ArtistaAdmin(admin.ModelAdmin):
-    list_display = ("nom", "get_territoris_display", "deezer_id", "deezer_no_trobat", "aprovat")
-    list_editable = ("deezer_id",)
-    list_filter = ("deezer_no_trobat", "aprovat", "territoris")
+    list_display = ("nom", "get_territoris_display", "deezer_id", "deezer_no_trobat", "aprovat", "localitat", "comarca")
+    list_editable = ("deezer_id", "localitat", "comarca")
+    list_filter = ("deezer_no_trobat", "aprovat", "auto_descobert", "territoris")
     search_fields = ("nom",)
     readonly_fields = ("deezer_link",)
     inlines = [TerritoriInline]
     exclude = ("territoris",)
-    actions = ["marcar_sense_deezer_i_netejar"]
+    actions = ["marcar_sense_deezer_i_netejar", "aprovar_artista"]
 
     @admin.display(description="Territoris")
     def get_territoris_display(self, obj):
@@ -84,7 +112,47 @@ class ArtistaAdmin(admin.ModelAdmin):
             f"{total_cancons} cançons no verificades esborrades.",
         )
 
+    @admin.action(description="Aprovar artista")
+    def aprovar_artista(self, request, queryset):
+        ok = 0
+        errors = []
+        comarca_map = _get_comarca_map()
+        for artista in queryset:
+            if not artista.localitat or not artista.comarca:
+                errors.append(f"{artista.nom}: falta localitat o comarca")
+                continue
+            artista.aprovat = True
+            artista.save(update_fields=["aprovat"])
+            # Auto-assign territory from comarca
+            codi = comarca_map.get(artista.comarca.strip())
+            if codi:
+                t = Territori.objects.filter(codi=codi).first()
+                if t:
+                    artista.territoris.set([t])
+                    self.message_user(
+                        request,
+                        f"{artista.nom}: aprovat, territori={codi}",
+                    )
+            ok += 1
+        if errors:
+            self.message_user(
+                request,
+                "Errors: " + "; ".join(errors),
+                level=messages.ERROR,
+            )
+        if ok:
+            self.message_user(request, f"{ok} artistes aprovats.")
+
     def save_model(self, request, obj, form, change):
+        # Auto-assign territory from comarca on save
+        if change and "comarca" in form.changed_data and obj.comarca:
+            comarca_map = _get_comarca_map()
+            codi = comarca_map.get(obj.comarca.strip())
+            if codi:
+                t = Territori.objects.filter(codi=codi).first()
+                if t:
+                    obj.territoris.set([t])
+
         super().save_model(request, obj, form, change)
         if change and "deezer_id" in form.changed_data and obj.deezer_id is not None:
             deleted, _ = Canco.objects.filter(
@@ -289,6 +357,82 @@ class CancoAdmin(admin.ModelAdmin):
                 msgs.append(f"{deleted} cançons de {len(album_ids)} àlbums")
         recalcular_ml_si_cal()
         self.message_user(request, f"Motiu: {motiu}. Esborrades: " + "; ".join(msgs) + ".")
+
+
+class ArtistaPendent(Artista):
+    """Proxy model for auto-discovered artists pending approval."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Artista pendent"
+        verbose_name_plural = "Artistes pendents"
+
+
+@admin.register(ArtistaPendent)
+class ArtistaPendentAdmin(admin.ModelAdmin):
+    list_display = ("nom", "deezer_id", "nb_cancons_verificades", "localitat", "comarca", "font_descoberta")
+    list_editable = ("localitat", "comarca")
+    search_fields = ("nom",)
+    readonly_fields = ("deezer_link",)
+    actions = ["aprovar_artista", "descartar_artista"]
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .filter(aprovat=False, auto_descobert=True)
+        )
+
+    @admin.display(description="Cançons verif.")
+    def nb_cancons_verificades(self, obj):
+        return obj.cancons.filter(verificada=True).count()
+
+    @admin.display(description="Deezer")
+    def deezer_link(self, obj):
+        if not obj.deezer_id:
+            return "-"
+        url = f"https://www.deezer.com/artist/{obj.deezer_id}"
+        return format_html('<a href="{}" target="_blank" rel="noopener">{}</a>', url, url)
+
+    @admin.action(description="Aprovar artista")
+    def aprovar_artista(self, request, queryset):
+        ok = 0
+        errs = []
+        comarca_map = _get_comarca_map()
+        for artista in queryset:
+            if not artista.localitat or not artista.comarca:
+                errs.append(f"{artista.nom}: falta localitat o comarca")
+                continue
+            artista.aprovat = True
+            artista.save(update_fields=["aprovat"])
+            codi = comarca_map.get(artista.comarca.strip())
+            if codi:
+                t = Territori.objects.filter(codi=codi).first()
+                if t:
+                    artista.territoris.set([t])
+            ok += 1
+        if errs:
+            self.message_user(request, "; ".join(errs), level=messages.ERROR)
+        if ok:
+            self.message_user(request, f"{ok} artistes aprovats.")
+
+    @admin.action(description="Descartar artista")
+    def descartar_artista(self, request, queryset):
+        deleted = 0
+        kept = 0
+        for artista in queryset:
+            has_verified = artista.cancons.filter(verificada=True).exists()
+            if has_verified:
+                # Keep but mark permanently not approved
+                artista.auto_descobert = False
+                artista.save(update_fields=["auto_descobert"])
+                kept += 1
+            else:
+                artista.delete()
+                deleted += 1
+        self.message_user(
+            request, f"{deleted} artistes eliminats, {kept} descartats (tenen cançons verificades)."
+        )
 
 
 @admin.register(HistorialRevisio)

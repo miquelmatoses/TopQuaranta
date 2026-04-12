@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -84,6 +85,12 @@ class Artista(models.Model):
     def __str__(self) -> str:
         codis = ",".join(self.territoris.values_list("codi", flat=True))
         return f"{self.nom} ({codis})" if codis else self.nom
+
+    def clean(self):
+        if self.aprovat and not self.localitat:
+            raise ValidationError("No es pot aprovar un artista sense localitat.")
+        if self.aprovat and not self.comarca:
+            raise ValidationError("No es pot aprovar un artista sense comarca.")
 
     def get_territoris(self) -> list[str]:
         """Return list of territory codes for this artist."""

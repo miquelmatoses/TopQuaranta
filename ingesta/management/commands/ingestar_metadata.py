@@ -302,14 +302,46 @@ class Command(BaseCommand):
 
         return album, created
 
+    def _resolve_main_artist(
+        self, artista: Artista, contributors: list[dict]
+    ) -> Artista:
+        """
+        Determine the real main artist from Deezer contributors.
+        The first contributor (or the one with role="Main") is the real main artist.
+        If it differs from the album's artist, get or create it.
+        """
+        if not contributors:
+            return artista
+
+        main = contributors[0]
+        main_id = main.get("id")
+        main_name = main.get("name", "")
+
+        if not main_id or main_id == artista.deezer_id:
+            return artista
+
+        try:
+            return Artista.objects.get(deezer_id=main_id)
+        except Artista.DoesNotExist:
+            new_artista = Artista.objects.create(
+                nom=main_name,
+                lastfm_nom=main_name,
+                deezer_id=main_id,
+                aprovat=False,
+                auto_descobert=True,
+                font_descoberta="deezer_contributor",
+            )
+            logger.info(
+                "Created main artist '%s' (deezer_id=%d) from track contributor",
+                main_name, main_id,
+            )
+            return new_artista
+
     def _upsert_track(
         self, artista: Artista, album: Album, data: dict, force: bool
     ) -> bool:
         """Create or update a Canco from Deezer data. Returns True if new."""
-        # The full track endpoint returns track.album.release_date which is the
-        # original release date. The /artist/albums and /album/{id} endpoints
-        # can return re-release dates (e.g. 2025 for a 2020 album).
-        # If the track's album date is earlier, it's the real one — fix the album.
+        # Fix album date from track.album.release_date (original, not re-release)
         track_album_date_str = data.get("album_release_date", "")
         if track_album_date_str:
             from ingesta.clients.deezer import _parse_date
@@ -321,10 +353,14 @@ class Command(BaseCommand):
                 album.data_llancament = track_album_date
                 album.save(update_fields=["data_llancament"])
 
+        # Resolve the real main artist from contributors
+        contributors = data.get("contributors", [])
+        real_artista = self._resolve_main_artist(artista, contributors)
+
         defaults = {
             "nom": data["title"],
             "album": album,
-            "artista": artista,
+            "artista": real_artista,
             "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
             "isrc": data.get("isrc", ""),
             "preview_url": data.get("preview", ""),
@@ -344,12 +380,12 @@ class Command(BaseCommand):
                     defaults=defaults,
                 )
 
-        # Link collaborators from Deezer contributors
-        if (created or force) and data.get("contributors"):
-            for contributor in data["contributors"]:
+        # Link other contributors as collaborators
+        if (created or force) and contributors:
+            for contributor in contributors:
                 c_id = contributor.get("id")
                 c_name = contributor.get("name", "")
-                if not c_id or c_id == artista.deezer_id:
+                if not c_id or c_id == real_artista.deezer_id:
                     continue
                 try:
                     collab = Artista.objects.get(deezer_id=c_id)
