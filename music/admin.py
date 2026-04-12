@@ -305,6 +305,7 @@ class CancoAdmin(admin.ModelAdmin):
                     artista.deezer_no_trobat = True
                     artista.deezer_id = None
                     artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
+                    Album.objects.filter(artista=artista).update(descartat=True)
                     msgs.append(f"{count} cançons esborrades de l'artista {artista.nom}")
             elif motiu == "album_incorrecte":
                 album_ids = set(queryset.values_list("album_id", flat=True))
@@ -312,10 +313,17 @@ class CancoAdmin(admin.ModelAdmin):
                     to_delete = Canco.objects.filter(album=album, verificada=False)
                     count = to_delete.count()
                     to_delete.delete()
+                    album.descartat = True
+                    album.save(update_fields=["descartat"])
                     msgs.append(f"{count} cançons esborrades de l'àlbum {album.nom}")
             else:
                 count = queryset.count()
+                album_ids = set(queryset.values_list("album_id", flat=True))
                 queryset.delete()
+                # Mark albums with no remaining unverified tracks as descartat
+                for album_id in album_ids:
+                    if not Canco.objects.filter(album_id=album_id, verificada=False).exists():
+                        Album.objects.filter(pk=album_id).update(descartat=True)
                 msgs.append(f"{count} cançons esborrades")
         recalcular_ml_si_cal()
         self.message_user(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
@@ -348,11 +356,13 @@ class CancoAdmin(admin.ModelAdmin):
                     artista.deezer_no_trobat = True
                     artista.deezer_id = None
                     artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
+                    Album.objects.filter(artista=artista).update(descartat=True)
                     msgs.append(f"{count} cançons de l'artista {artista.nom}")
             else:
                 deleted, _ = Canco.objects.filter(
                     album_id__in=album_ids, verificada=False
                 ).delete()
+                Album.objects.filter(pk__in=album_ids).update(descartat=True)
                 msgs.append(f"{deleted} cançons de {len(album_ids)} àlbums")
         recalcular_ml_si_cal()
         self.message_user(request, f"Motiu: {motiu}. Esborrades: " + "; ".join(msgs) + ".")

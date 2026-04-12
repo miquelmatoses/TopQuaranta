@@ -6,7 +6,7 @@ from django.db import transaction
 
 from ingesta.clients.lastfm import get_track_info
 from music.models import Canco
-from ranking.models import IngestaDiari
+from ranking.models import SenyalDiari
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class Command(BaseCommand):
 
         # Skip tracks already ingested for this date
         already_ingested = set(
-            IngestaDiari.objects.filter(data=target_date).values_list(
+            SenyalDiari.objects.filter(data=target_date).values_list(
                 "canco_id", flat=True
             )
         )
@@ -109,7 +109,7 @@ class Command(BaseCommand):
 
             if result is not None:
                 with transaction.atomic():
-                    IngestaDiari.objects.update_or_create(
+                    SenyalDiari.objects.update_or_create(
                         canco=canco,
                         data=target_date,
                         defaults={
@@ -122,7 +122,7 @@ class Command(BaseCommand):
                 success += 1
             else:
                 with transaction.atomic():
-                    IngestaDiari.objects.update_or_create(
+                    SenyalDiari.objects.update_or_create(
                         canco=canco,
                         data=target_date,
                         defaults={

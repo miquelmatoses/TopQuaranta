@@ -64,7 +64,7 @@ class Artista(models.Model):
         help_text="False = pending human review in Wagtail admin.",
     )
 
-    # Deezer metadata (populated by ingestar_metadata)
+    # Deezer metadata (populated by obtenir_metadata)
     deezer_nb_fan = models.IntegerField(null=True, blank=True)
     deezer_nb_album = models.IntegerField(null=True, blank=True)
     deezer_nom = models.CharField(max_length=255, blank=True)
@@ -115,9 +115,13 @@ class Album(models.Model):
     data_llancament = models.DateField(null=True, blank=True)
     tipus = models.CharField(max_length=10, choices=TIPUS_CHOICES, default="album")
     imatge_url = models.URLField(blank=True)
-    cancons_ingerades = models.BooleanField(
+    cancons_obtingudes = models.BooleanField(
         default=False,
         help_text="True when tracks have been fetched from Deezer.",
+    )
+    descartat = models.BooleanField(
+        default=False,
+        help_text="True if all tracks were rejected. Skipped by obtenir_novetats.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

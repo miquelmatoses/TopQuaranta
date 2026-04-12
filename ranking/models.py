@@ -55,13 +55,13 @@ class ConfiguracioGlobal(models.Model):
         return obj
 
 
-class IngestaDiari(models.Model):
+class SenyalDiari(models.Model):
     """
     Daily Last.fm snapshot per track.
     Stores raw cumulative values. One row per (canco, data).
     """
 
-    canco = models.ForeignKey(Canco, on_delete=models.CASCADE, related_name="ingestes")
+    canco = models.ForeignKey(Canco, on_delete=models.CASCADE, related_name="senyals")
     data = models.DateField()
 
     lastfm_playcount = models.BigIntegerField(null=True)

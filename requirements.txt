@@ -8,3 +8,5 @@ Pillow==11.3.0
 python-telegram-bot==21.11
 spotipy==2.25.1
 gunicorn==23.0.0
+scikit-learn>=1.7
+joblib>=1.5

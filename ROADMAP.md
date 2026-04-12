@@ -30,7 +30,7 @@
 
 - [x] Create `legacy/models.py` with unmanaged models (`LegacyArtista`, `LegacyCanco`)
 - [x] Create `music/models.py` (`Territori` M2M, `Artista`, `Album`, `Canco`) and migrate
-- [x] Create `ranking/models.py` (`ConfiguracioGlobal`, `IngestaDiari`, `RankingSetmanal`) and migrate
+- [x] Create `ranking/models.py` (`ConfiguracioGlobal`, `SenyalDiari`, `RankingSetmanal`) and migrate
 - [x] Write `importar_legacy` management command
   - Territory mapping: `'Catalunya'→CAT`, `'País Valencià'→VAL`, `'Balears'/'Illes'→BAL`
   - Status mapping: `'go'→aprovat=True`
@@ -61,10 +61,10 @@
 - [x] Add `LASTFM_API_KEY` + `LASTFM_API_SECRET` to `.env`
 - [x] Implement `ingesta/clients/lastfm.py::get_track_info()`
 - [x] Write `test_lastfm_client.py` (4 tests: success, track_not_found, network_error, rate_limit_sleep)
-- [x] Implement `ingestar_senyal` management command
-- [x] Run `ingestar_senyal --dry-run --limit 50`, inspect output
-- [x] Set up cron: `ingestar_senyal` daily at 06:00 (`/etc/cron.d/topquaranta`)
-- [x] `ingestar_senyal` filters by `verificada=True` — safe from Deezer false positives
+- [x] Implement `obtenir_senyal` management command
+- [x] Run `obtenir_senyal --dry-run --limit 50`, inspect output
+- [x] Set up cron: `obtenir_senyal` daily at 06:00 (`/etc/cron.d/topquaranta`)
+- [x] `obtenir_senyal` filters by `verificada=True` — safe from Deezer false positives
 - [ ] Fix `lastfm_nom` mismatches (manual or heuristic) ← **next**
 - [ ] Run daily ingestion for 7 consecutive days
 
@@ -73,13 +73,13 @@
   - Root cause: bulk verification on 2026-04-11 included non-Catalan false positives from Deezer
   - 57.4% error rate in daily cron triggered the fix
 - Eligible tracks (verified, recent, approved): recalculated from 10,351 legacy-only verified
-- `ingestar_senyal` only processes `verificada=True` cançons — Deezer tracks now excluded until manual review
+- `obtenir_senyal` only processes `verificada=True` cançons — Deezer tracks now excluded until manual review
 - Idempotency verified (re-run skips already-ingested)
 
 **Go/no-go (pending):**
 - ≥ 80% of active tracks have successful Last.fm data after 5 days
 - Error rate < 20%
-- `IngestaDiari` rows show non-zero `playcount` and `listeners`
+- `SenyalDiari` rows show non-zero `playcount` and `listeners`
 - `score_entrada` is NULL everywhere (correct — formula not defined yet)
 
 ---
@@ -144,7 +144,7 @@
   - `get_artist_albums()`: with date filter + pagination
   - `get_album_tracks()`: fetches full track endpoint for ISRC (100% coverage)
   - Rate limit 0.1s, retry 3x with backoff, never raises
-- [x] Implement `ingestar_metadata` command using Deezer
+- [x] Implement `obtenir_metadata` command using Deezer
   - Iterates `Artista.objects.filter(aprovat=True)`
   - Artist resolution: search by name → ISRC cross-validation → save `deezer_id`
   - If ISRC validation fails or no search match → `deezer_no_trobat=True`, skip
@@ -177,7 +177,7 @@
 
 ### Production runs (2026-04-10 → 2026-04-11) `DONE`
 
-- **ingestar_metadata complete:** 2,273 artists processed
+- **obtenir_metadata complete:** 2,273 artists processed
   - 1,894 with `deezer_id` (83%) — name search + ISRC matching combined
   - 370 `deezer_no_trobat=True` (16%)
   - 10 pending (no Deezer match yet, not marked as not found)
@@ -198,7 +198,7 @@
 
 ### Safety gate: `verificada` field
 
-- `ingestar_senyal` (daily cron) only processes `verificada=True` tracks
+- `obtenir_senyal` (daily cron) only processes `verificada=True` tracks
 - New Deezer tracks enter with `verificada=False` — blocked from ranking
 - Admin must review and approve before tracks enter the pipeline
 - Prevents false positives (Aion metal, anime, etc.) from polluting rankings
@@ -209,7 +209,7 @@
 - [x] Artista Deezer metadata: `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
 - [x] `music/verificacio.py::crear_historial()` — snapshot helper called before delete/modify
 - [x] Admin actions with intermediate confirmation page and required motiu
-- [x] ML heuristic classifier `music/ml.py::pre_classificar()` — classes A/B/C
+- [x] ML Random Forest classifier `music/ml.py::pre_classificar()` — classes A/B/C (607 samples, heuristic fallback)
 - [x] ML column in CancoAdmin with color and tooltip, MLClasseFilter
 - [x] `HistorialRevisioAdmin` — read-only admin for review history
 - [x] 50 initial decisions imported via `scripts/importar_decisions_inicials.py`
@@ -218,8 +218,8 @@
 
 - [x] `deezer.get_artist_info()` — fetches nb_fan, nb_album for metadata
 - [x] `deezer.get_album_tracks()` — now returns `contributors` list from full track endpoint
-- [x] `ingestar_metadata._upsert_track()` — reads contributors, creates collaborator Artista if needed
-- [x] `ingestar_metadata._resolve_deezer_id()` → populates `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
+- [x] `obtenir_metadata._upsert_track()` — reads contributors, creates collaborator Artista if needed
+- [x] `obtenir_metadata._resolve_deezer_id()` → populates `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud`
 
 ### Territory expansion (2026-04-12) `DONE`
 
@@ -234,14 +234,25 @@
 
 ### Incremental Deezer ingestion (2026-04-12) `DONE`
 
-- [x] `Artista.last_checked_deezer` and `Album.cancons_ingerades` fields (migration 0015)
-- [x] `ingestar_novetats` command with priority queue:
+- [x] `Artista.last_checked_deezer` and `Album.cancons_obtingudes` fields (migration 0015)
+- [x] `obtenir_novetats` command with priority queue:
   - P1: backfill ISRC + preview for tracks missing them
-  - P2: fetch tracks for albums with `cancons_ingerades=False`
+  - P2: fetch tracks for albums with `cancons_obtingudes=False`
   - P3: check approved artists for new albums (oldest-checked first)
 - [x] Cron: daily at 05:00 (`/etc/cron.d/topquaranta`)
 - [x] Deezer rate limit increased: 0.1s → 1.0s to avoid quota exhaustion
 - [x] `fix_artista_principal` complete: 10,638 tracks checked, 1,316 main artists fixed, 5,063 collaborators added
+
+### Terminology refactoring (2026-04-13) `DONE`
+
+- [x] Renamed: ingestar_novetats→obtenir_novetats, ingestar_senyal→obtenir_senyal, ingestar_metadata→obtenir_metadata
+- [x] Renamed: cancons_ingerades→cancons_obtingudes (migration 0016)
+- [x] Renamed: IngestaDiari→SenyalDiari (migration ranking/0003, RenameModel preserving data)
+- [x] Album.descartat field (migration 0016) — marks rejected albums, skipped by obtenir_novetats
+- [x] Admin marks album.descartat=True on all reject actions
+- [x] Random Forest classifier trained with 607 decisions (replaces heuristic)
+  - Top features: ratio_rebuig_artista (36%), ratio_rebuig_isrc_prefix (28%), isrc_es (10%)
+  - Model at music/ml_model.joblib, retrained on each recalcular_ml call
 
 ### Pending
 

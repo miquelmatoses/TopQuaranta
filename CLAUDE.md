@@ -307,15 +307,15 @@ table/view can be dropped (Phase 6).
 │   │   ├── lastfm.py              # daily signal
 │   │   └── viasona.py             # scraper for artist discovery
 │   ├── management/commands/
-│   │   ├── ingestar_metadata.py
-│   │   ├── ingestar_senyal.py
+│   │   ├── obtenir_metadata.py
+│   │   ├── obtenir_senyal.py
 │   │   ├── descobrir_artistes.py
 │   │   └── importar_legacy.py     # one-off: import artistes + cançons from legacy
 │   ├── pipeline.py
 │   └── tests/
 ├── ranking/                       # algorithm + signal storage
 │   ├── migrations/
-│   ├── models.py                  # IngestaDiari, RankingSetmanal, ConfiguracioGlobal
+│   ├── models.py                  # SenyalDiari, RankingSetmanal, ConfiguracioGlobal
 │   ├── management/commands/
 │   │   └── calcular_ranking.py
 │   ├── algorisme.py               # 14-CTE SQL extracted from legacy views
@@ -560,7 +560,7 @@ class ConfiguracioGlobal(models.Model):
         return obj
 
 
-class IngestaDiari(models.Model):
+class SenyalDiari(models.Model):
     """
     Daily Last.fm snapshot per track.
 
@@ -683,7 +683,7 @@ The 14-CTE SQL currently lives inside PostgreSQL views (not versioned).
 Phase 4 extracts it into `ranking/algorisme.py` as a parameterized Python function
 that executes the SQL. The algorithm logic stays identical. Changes:
 
-- Input: `score_entrada` from `IngestaDiari` (was `popularitat` from `ranking_diari`)
+- Input: `score_entrada` from `SenyalDiari` (was `popularitat` from `ranking_diari`)
 - Coefficients: read from `ConfiguracioGlobal` Django model (was `configuracio_global` raw table)
 - Territory codes: `CAT`/`VAL`/`BAL` (was `cat`/`pv`/`ib` strings)
 - Output: written to `RankingSetmanal` via Django ORM (was raw INSERT ON CONFLICT)
@@ -782,11 +782,11 @@ Manual Wagtail entry     ─┘         (or aprovat=True for manual)
                               Approve → aprovat=True
                               Reject  → aprovat=False (keep, avoids re-discovery)
                                            │
-                              ingestar_metadata command
+                              obtenir_metadata command
                               Deezer: tracks released in last 12 months
                               Store ISRC on each Canco
                                            │
-                              ingestar_senyal starts collecting daily Last.fm data
+                              obtenir_senyal starts collecting daily Last.fm data
 ```
 
 ### Deezer metadata scope (approved artists only)
@@ -918,7 +918,7 @@ for the app owner (403 since 2024). Deezer has no such restriction, provides
 **Rate limit:** 0.1s between calls. Retry 3x with exponential backoff.
 Never raises — returns None/[] on error.
 
-**ISRC validation flow (in ingestar_metadata):**
+**ISRC validation flow (in obtenir_metadata):**
 1. Search Deezer by artist name
 2. Find a known Canco with ISRC for this artist
 3. Fetch up to 3 albums from Deezer candidate, check if any track matches ISRC
@@ -965,18 +965,18 @@ python manage.py importar_legacy [--artistes] [--cancons] [--dry-run]
 - Sets `lastfm_nom = nom` initially (to be verified in Phase 2)
 - Prints mapping report: imported / skipped / errors
 
-### 9.2 ingestar_senyal (daily)
+### 9.2 obtenir_senyal (daily)
 
 ```
-python manage.py ingestar_senyal [--data YYYY-MM-DD] [--limit N] [--dry-run]
+python manage.py obtenir_senyal [--data YYYY-MM-DD] [--limit N] [--dry-run]
 ```
 
 - Queries `Canco` where `activa=True`, `artista__aprovat=True`,
   `data_llancament >= today - 365 days`
-- Skips cancons already in `IngestaDiari` for `--data` (idempotent)
+- Skips cancons already in `SenyalDiari` for `--data` (idempotent)
 - Calls `lastfm.get_track_info(artista.lastfm_nom, canco.lastfm_lookup_nom)`
-- Success → `IngestaDiari.update_or_create(canco, data, playcount, listeners)`
-- Failure → `IngestaDiari.update_or_create(canco, data, error=True, error_msg=...)`
+- Success → `SenyalDiari.update_or_create(canco, data, playcount, listeners)`
+- Failure → `SenyalDiari.update_or_create(canco, data, error=True, error_msg=...)`
 - Does NOT compute `score_entrada` — that is a separate step (Phase 3)
 
 ### 9.3 calcular_ranking (weekly — Sundays)
@@ -997,15 +997,15 @@ python manage.py calcular_ranking [--setmana YYYY-MM-DD] [--min-dies N]
 python manage.py actualitzar_score_entrada [--des-de YYYY-MM-DD]
 ```
 
-- Reads all `IngestaDiari` rows where `score_entrada IS NULL`
+- Reads all `SenyalDiari` rows where `score_entrada IS NULL`
 - Applies `ranking/senyal.py::calcular_score_entrada()` to each
 - Updates `score_entrada` in batches of 500 inside `transaction.atomic()`
 - **Only implement this command after Phase 3 formula is defined**
 
-### 9.5 ingestar_metadata (on demand)
+### 9.5 obtenir_metadata (on demand)
 
 ```
-python manage.py ingestar_metadata [--artista-id N] [--force] [--dry-run]
+python manage.py obtenir_metadata [--artista-id N] [--force] [--dry-run]
 ```
 
 - Uses Deezer API (public, no auth) as primary metadata source
@@ -1086,7 +1086,7 @@ Read-only in admin. Created via `music/verificacio.py::crear_historial()`.
 ### Artista Deezer metadata fields
 
 Added to `Artista`: `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`,
-`deezer_nom_similitud`. Populated by `ingestar_metadata` when resolving
+`deezer_nom_similitud`. Populated by `obtenir_metadata` when resolving
 `deezer_id` (calls `deezer.get_artist_info()` + `difflib.SequenceMatcher`).
 
 ### Admin actions with motiu
@@ -1124,7 +1124,7 @@ Classes: A (≥0.65, green), B (0.35–0.65, orange), C (<0.35, red).
 Shown as column in CancoAdmin with tooltip showing reasons.
 Filterable via MLClasseFilter.
 
-### Collaborator extraction (ingestar_metadata)
+### Collaborator extraction (obtenir_metadata)
 
 `_upsert_track` reads `track["contributors"]` from Deezer full track endpoint.
 For each contributor (excluding the main artist):
@@ -1146,7 +1146,7 @@ PATH=/usr/local/bin:/usr/bin:/bin
 0 * * * *   topquaranta   cd /home/topquaranta/app && python manage.py ingestar_novetats >> /var/log/topquaranta/novetats.log 2>&1
 
 # Daily signal ingestion — 06:00
-0 6 * * *   topquaranta   cd /home/topquaranta/app && python manage.py ingestar_senyal >> /var/log/topquaranta/ingestar.log 2>&1
+0 6 * * *   topquaranta   cd /home/topquaranta/app && python manage.py obtenir_senyal >> /var/log/topquaranta/ingestar.log 2>&1
 
 # Weekly ranking — Sunday 08:00
 0 8 * * 0   topquaranta   cd /home/topquaranta/app && python manage.py calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1

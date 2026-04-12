@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import IngestaDiari
+from .models import SenyalDiari
 
 
-@admin.register(IngestaDiari)
-class IngestaDiariAdmin(admin.ModelAdmin):
+@admin.register(SenyalDiari)
+class SenyalDiariAdmin(admin.ModelAdmin):
     list_display = ("canco", "data", "lastfm_playcount", "lastfm_listeners", "error")
     list_filter = ("data", "error")
     search_fields = ("canco__nom", "canco__artista__nom")

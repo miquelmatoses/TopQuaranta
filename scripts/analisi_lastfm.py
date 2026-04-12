@@ -1,5 +1,5 @@
 """
-One-off analysis of Last.fm ingestion data from IngestaDiari.
+One-off analysis of Last.fm ingestion data from SenyalDiari.
 
 Usage:
     DJANGO_SETTINGS_MODULE=topquaranta.settings.production \
@@ -18,7 +18,7 @@ django.setup()
 from django.db.models import Avg, Count, Min, Max, Q
 from django.db.models.functions import Coalesce
 
-from ranking.models import IngestaDiari
+from ranking.models import SenyalDiari
 
 
 def percentile(values, p):
@@ -39,7 +39,7 @@ def main():
     print("1. FILES PER DATA")
     print("=" * 70)
     dates = (
-        IngestaDiari.objects.values("data")
+        SenyalDiari.objects.values("data")
         .annotate(
             total=Count("id"),
             ok=Count("id", filter=Q(error=False)),
@@ -48,7 +48,7 @@ def main():
         .order_by("data")
     )
     if not dates:
-        print("  Cap dada a IngestaDiari!")
+        print("  Cap dada a SenyalDiari!")
         return
 
     for d in dates:
@@ -62,11 +62,11 @@ def main():
     print(f"2. ESTADÍSTIQUES PER A {latest}")
     print("=" * 70)
 
-    qs_day = IngestaDiari.objects.filter(data=latest, error=False)
+    qs_day = SenyalDiari.objects.filter(data=latest, error=False)
     with_play = qs_day.filter(lastfm_playcount__gt=0).count()
     zero_play = qs_day.filter(lastfm_playcount=0).count()
     null_play = qs_day.filter(lastfm_playcount__isnull=True).count()
-    err_count = IngestaDiari.objects.filter(data=latest, error=True).count()
+    err_count = SenyalDiari.objects.filter(data=latest, error=True).count()
 
     print(f"  playcount > 0:   {with_play}")
     print(f"  playcount = 0:   {zero_play}")
@@ -125,7 +125,7 @@ def main():
 
     print("\n  5 amb error:")
     errs = (
-        IngestaDiari.objects.filter(data=latest, error=True)
+        SenyalDiari.objects.filter(data=latest, error=True)
         .select_related("canco", "canco__artista")[:5]
     )
     for r in errs:

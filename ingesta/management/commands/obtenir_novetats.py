@@ -95,9 +95,9 @@ class Command(BaseCommand):
                     self.stdout.write(f"  P1 track {canco.deezer_id} → ISRC={canco.isrc}")
                 continue
 
-            # --- P2: albums with deezer_id but cancons_ingerades=False ---
+            # --- P2: albums with deezer_id but cancons_obtingudes=False ---
             p2_qs = Album.objects.filter(
-                deezer_id__isnull=False, cancons_ingerades=False
+                deezer_id__isnull=False, cancons_obtingudes=False, descartat=False
             ).select_related("artista")
             if seen_p2:
                 p2_qs = p2_qs.exclude(pk__in=seen_p2)
@@ -119,8 +119,8 @@ class Command(BaseCommand):
                     if was_new:
                         created += 1
                     calls += 1  # each track = 1 API call in get_album_tracks
-                album.cancons_ingerades = True
-                album.save(update_fields=["cancons_ingerades"])
+                album.cancons_obtingudes = True
+                album.save(update_fields=["cancons_obtingudes"])
                 self.stdout.write(
                     f"  P2 album {album.deezer_id} ({album.nom}) → {created} cançons creades"
                 )
@@ -295,7 +295,7 @@ class Command(BaseCommand):
                 data_llancament=album_data.get("release_date"),
                 tipus=tipus,
                 imatge_url=album_data.get("cover_xl", ""),
-                cancons_ingerades=False,
+                cancons_obtingudes=False,
             )
         except IntegrityError:
             return False

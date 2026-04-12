@@ -48,14 +48,14 @@ MOCK_TRACK = {
 
 @pytest.mark.django_db
 class TestIngestarMetadataDeezer:
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_creates_album_and_track_with_known_deezer_id(self, mock_deezer):
         artista = _make_artista(deezer_id=98469)
 
         mock_deezer.get_artist_albums.return_value = [MOCK_ALBUM]
         mock_deezer.get_album_tracks.return_value = [MOCK_TRACK]
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         assert Album.objects.count() == 1
         album = Album.objects.first()
@@ -68,7 +68,7 @@ class TestIngestarMetadataDeezer:
         assert canco.isrc == "ES0001234567"
         assert canco.deezer_id == 500
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_resolves_deezer_id_via_search_and_isrc(self, mock_deezer):
         artista = _make_artista(deezer_id=None)
         # Create a known track with ISRC for validation
@@ -94,25 +94,25 @@ class TestIngestarMetadataDeezer:
             [MOCK_TRACK],
         ]
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
         assert artista.deezer_id == 98469
         assert artista.deezer_no_trobat is False
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_search_fails(self, mock_deezer):
         artista = _make_artista(deezer_id=None)
 
         mock_deezer.search_artist.return_value = None
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
         assert artista.deezer_no_trobat is True
         assert artista.deezer_id is None
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_isrc_validation_fails(self, mock_deezer):
         artista = _make_artista(deezer_id=None)
         album = Album.objects.create(
@@ -133,44 +133,44 @@ class TestIngestarMetadataDeezer:
              "isrc": "DIFFERENT_ISRC", "artist_id": 999, "artist_name": "Wrong"}
         ]
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
         assert artista.deezer_no_trobat is True
         assert artista.deezer_id is None
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_skips_unapproved_artist(self, mock_deezer):
         artista = _make_artista(aprovat=False)
 
         with pytest.raises(CommandError, match="No approved Artista"):
-            call_command("ingestar_metadata", artista_id=artista.pk)
+            call_command("obtenir_metadata", artista_id=artista.pk)
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_dry_run_no_writes(self, mock_deezer):
         _make_artista(deezer_id=98469)
 
-        call_command("ingestar_metadata", dry_run=True)
+        call_command("obtenir_metadata", dry_run=True)
 
         assert Album.objects.count() == 0
         assert Canco.objects.count() == 0
         mock_deezer.search_artist.assert_not_called()
         mock_deezer.get_artist_albums.assert_not_called()
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_idempotent_without_force(self, mock_deezer):
         artista = _make_artista(deezer_id=98469)
 
         mock_deezer.get_artist_albums.return_value = [MOCK_ALBUM]
         mock_deezer.get_album_tracks.return_value = [MOCK_TRACK]
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         assert Album.objects.count() == 1
         assert Canco.objects.count() == 1
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_force_updates_existing(self, mock_deezer):
         artista = _make_artista(deezer_id=98469)
 
@@ -190,7 +190,7 @@ class TestIngestarMetadataDeezer:
             **MOCK_TRACK, "title": "New Track", "isrc": "NEW123",
         }]
 
-        call_command("ingestar_metadata", artista_id=artista.pk, force=True)
+        call_command("obtenir_metadata", artista_id=artista.pk, force=True)
 
         album.refresh_from_db()
         assert album.nom == "New Name"
@@ -199,17 +199,17 @@ class TestIngestarMetadataDeezer:
         assert canco.nom == "New Track"
         assert canco.isrc == "NEW123"
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_skips_deezer_no_trobat_artists(self, mock_deezer):
         artista = _make_artista(deezer_id=None)
         artista.deezer_no_trobat = True
         artista.save()
 
-        call_command("ingestar_metadata")
+        call_command("obtenir_metadata")
 
         mock_deezer.search_artist.assert_not_called()
 
-    @patch("ingesta.management.commands.ingestar_metadata.deezer")
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_accepts_name_match_without_isrc(self, mock_deezer):
         """Artist with no known ISRC tracks — accept name match."""
         artista = _make_artista(deezer_id=None)
@@ -219,7 +219,7 @@ class TestIngestarMetadataDeezer:
         mock_deezer.get_artist_albums.return_value = [MOCK_ALBUM]
         mock_deezer.get_album_tracks.return_value = [MOCK_TRACK]
 
-        call_command("ingestar_metadata", artista_id=artista.pk)
+        call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
         assert artista.deezer_id == 98469
