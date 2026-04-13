@@ -10,3 +10,4 @@ spotipy==2.25.1
 gunicorn==23.0.0
 scikit-learn>=1.7
 joblib>=1.5
+fasttext-wheel>=0.9.2

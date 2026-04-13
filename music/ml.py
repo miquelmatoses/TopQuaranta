@@ -41,7 +41,38 @@ FEATURE_NAMES = [
     "isrc_any",
     "isrc_prefix_q",
     "artista_aprovat",
+    "prob_catala_titol",
 ]
+
+
+FASTTEXT_MODEL_PATH = Path(__file__).parent / "lid.176.ftz"
+_ft_model = None
+
+
+def _get_ft_model():
+    global _ft_model
+    if _ft_model is None and FASTTEXT_MODEL_PATH.exists():
+        import fasttext
+        fasttext.FastText.eprint = lambda x: None
+        _ft_model = fasttext.load_model(str(FASTTEXT_MODEL_PATH))
+    return _ft_model
+
+
+def _prob_catala(text: str) -> float:
+    """Returns probability that text is Catalan (0.0-1.0)."""
+    if not text or not text.strip():
+        return 0.5
+    ft = _get_ft_model()
+    if ft is None:
+        return 0.5
+    try:
+        labels, probs = ft.predict(text.replace("\n", " "), k=5)
+        for label, prob in zip(labels, probs):
+            if label == "__label__ca":
+                return float(prob)
+        return 0.0
+    except Exception:
+        return 0.5
 
 
 def _isrc_category(isrc: str) -> tuple[int, int, int, int]:
@@ -141,6 +172,7 @@ def _build_features(canco) -> list[float]:
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
         float(1 if artista.aprovat else 0),
+        float(_prob_catala(canco.nom)),
     ]
 
 
@@ -187,6 +219,7 @@ def _build_features_from_historial(rec) -> list[float]:
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
         float(_artista_aprovat_from_historial(rec)),
+        float(_prob_catala(rec.canco_nom)),
     ]
 
 
