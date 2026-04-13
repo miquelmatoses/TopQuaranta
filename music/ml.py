@@ -40,6 +40,7 @@ FEATURE_NAMES = [
     "ratio_rebuig_registrant",
     "isrc_any",
     "isrc_prefix_q",
+    "artista_aprovat",
 ]
 
 
@@ -139,6 +140,7 @@ def _build_features(canco) -> list[float]:
         float(_get_registrant_rejection_ratio(isrc)),
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
+        float(1 if artista.aprovat else 0),
     ]
 
 
@@ -184,7 +186,20 @@ def _build_features_from_historial(rec) -> list[float]:
         float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
+        float(_artista_aprovat_from_historial(rec)),
     ]
+
+
+def _artista_aprovat_from_historial(rec) -> int:
+    """Look up whether the artist is currently approved."""
+    from music.models import Artista
+    if rec.artista_deezer_id:
+        try:
+            a = Artista.objects.get(deezer_id=rec.artista_deezer_id)
+            return 1 if a.aprovat else 0
+        except Artista.DoesNotExist:
+            pass
+    return 0
 
 
 def _build_dataset() -> tuple[list, list]:
