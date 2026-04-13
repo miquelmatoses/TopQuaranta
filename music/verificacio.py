@@ -25,6 +25,8 @@ def crear_historial(canco: Canco, decisio: str, motiu: str) -> HistorialRevisio:
         artista_deezer_nb_album=artista.deezer_nb_album,
         artista_nom_deezer=artista.deezer_nom,
         artista_nom_similitud=artista.deezer_nom_similitud,
+        ml_classe_decisio=canco.ml_classe or "",
+        ml_confianca_decisio=canco.ml_confianca,
         decisio=decisio,
         motiu=motiu,
     )

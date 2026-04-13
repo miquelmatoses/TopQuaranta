@@ -643,7 +643,7 @@ class ArtistaPendentAdmin(admin.ModelAdmin):
 
 @admin.register(HistorialRevisio)
 class HistorialRevisioAdmin(admin.ModelAdmin):
-    list_display = ("canco_nom", "artista_nom", "decisio", "motiu", "created_at")
+    list_display = ("canco_nom", "artista_nom", "decisio", "motiu", "ml_classe_decisio", "ml_confianca_decisio", "created_at")
     list_filter = ("decisio", "motiu")
     search_fields = ("canco_nom", "artista_nom")
     readonly_fields = [f.name for f in HistorialRevisio._meta.get_fields()]

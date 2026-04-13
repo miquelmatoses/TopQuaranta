@@ -244,6 +244,15 @@ class HistorialRevisio(models.Model):
     artista_nom_deezer = models.CharField(max_length=255, blank=True)
     artista_nom_similitud = models.FloatField(null=True, blank=True)
 
+    ml_classe_decisio = models.CharField(
+        max_length=1, blank=True,
+        help_text="ML class at the time of decision.",
+    )
+    ml_confianca_decisio = models.FloatField(
+        null=True, blank=True,
+        help_text="ML confidence at the time of decision.",
+    )
+
     decisio = models.CharField(max_length=20, choices=DECISIONS)
     motiu = models.CharField(max_length=50, choices=MOTIUS)
     created_at = models.DateTimeField(auto_now_add=True)
