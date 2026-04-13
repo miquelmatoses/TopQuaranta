@@ -41,10 +41,10 @@ FEATURE_NAMES = [
     "isrc_any",
     "isrc_prefix_q",
     "artista_aprovat",
-] + [f"tfidf_{i}" for i in range(50)]
+] + [f"tfidf_{i}" for i in range(200)]
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
-TFIDF_MAX_FEATURES = 50
+TFIDF_MAX_FEATURES = 200
 _tfidf = None
 
 
@@ -248,6 +248,7 @@ def entrenar_model() -> bool:
         ngram_range=(2, 4),
         max_features=TFIDF_MAX_FEATURES,
         sublinear_tf=True,
+        min_df=2,
     )
     tfidf.fit(titols)
     joblib.dump(tfidf, TFIDF_PATH)
