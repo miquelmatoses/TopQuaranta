@@ -1,4 +1,5 @@
 import difflib
+import fcntl
 import logging
 from datetime import date, timedelta
 
@@ -48,6 +49,21 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true")
 
     def handle(self, *args, **options):
+        lock_file = "/tmp/obtenir_novetats.lock"
+        try:
+            lock = open(lock_file, "w")
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            self.stdout.write("Ja hi ha una instància corrent. Sortint.")
+            return
+
+        try:
+            self._run(lock, *args, **options)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+            lock.close()
+
+    def _run(self, lock, *args, **options):
         limit = options["limit"]
         dry_run = options["dry_run"]
 
