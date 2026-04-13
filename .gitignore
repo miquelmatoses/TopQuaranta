@@ -37,8 +37,9 @@ htmlcov/
 # pytest
 .pytest_cache/
 
-# FastText language model (917KB binary, downloaded separately)
+# ML models (binary, generated locally)
 music/lid.176.ftz
+music/ml_tfidf.joblib
 
 # Claude Code
 .claude/

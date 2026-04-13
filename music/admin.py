@@ -219,7 +219,7 @@ class CancoAdmin(admin.ModelAdmin):
     list_display_links = ("nom",)
     list_filter = (VerificadaFilter, "ml_classe", "data_llancament")
     search_fields = ("nom", "artista__nom")
-    ordering = ("ml_classe", "-data_llancament")
+    ordering = ("-ml_confianca",)
     list_per_page = 50
     raw_id_fields = ("artista", "album")
     actions = ["marcar_verificada", "rebutjar_esborrar", "rebutjar_album_sencer"]
