@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from music.constants import DIES_CADUCITAT
 from music.models import Canco
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
-        cutoff = date.today() - timedelta(days=365)
+        cutoff = date.today() - timedelta(days=DIES_CADUCITAT)
 
         qs = Canco.objects.filter(verificada=False, data_llancament__lt=cutoff)
         count = qs.count()

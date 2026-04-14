@@ -5,12 +5,12 @@ from django.db.models import Count, Q
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
+from .constants import MOTIUS_VALIDS
 from .ml import classificar_i_guardar, recalcular_ml_si_cal
 from .models import Album, Artista, Canco, HistorialRevisio, Territori
+from .services import aprovar_canco, rebutjar_album, rebutjar_artista, rebutjar_canco
 from .verificacio import crear_historial
 
-
-MOTIUS_VALIDS = {"no_catala", "artista_incorrecte", "album_incorrecte", "no_musica"}
 
 MOTIUS_REBUIG_ARTISTA = [
     ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
@@ -95,19 +95,11 @@ class ArtistaAdmin(admin.ModelAdmin):
         total_cancons = 0
         with transaction.atomic():
             for artista in queryset:
-                cancons = Canco.objects.filter(
-                    artista=artista, verificada=False
-                )
-                for canco in cancons.iterator():
-                    crear_historial(canco, "rebutjada", motiu)
-                deleted = cancons.count()
-                cancons.delete()
-                total_cancons += deleted
-            updated = queryset.update(deezer_id=None, deezer_no_trobat=True)
+                total_cancons += rebutjar_artista(artista, motiu)
         recalcular_ml_si_cal()
         self.message_user(
             request,
-            f"{updated} artistes marcats sense Deezer, "
+            f"{queryset.count()} artistes marcats sense Deezer, "
             f"{total_cancons} cançons no verificades esborrades.",
         )
 
@@ -274,11 +266,10 @@ class CancoAdmin(admin.ModelAdmin):
     @admin.action(description="Aprovar cançó")
     def marcar_verificada(self, request, queryset):
         with transaction.atomic():
-            for canco in queryset.iterator():
-                crear_historial(canco, "aprovada", "ok")
-            updated = queryset.update(verificada=True)
+            for canco in queryset.select_related("artista", "album"):
+                aprovar_canco(canco)
         recalcular_ml_si_cal()
-        self.message_user(request, f"{updated} cançons marcades com a verificades.")
+        self.message_user(request, f"{queryset.count()} cançons marcades com a verificades.")
 
     @admin.action(description="Rebutjar (esborrar)")
     def rebutjar_esborrar(self, request, queryset):
@@ -293,34 +284,22 @@ class CancoAdmin(admin.ModelAdmin):
 
         msgs = []
         with transaction.atomic():
-            for canco in queryset.select_related("artista", "album"):
-                crear_historial(canco, "rebutjada", motiu)
-
             if motiu == "artista_incorrecte":
                 artista_ids = set(queryset.values_list("artista_id", flat=True))
                 for artista in Artista.objects.filter(pk__in=artista_ids):
-                    to_delete = Canco.objects.filter(artista=artista, verificada=False)
-                    count = to_delete.count()
-                    to_delete.delete()
-                    artista.deezer_no_trobat = True
-                    artista.deezer_id = None
-                    artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
-                    Album.objects.filter(artista=artista).update(descartat=True)
+                    count = rebutjar_artista(artista, motiu)
                     msgs.append(f"{count} cançons esborrades de l'artista {artista.nom}")
             elif motiu == "album_incorrecte":
                 album_ids = set(queryset.values_list("album_id", flat=True))
                 for album in Album.objects.filter(pk__in=album_ids):
-                    to_delete = Canco.objects.filter(album=album, verificada=False)
-                    count = to_delete.count()
-                    to_delete.delete()
-                    album.descartat = True
-                    album.save(update_fields=["descartat"])
+                    count = rebutjar_album(album, motiu)
                     msgs.append(f"{count} cançons esborrades de l'àlbum {album.nom}")
             else:
+                for canco in queryset.select_related("artista", "album"):
+                    crear_historial(canco, "rebutjada", motiu)
                 count = queryset.count()
                 album_ids = set(queryset.values_list("album_id", flat=True))
                 queryset.delete()
-                # Mark albums with no remaining unverified tracks as descartat
                 for album_id in album_ids:
                     if not Canco.objects.filter(album_id=album_id, verificada=False).exists():
                         Album.objects.filter(pk=album_id).update(descartat=True)
@@ -340,30 +319,21 @@ class CancoAdmin(admin.ModelAdmin):
             return
 
         album_ids = set(queryset.values_list("album_id", flat=True).distinct())
-        cancons = Canco.objects.filter(album_id__in=album_ids, verificada=False)
 
         msgs = []
         with transaction.atomic():
-            for canco in cancons.select_related("artista", "album"):
-                crear_historial(canco, "rebutjada", motiu)
-
             if motiu == "artista_incorrecte":
-                artista_ids = set(cancons.values_list("artista_id", flat=True))
+                artista_ids = set(
+                    Canco.objects.filter(album_id__in=album_ids, verificada=False)
+                    .values_list("artista_id", flat=True)
+                )
                 for artista in Artista.objects.filter(pk__in=artista_ids):
-                    to_delete = Canco.objects.filter(artista=artista, verificada=False)
-                    count = to_delete.count()
-                    to_delete.delete()
-                    artista.deezer_no_trobat = True
-                    artista.deezer_id = None
-                    artista.save(update_fields=["deezer_no_trobat", "deezer_id"])
-                    Album.objects.filter(artista=artista).update(descartat=True)
+                    count = rebutjar_artista(artista, motiu)
                     msgs.append(f"{count} cançons de l'artista {artista.nom}")
             else:
-                deleted, _ = Canco.objects.filter(
-                    album_id__in=album_ids, verificada=False
-                ).delete()
-                Album.objects.filter(pk__in=album_ids).update(descartat=True)
-                msgs.append(f"{deleted} cançons de {len(album_ids)} àlbums")
+                for album in Album.objects.filter(pk__in=album_ids):
+                    count = rebutjar_album(album, motiu)
+                    msgs.append(f"{count} cançons de l'àlbum {album.nom}")
         recalcular_ml_si_cal()
         self.message_user(request, f"Motiu: {motiu}. Esborrades: " + "; ".join(msgs) + ".")
 

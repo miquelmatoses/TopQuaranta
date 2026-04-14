@@ -5,19 +5,12 @@ from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
+from music.constants import MOTIUS_REBUIG
 from music.ml import recalcular_ml_si_cal
-from music.verificacio import crear_historial
-from music.models import Album, Artista, Canco
+from music.models import Artista, Canco
+from music.services import rebutjar_artista, rebutjar_canco
 
 from .models import RankingProvisional, SenyalDiari
-
-
-MOTIUS_REBUIG_CANCO = [
-    ("no_catala", "No és en català"),
-    ("artista_incorrecte", "El perfil Deezer no és el nostre artista"),
-    ("album_incorrecte", "Àlbum incorrecte"),
-    ("no_musica", "No és música"),
-]
 
 
 @admin.register(SenyalDiari)
@@ -78,7 +71,7 @@ class RankingProvisionalAdmin(admin.ModelAdmin):
     list_per_page = 40
     ordering = ("posicio",)
     search_fields = ("canco__nom", "canco__artista__nom")
-    actions = ["rebutjar_canco", "rebutjar_artista"]
+    actions = ["rebutjar_canco_action", "rebutjar_artista_action"]
 
     def has_add_permission(self, request):
         return False
@@ -113,23 +106,23 @@ class RankingProvisionalAdmin(admin.ModelAdmin):
         )
 
     @admin.action(description="Rebutjar cançó (no verificada)")
-    def rebutjar_canco(self, request, queryset):
+    def rebutjar_canco_action(self, request, queryset):
         if "confirmar" not in request.POST:
             return TemplateResponse(
                 request,
                 "admin/music/confirmar_rebuig.html",
                 {
-                    "action_name": "rebutjar_canco",
+                    "action_name": "rebutjar_canco_action",
                     "queryset": queryset,
                     "total_cancons": queryset.count(),
                     "total_albums": 0,
-                    "motius": MOTIUS_REBUIG_CANCO,
+                    "motius": MOTIUS_REBUIG,
                     "cancel_url": request.get_full_path(),
                 },
             )
 
         motiu = request.POST.get("motiu", "")
-        if motiu not in {m[0] for m in MOTIUS_REBUIG_CANCO}:
+        if motiu not in {m[0] for m in MOTIUS_REBUIG}:
             self.message_user(
                 request, "Has de seleccionar un motiu de rebuig.", level=messages.ERROR
             )
@@ -138,17 +131,14 @@ class RankingProvisionalAdmin(admin.ModelAdmin):
         total = 0
         with transaction.atomic():
             for rp in queryset.select_related("canco__artista", "canco__album"):
-                canco = rp.canco
-                crear_historial(canco, "rebutjada", motiu)
-                canco.verificada = False
-                canco.save(update_fields=["verificada"])
+                rebutjar_canco(rp.canco, motiu)
                 rp.delete()
                 total += 1
         recalcular_ml_si_cal()
         self.message_user(request, f"{total} cançons rebutjades (verificada=False).")
 
     @admin.action(description="Rebutjar totes les cançons de l'artista")
-    def rebutjar_artista(self, request, queryset):
+    def rebutjar_artista_action(self, request, queryset):
         if "confirmar" not in request.POST:
             artista_ids = set(
                 queryset.values_list("canco__artista_id", flat=True)
@@ -160,7 +150,7 @@ class RankingProvisionalAdmin(admin.ModelAdmin):
                 request,
                 "admin/music/confirmar_rebuig.html",
                 {
-                    "action_name": "rebutjar_artista",
+                    "action_name": "rebutjar_artista_action",
                     "queryset": queryset,
                     "total_cancons": total_cancons,
                     "total_albums": 0,
@@ -176,21 +166,7 @@ class RankingProvisionalAdmin(admin.ModelAdmin):
         total_cancons = 0
         with transaction.atomic():
             for artista in Artista.objects.filter(pk__in=artista_ids):
-                cancons_no_verif = Canco.objects.filter(
-                    artista=artista, verificada=False
-                )
-                for canco in cancons_no_verif.select_related("album"):
-                    crear_historial(canco, "rebutjada", motiu)
-                deleted = cancons_no_verif.count()
-                cancons_no_verif.delete()
-                total_cancons += deleted
-
-                artista.deezer_id = None
-                artista.deezer_no_trobat = True
-                artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
-                Album.objects.filter(artista=artista).update(descartat=True)
-
-            # Remove provisional ranking rows for these artists
+                total_cancons += rebutjar_artista(artista, motiu)
             RankingProvisional.objects.filter(
                 canco__artista_id__in=artista_ids
             ).delete()

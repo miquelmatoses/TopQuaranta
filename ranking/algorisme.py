@@ -10,8 +10,8 @@ import logging
 from datetime import date, timedelta
 
 from django.db import connection
-from django.db.models import Count
 
+from music.constants import DIES_CADUCITAT
 from music.models import Canco, Territori
 from ranking.models import ConfiguracioGlobal
 
@@ -38,7 +38,7 @@ def territoris_amb_ranking_propi() -> list[str]:
     """
     config = ConfiguracioGlobal.load()
     threshold = config.min_cancons_ranking_propi
-    cutoff = date.today() - timedelta(days=365)
+    cutoff = date.today() - timedelta(days=DIES_CADUCITAT)
 
     result = sorted(TERRITORIS_FIXOS | TERRITORIS_AGREGATS)
 

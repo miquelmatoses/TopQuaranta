@@ -25,12 +25,17 @@ from pathlib import Path
 
 from django.db.models import QuerySet
 
+from .constants import (
+    ML_CLASSE_A_THRESHOLD,
+    ML_CLASSE_B_THRESHOLD,
+    MIN_NEW_DECISIONS,
+    MIN_TRAINING_SAMPLES,
+)
+
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = Path("/home/topquaranta/app/music/ml_model.joblib")
+MODEL_PATH = Path(__file__).parent / "ml_model.joblib"
 LAST_RECALC_FILE = "/tmp/tq_last_ml_recalc"
-MIN_NEW_DECISIONS = 5
-MIN_TRAINING_SAMPLES = 20
 
 FEATURE_NAMES = [
     "isrc_es",
@@ -302,9 +307,9 @@ def pre_classificar(canco) -> dict:
             proba = clf.predict_proba([features])[0]
             # proba[1] = probability of approval (class 1)
             confianca = float(proba[1]) if len(proba) > 1 else float(proba[0])
-            if confianca >= 0.7:
+            if confianca >= ML_CLASSE_A_THRESHOLD:
                 classe = "A"
-            elif confianca >= 0.4:
+            elif confianca >= ML_CLASSE_B_THRESHOLD:
                 classe = "B"
             else:
                 classe = "C"

@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 
+from music.constants import DIES_CADUCITAT
 from music.models import Canco, Territori
 from ranking.algorisme import (
     TERRITORIS_AGREGATS,
@@ -81,7 +82,7 @@ class Command(BaseCommand):
         # Pre-flight: check data availability
         total_verified = Canco.objects.filter(
             verificada=True, activa=True,
-            data_llancament__gte=date.today() - timedelta(days=365),
+            data_llancament__gte=date.today() - timedelta(days=DIES_CADUCITAT),
         ).count()
         with_score = SenyalDiari.objects.filter(
             data__gte=date.today() - timedelta(days=7),
