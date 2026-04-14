@@ -71,7 +71,11 @@ WITH cancons_territori AS (
     FROM ranking_senyaldiari sd
     JOIN music_canco c ON c.id = sd.canco_id
     JOIN music_album a ON a.id = c.album_id
-    JOIN music_artista_territoris mt ON mt.artista_id = c.artista_id
+    LEFT JOIN music_canco_artistes_col col ON col.canco_id = c.id
+    JOIN music_artista_territoris mt ON (
+        mt.artista_id = c.artista_id
+        OR mt.artista_id = col.artista_id
+    )
     WHERE mt.territori_id = %(territori)s
       AND sd.data >= CURRENT_DATE - INTERVAL '7 days'
       AND sd.error = FALSE
@@ -261,7 +265,8 @@ SELECT
     o.score_setmanal,
     o.posicio,
     o.posicio_anterior,
-    o.posicio_anterior - o.posicio AS canvi_posicio
+    o.posicio_anterior - o.posicio AS canvi_posicio,
+    o.dies_en_top
 FROM posicions_final o
 WHERE o.posicio <= 100
 ORDER BY o.score_setmanal DESC

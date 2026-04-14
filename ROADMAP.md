@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-12 — emergency fix: reverted 6,002 Deezer-only cançons to verificada=False
+> Updated: 2026-04-14 — Phase 5 DONE: provisional ranking + admin review
 
 ---
 
@@ -118,7 +118,7 @@
 - [x] Implement `calcular_ranking` management command (`--setmana`, `--territori`, `--dry-run`)
 - [x] First run (2026-04-14): CAT=40, VAL=40, BAL=40 positions saved for week 2026-04-13
 - [ ] Write `test_algorisme.py` (fixture-based, known expected output)
-- [ ] Add to cron (Sunday 08:00) after 7+ days of signal data
+- [x] Added to cron: Saturday 08:00 (official), daily 07:00 (provisional)
 
 **Go/no-go:** all passed
 - Rankings for CAT, VAL, BAL without SQL errors
@@ -128,7 +128,23 @@
 
 ---
 
-## Phase 5 — Distribution (Telegram + images)
+## Phase 5 — Provisional ranking + admin review `DONE`
+
+**Goal:** daily provisional ranking for admin review, weekly official ranking on Saturdays.
+
+- [x] `RankingProvisional` model — rolling daily ranking, truncated and rebuilt each run (migration 0004)
+- [x] `calcular_ranking --provisional` flag — writes to `RankingProvisional` instead of `RankingSetmanal`
+- [x] `algorisme.py`: collaborator territory join (LEFT JOIN `artistes_col`), returns `dies_en_top`
+- [x] `RankingProvisionalAdmin` — read-only list with Deezer/Last.fm links
+- [x] Admin actions: rebutjar cançó (verificada=False + historial), rebutjar artista (deezer_no_trobat + esborrar cançons)
+- [x] `TerritoriProvisionalFilter` — defaults to CAT
+- [x] Cron: provisional ranking daily at 07:00, official ranking Saturday at 08:00
+
+**Summary:** RankingProvisional model + admin amb accions de rebuig directe (rebutjar cançó / rebutjar artista), ranking provisional diari a les 07:00, ranking oficial dissabtes a les 08:00.
+
+---
+
+## Phase 5b — Distribution (Telegram + images)
 
 **Goal:** restore weekly image publication.
 

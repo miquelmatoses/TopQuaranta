@@ -105,3 +105,28 @@ class RankingSetmanal(models.Model):
 
     def __str__(self) -> str:
         return f"#{self.posicio} {self.canco.nom} ({self.territori}) — {self.setmana}"
+
+
+class RankingProvisional(models.Model):
+    """
+    Rolling daily ranking. Recalculated every day at 07:00.
+    Truncated and rebuilt on each run — not a historical record.
+    """
+
+    canco = models.ForeignKey(
+        Canco, on_delete=models.CASCADE, related_name="ranking_provisional"
+    )
+    territori = models.CharField(max_length=4)
+    posicio = models.PositiveSmallIntegerField()
+    score_setmanal = models.FloatField()
+    lastfm_playcount = models.IntegerField(null=True)
+    dies_en_top = models.IntegerField(null=True)
+    data_calcul = models.DateField(auto_now=True)
+
+    class Meta:
+        unique_together = [("canco", "territori")]
+        ordering = ["territori", "posicio"]
+        indexes = [models.Index(fields=["territori", "posicio"])]
+
+    def __str__(self) -> str:
+        return f"#{self.posicio} {self.canco.nom} ({self.territori})"
