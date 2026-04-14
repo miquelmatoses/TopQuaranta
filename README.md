@@ -19,7 +19,7 @@
 
 ---
 
-## Què és
+## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-music-red.svg" width="20" height="20" /> Què és
 
 **TopQuaranta** és un sistema de rànquing setmanal de música en llengua catalana que cobreix tots els territoris de parla catalana.
 
@@ -27,7 +27,7 @@ Missió cultural: demostrar que la música en català és viva, creix, i mereix 
 
 El rànquing es publica cada setmana amb un **Top 40** per territori, calculat a partir de dades reals d'escolta.
 
-## Funcionalitats
+## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-check-green.svg" width="20" height="20" /> Funcionalitats
 
 - 📊 **Senyal diari** via Last.fm — `playcount` (reproduccions acumulades) + `listeners` (oients únics)
 - 🏆 **Rànquing setmanal** amb algoritme de 14 CTEs SQL (penalitzacions per antiguitat, monopoli, novetats)
@@ -35,7 +35,7 @@ El rànquing es publica cada setmana amb un **Top 40** per territori, calculat a
 - ⚙️ **Admin Wagtail** per gestió d'artistes, àlbums, cançons i rànquings
 - 📋 **Rànquing provisional** interactiu a l'admin
 
-## Stack
+## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-target-blue.svg" width="20" height="20" /> Stack
 
 <div align="center">
 
@@ -48,7 +48,7 @@ El rànquing es publica cada setmana amb un **Top 40** per territori, calculat a
 
 </div>
 
-## Estructura
+## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-data-blue.svg" width="20" height="20" /> Estructura
 
 ```
 TopQuaranta/
@@ -60,7 +60,7 @@ TopQuaranta/
 └── legacy/          # Models legacy (només lectura)
 ```
 
-## Estat
+## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-globe-blue.svg" width="20" height="20" /> Estat
 
 🟢 **Pipeline operacional** — ingesta diària + rànquing setmanal funcionant.
 
