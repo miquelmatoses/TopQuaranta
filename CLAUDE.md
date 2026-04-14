@@ -1141,21 +1141,25 @@ File: `/etc/cron.d/topquaranta` — runs as user `topquaranta`
 ```cron
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
+DJANGO_SETTINGS_MODULE=topquaranta.settings.production
 
-# Hourly Deezer novelty ingestion (priority queue: P1=ISRC, P2=album tracks, P3=new albums)
-0 * * * *   topquaranta   cd /home/topquaranta/app && python manage.py ingestar_novetats >> /var/log/topquaranta/novetats.log 2>&1
+# Hourly Deezer novelty ingestion
+0 * * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_novetats >> /var/log/topquaranta/novetats.log 2>&1
+
+# Daily cleanup of expired unverified tracks — 04:00
+0 4 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py netejar_caducades >> /var/log/topquaranta/neteja.log 2>&1
 
 # Daily signal ingestion — 06:00
-0 6 * * *   topquaranta   cd /home/topquaranta/app && python manage.py obtenir_senyal >> /var/log/topquaranta/ingestar.log 2>&1
+0 6 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_senyal >> /var/log/topquaranta/senyal.log 2>&1
 
-# Weekly ranking — Sunday 08:00
-0 8 * * 0   topquaranta   cd /home/topquaranta/app && python manage.py calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1
+# Safety net: recompute score_entrada for yesterday if missed — 06:30
+30 6 * * *  topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py actualitzar_score_entrada >> /var/log/topquaranta/senyal.log 2>&1
 
-# Weekly distribution — Sunday 09:00
-0 9 * * 0   topquaranta   cd /home/topquaranta/app && python manage.py distribuir_ranking >> /var/log/topquaranta/distribucio.log 2>&1
+# Daily provisional ranking — 07:00
+0 7 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
 
-# Artist discovery — Monday 10:00
-0 10 * * 1  topquaranta   cd /home/topquaranta/app && python manage.py descobrir_artistes >> /var/log/topquaranta/descoberta.log 2>&1
+# Weekly official ranking — Saturday 08:00
+0 8 * * 6   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1
 ```
 
 ---
