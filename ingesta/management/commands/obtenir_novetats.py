@@ -236,15 +236,43 @@ class Command(BaseCommand):
         classificar_i_guardar(canco)
 
     def _create_track(self, album: Album, track_data: dict) -> bool:
-        """Create a Canco from track data if it doesn't exist. Returns True if new."""
+        """Create a Canco from track data, or merge into existing by ISRC. Returns True if new."""
         dz_id = track_data["id"]
         isrc = track_data.get("isrc", "")
 
-        # Skip if already exists
+        # Skip if already exists by deezer_id
         if Canco.objects.filter(deezer_id=dz_id).exists():
             return False
-        if isrc and Canco.objects.filter(isrc=isrc).exists():
-            return False
+
+        # ISRC dedup: if a Canco with this ISRC already exists, merge into it
+        if isrc:
+            existing = Canco.objects.filter(isrc=isrc).first()
+            if existing:
+                updated_fields = []
+                if not existing.deezer_id:
+                    existing.deezer_id = dz_id
+                    updated_fields.append("deezer_id")
+                preview = track_data.get("preview", "")
+                if preview and preview != existing.preview_url:
+                    existing.preview_url = preview
+                    updated_fields.append("preview_url")
+                if updated_fields:
+                    existing.save(update_fields=updated_fields)
+                # Add main artist as collaborator if different
+                contributors = track_data.get("contributors", [])
+                if contributors:
+                    main = contributors[0]
+                    main_id = main.get("id")
+                    main_name = main.get("name", "")
+                    if main_id and main_id != existing.artista.deezer_id:
+                        collab = _get_or_create_artista(main_id, main_name)
+                        if collab:
+                            existing.artistes_col.add(collab)
+                logger.info(
+                    "ISRC %s: merged deezer_id=%s into existing canco id=%s",
+                    isrc, dz_id, existing.pk,
+                )
+                return False
 
         # Resolve main artist
         contributors = track_data.get("contributors", [])
