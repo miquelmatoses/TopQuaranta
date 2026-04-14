@@ -64,7 +64,222 @@ no transactions, sys.exit() throughout) is disabled. This is a full rewrite.
 
 ---
 
-## 2. Migration Strategy
+## Design System (mm-design)
+
+All frontend work uses mm-design (https://github.com/miquelmatoses/mm-design).
+
+### Integration
+- Git submodule at `static/mm-design/` (add with `git submodule add https://github.com/miquelmatoses/mm-design.git static/mm-design`)
+- CSS tokens loaded via `{% static 'mm-design/tokens/colors.css' %}` etc. in base template
+- Icons from `mm-design/icons/` — embed SVGs via `{% static %}` or include inline
+
+### Rules
+1. **Tokens**: All colors, fonts, spacing, and shadows must come from mm-design tokens (`var(--mm-*)`). Never hardcode hex values.
+2. **Fonts**: Playfair Display (headings), Roboto (body), JetBrains Mono (code). No other fonts.
+3. **Icons**: All icons come from mm-design/icons/. If a needed icon does not exist, add it to mm-design first (SVG + React export), then import.
+4. **Components**: Use mm-design CSS component classes (.mm-btn, .mm-card, etc.) where applicable.
+5. **README badges**: All shields.io badge hex colors must use the mm-design brand palette:
+   - Red: cf3339 | Blue: 0047ba | Yellow: f1c22f | Green: 427c42 | Black: 111111
+6. **No parallel design systems**: Never create local token files, color constants, or icon collections that duplicate mm-design.
+
+---
+
+## 2. Legacy System Audit (2026-04-10)
+
+### 2.1 Legacy codebase location
+
+Two copies exist on the server:
+- `/root/TopQuaranta/` — git repo (1 commit: "Initial commit"), `.git` present
+- `/root/TopQuaranta_dev/` — dev copy with venv at `/root/TopQuaranta_dev/venv`
+- Symlink: `/root/TopQuaranta/venv -> /root/TopQuaranta_dev/venv`
+- Everything runs as `root` — no `topquaranta` OS user exists yet
+- No `/home/topquaranta/` directory exists
+
+### 2.2 Legacy Django structure
+
+```
+/root/TopQuaranta/web_cms/
+├── manage.py                    # DJANGO_SETTINGS_MODULE = tqcms.settings
+├── tqcms/settings/
+│   ├── base.py
+│   ├── dev.py
+│   └── production.py
+└── home/                        # single Wagtail app — everything in one models.py
+    ├── models.py                # 18 model classes (pages + data + admin)
+    └── migrations/
+```
+
+Single app `home/` contains: Wagtail pages (HomePage, MusicIndexPage, RankingsPage,
+etc.), data models (CmsArtista, CmsAlbum, CmsSong — unmanaged views), navigation,
+theme/branding models, and admin forms. No separation of concerns.
+
+### 2.3 Legacy scripts (not Django)
+
+```
+/root/TopQuaranta/scripts/
+├── worker.py                    # 1,350-line monolith — DISABLED, the core problem
+├── update_playlist_daily.py     # daily top 40 per territory + Spotify playlist
+├── update_playlist_weekly.py    # weekly ranking generation (raw SQL INSERT ON CONFLICT)
+├── generate_images.py           # ranking image rendering (PIL)
+├── playlist_render_and_send.py  # Spotify playlist updates
+├── bot_exclusions.py            # Telegram bot for exclusion management
+├── update_from_viasona.py       # Viasona scraper (BeautifulSoup)
+├── worker_update_artistes_viasona.py
+└── worker_update_artistes_vmo.py
+
+/root/TopQuaranta/utils/
+├── imagens.py                   # 41KB — image generation + color palettes per territory
+├── playlists.py                 # Spotify playlist ID mappings
+├── logger.py
+├── spotify_rate_guard.py
+└── frases_instagram.py
+```
+
+### 2.4 Legacy database schema (actual state)
+
+**Core tables:**
+
+| Table | PK | Rows | Notes |
+|---|---|---|---|
+| `artistes` | `id_spotify` (varchar 50) | 6,477 (2,313 with status='go') | Main artist table |
+| `cançons` | `(id_canco, territori)` composite | 11,555 active | Same track duplicated per territory! |
+| `ranking_diari` | `(data, territori, posicio)` | 312,132 (2025-04-13 → 2026-03-09) | Daily snapshots — 126 MB |
+| `ranking_setmanal` | `(data, territori, posicio)` | populated | Weekly results |
+| `configuracio_global` | (single row) | 1 | 14 algorithm coefficients |
+| `spotify_artists` | | | Spotify raw data — 3.4 MB |
+| `spotify_albums` | | | Spotify raw data — 3.1 MB |
+| `spotify_tracks` | | | Spotify raw data — 18 MB |
+| `exclusions` | | | Track/album exclusion lists |
+| `artistes_viasona` | | | Viasona enrichment data |
+| `artistes_vmo` | | | VMO enrichment data |
+| `cms_artists` | | | CMS denormalized view — 1.7 MB |
+| `cms_albums` | | | CMS denormalized view (unmanaged) |
+| `cms_songs` | | | CMS denormalized view (unmanaged) |
+
+**Territory values in legacy (inconsistent):**
+```
+artistes.territori:  'Catalunya', 'País Valencià', 'Balears', 'Altres', 'Illes'
+cançons.territori:   'cat', 'pv', 'ib', 'altres'
+ranking views:       'cat', 'pv', 'ib', 'ppcc', 'altres'
+```
+
+**Key columns in `artistes`:**
+```
+id_spotify, nom, nom_spotify, imatge_url, popularitat, followers, generes,
+status ('go'/'stop'/etc.), territori, català (boolean), localitat, comarca,
+provincia, instagram, bio, web, youtube, tiktok, bluesky, bandcamp, deezer,
+soundcloud, facebook, viquipedia, id_viasona, url_viasona, id_vmo, url_vmo,
+data_actualitzacio, spotify_update, update_canco, font_dades
+```
+
+**Key columns in `cançons`:**
+```
+id_canco, territori, popularitat, titol, artistes (text[]), artista_basat,
+exclosa (boolean), motiu_exclusio, artistes_ids (text[]), album_id,
+album_titol, album_data, album_caratula_url, followers,
+ultima_actualitzacio_spotify
+```
+
+**Key columns in `ranking_diari`:**
+```
+data, territori, posicio, id_canco, titol, artistes (text[]),
+album_titol, popularitat, followers, artistes_ids (text[]),
+album_id, album_data, album_caratula_url, canvi_posicio
+```
+
+### 2.5 The ranking algorithm — SQL views (not in code!)
+
+The algorithm is NOT in Python. It lives as 5 PostgreSQL views:
+`vw_top40_weekly_cat`, `vw_top40_weekly_pv`, `vw_top40_weekly_ib`,
+`vw_top40_weekly_ppcc`, `vw_top40_weekly_altres`.
+
+Each view is identical except for the territory filter. The CTE chain:
+
+```
+configuracio → dates → base → calculs_a → calcul_factor_a → amb_score_a
+→ posicions_a → calculs_b → calcul_factor_b → amb_score_b → posicions_b
+→ calculs_c → calcul_factor_c → amb_score_c → posicions_c
+→ calcul_factor_final → amb_score_final → posicions_final
+```
+
+**How it works (summary):**
+1. `configuracio`: reads coefficients from `configuracio_global` table
+2. `dates`: computes current and previous ranking week boundaries
+3. `base`: aggregates last 7 days of `ranking_diari` per track — computes
+   `popularitat_mitjana`, `popularitat_inici` (days -7 to -5), `popularitat_final`
+   (days -2 to 0), `dies_en_top`, `setmanes_top`, `antiguitat_dies`
+4. `calculs_a` → `amb_score_a`: applies age penalty, descent penalty, stability
+   weight, top-position penalty → produces `score_a`
+5. `calculs_b` → `amb_score_b`: applies album monopoly and artist monopoly
+   penalties → produces `score_b`
+6. `calculs_c` → `amb_score_c`: applies new-entry bonus (weeks 0, 1, 2) →
+   produces `factor_score_c`
+7. `calcul_factor_final` → `amb_score_final`: applies smoothing factor based on
+   position change → produces final `score_setmanal`
+8. `posicions_final`: ranks by `score_setmanal` DESC, limits to top 40
+
+**Input:** `ranking_diari.popularitat` (integer, 0–100, was Spotify popularity)
+**Output:** ranked list with `score_setmanal`, `posicio`, `canvi_posicio`
+
+**`configuracio_global` current values:**
+```
+dia_setmana_ranking              = 6      (Saturday)
+penalitzacio_descens             = 0.025
+exponent_penalitzacio_antiguitat = 2.5
+max_factor_a                     = 1.0
+max_factor_b                     = 1.0
+max_factor_c                     = 1.0
+max_factor_final                 = 1.5
+penalitzacio_album_per_canco     = 0.25
+penalitzacio_artista_per_canco   = 0.2
+coeficient_penalitzacio_top      = 0.075
+penalitzacio_setmana_0           = 0.1
+penalitzacio_setmana_1           = 0.05
+penalitzacio_setmana_2           = 0.0
+suavitat                         = 5
+```
+
+### 2.6 Legacy SQL views (15 total)
+
+```
+vw_top40_cat, vw_top40_pv, vw_top40_ib, vw_top40_altres     (daily top 40)
+vw_top40_weekly_cat, vw_top40_weekly_pv, vw_top40_weekly_ib,
+vw_top40_weekly_ppcc, vw_top40_weekly_altres                  (weekly ranking — the algorithm)
+vw_albums_recents, vw_cancons_caigudes, vw_novetats           (CMS helper views)
+vw_geodata_artistes, artistes_discrepants, pending_update     (admin/maintenance views)
+```
+
+### 2.7 Legacy cron
+
+```
+0 * * * *    worker.sh              (hourly — DISABLED, was Spotify popularity)
+0 */4 * * *  update_playlist_daily   (every 4h)
+0 3 * * 6    update_playlist_weekly  (Saturday 03:00)
+0 3 * * 0    send_telegram_pv
+0 3 * * 1    send_telegram_album
+0 3 * * 2    send_telegram_cat
+0 3 * * 3    send_telegram_singles
+0 3 * * 4    send_telegram_ib
+```
+
+### 2.8 Legacy .env keys (relevant subset)
+
+```
+DB_USER, DB_PASSWORD, DB_NAME, DB_HOST, DB_PORT
+SPOTIPY_CLIENT_ID_WORKER_A1..E1  (7 credential pairs for rotation!)
+SPOTIPY_CLIENT_SECRET_WORKER_A1..E1
+SPOTIPY_CLIENT_ID_PLAYLIST, SPOTIPY_CLIENT_SECRET_PLAYLIST
+SPOTIFY_REFRESH_TOKEN_PLAYLIST
+TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+OPENAI_API_KEY
+DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS
+```
+
+No Last.fm credentials exist yet — must be obtained from https://www.last.fm/api/account/create
+
+---
+
+## 3. Migration Strategy
 
 ### Principle: new project, same database
 
