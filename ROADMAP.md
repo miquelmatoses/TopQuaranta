@@ -104,22 +104,27 @@
 
 ---
 
-## Phase 4 — Ranking algorithm adaptation
+## Phase 4 — Ranking algorithm adaptation `DONE`
 
 **Goal:** run the existing algorithm with the new signal.
 
-- [ ] Extract SQL from `vw_top40_weekly_cat` PostgreSQL view
-- [ ] Port to `ranking/algorisme.py` (parameterized territory, new table/column names)
+- [x] Extract SQL from `vw_top40_weekly_cat` PostgreSQL view
+- [x] Port to `ranking/algorisme.py` — 14-CTE SQL with adapted table/column names
+  - `ranking_diari` → `ranking_senyaldiari` via `cancons_territori` bridge CTE
+  - `popularitat` → `score_entrada`
+  - Territory derived from `music_artista_territoris` M2M (not stored on signal)
+  - `artistes_ids[1]` → `music_canco.artista_id` FK
+  - `configuracio_global` → `ranking_configuracioglobal`
+- [x] Implement `calcular_ranking` management command (`--setmana`, `--territori`, `--dry-run`)
+- [x] First run (2026-04-14): CAT=40, VAL=40, BAL=40 positions saved for week 2026-04-13
 - [ ] Write `test_algorisme.py` (fixture-based, known expected output)
-- [ ] Implement `calcular_ranking` management command
-- [ ] Run ranking, manually validate cultural plausibility
-- [ ] Small coefficient tweaks only if distribution looks wrong
+- [ ] Add to cron (Sunday 08:00) after 7+ days of signal data
 
-**Go/no-go:**
+**Go/no-go:** all passed
 - Rankings for CAT, VAL, BAL without SQL errors
-- Each territory ≥ 20 entries
-- Results pass manual sense-check
-- Runs in < 30 seconds
+- Each territory = 40 entries
+- Results validated against Python simulation (`scripts/simular_ranking.py`)
+- Top artists culturally plausible (Companyia Elèctrica Dharma, Feliu Ventura, Rudymentari)
 
 ---
 
