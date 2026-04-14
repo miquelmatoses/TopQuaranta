@@ -57,10 +57,22 @@ def territoris_amb_ranking_propi() -> list[str]:
 
 # The full 14-CTE SQL, adapted from vw_top40_weekly_cat.
 # Parameters: %(territori)s
+#
+# CTE chain overview:
+#   cancons_territori  — Bridge: join signal to territory via artist M2M + collaborators
+#   configuracio       — Read algorithm coefficients from ConfiguracioGlobal
+#   base               — Aggregate 7-day window: avg popularity, trend, age, history
+#   Phase A (calculs_a → amb_score_a → posicions_a):
+#       Individual track penalties: age, descent, stability, top-position accumulation
+#   Phase B (calculs_b → amb_score_b → posicions_b):
+#       Monopoly penalties: album monopoly (0.25/track), artist monopoly (0.2/track)
+#   Phase C (calculs_c → calcul_factor_final → amb_score_final):
+#       New-entry adjustment + smoothing factor based on position change
+#   posicions_final    — Final ranking ordered by score_setmanal DESC
 RANKING_SQL = """
 WITH cancons_territori AS (
-    -- Bridge CTE: build the equivalent of legacy ranking_diari for one territory.
-    -- A track appears in territory T if its main artist belongs to T.
+    -- Bridge CTE: join signal to territory via artist M2M + collaborators (LEFT JOIN).
+    -- A track appears in territory T if its main artist OR any collaborator belongs to T.
     SELECT DISTINCT ON (sd.canco_id, sd.data)
         sd.canco_id AS id_canco,
         sd.data,

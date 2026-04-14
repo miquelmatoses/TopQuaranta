@@ -1,13 +1,24 @@
 """
-Track verification classifier.
+Track verification ML classifier.
 
-Uses a Random Forest trained on HistorialRevisio decisions.
-Falls back to hand-tuned heuristics if <20 training examples.
+Pipeline:
+1. Feature extraction (_build_features): 19 structured features + 200 TF-IDF
+   char n-gram features from the track title. Structured features include ISRC
+   country, Deezer metadata (fans, albums, name similarity), artist rejection
+   history, ISRC registrant rejection history, and artist approval status.
+2. Classification: Random Forest (100 estimators, balanced class weights) trained
+   on HistorialRevisio approve/reject decisions. Falls back to hand-tuned
+   heuristics if fewer than MIN_TRAINING_SAMPLES (20) decisions exist.
+3. Output: class A (likely Catalan, >= 0.7), B (uncertain, 0.4-0.7),
+   C (likely false positive, < 0.4). Stored on Canco.ml_classe / ml_confianca.
+4. Retraining: triggered automatically via recalcular_ml_si_cal() when >= 5 new
+   decisions since last recalc. Runs in background daemon thread.
 
-Model saved to /home/topquaranta/app/music/ml_model.joblib
+Model files: ml_model.joblib (RF), ml_tfidf.joblib (TF-IDF vectorizer).
 """
 
 import logging
+import re
 import threading
 import time
 from pathlib import Path
@@ -111,7 +122,7 @@ def _get_registrant_rejection_ratio(isrc: str) -> float:
     if not registrant:
         return 0.5
     decs = HistorialRevisio.objects.filter(
-        canco_isrc__regex=r"^.{2}" + registrant
+        canco_isrc__regex=f"^.{{2}}{re.escape(registrant)}"
     )
     total = decs.count()
     if total < 3:
@@ -125,7 +136,7 @@ def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> flo
     if not registrant:
         return 0.5
     decs = HistorialRevisio.objects.filter(
-        canco_isrc__regex=r"^.{2}" + registrant
+        canco_isrc__regex=f"^.{{2}}{re.escape(registrant)}"
     ).exclude(pk=exclude_pk)
     total = decs.count()
     if total < 3:

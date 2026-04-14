@@ -142,22 +142,11 @@
 
 **Summary:** RankingProvisional model + admin amb accions de rebuig directe (rebutjar cançó / rebutjar artista), ranking provisional diari a les 07:00, ranking oficial dissabtes a les 08:00.
 
----
-
-## Phase 5b — Distribution (Telegram + images)
-
-**Goal:** restore weekly image publication.
-
-- [ ] Audit legacy `utils/imagens.py` (41KB) — extract color palettes, layout logic
-- [ ] Rebuild `distribucio/image_generator.py` (Pillow)
-- [ ] Audit legacy Telegram bot code
-- [ ] Rebuild `distribucio/telegram_bot.py`
-- [ ] Implement `distribuir_ranking` command
-- [ ] Test with `--dry-run` before sending to real channel
-
-**Go/no-go:**
-- `--dry-run` generates correct image for all territories
-- Real Telegram send works
+> **Distribution (Telegram + images): SHELVED INDEFINITELY.**
+> Originally Phase 5b. Shelved because:
+> - Original assets (TTF fonts, SVG logos per territory) were on an inaccessible local machine
+> - Instagram via Telegram was the only distribution channel
+> - Replaced by future web publica (Phase 6) as primary distribution channel
 
 ---
 
@@ -299,7 +288,23 @@
 
 ---
 
-## Phase 6b — Control panel (deferred, post-publication)
+## Phase 6 — Web publica
+
+**Goal:** build topquaranta.cat as the primary public distribution channel.
+
+- [ ] Ranking setmanal public: top 40 per territori, actualitzat cada dissabte
+- [ ] Base de dades d'artistes navegable: fitxa d'artista, discografia, territoris
+- [ ] Portal d'artista registrat: login, estadistiques de les seues cancons al ranking
+- [ ] Mapes de distribucio geografica dels artistes
+- [ ] Visualitzacions d'evolucio temporal (posicio setmanal, score)
+- [ ] Disseny responsive (mobile-first)
+
+**Prerequisit:** ranking publicant setmanalment durant >= 4 setmanes.
+**Note:** disseny i planificacio en conversa dedicada. Construida sobre Django 5.2 + Wagtail 7.0 + models nous.
+
+---
+
+## Phase 7 — Control panel intern
 
 **Goal:** admin tooling for ongoing data quality.
 
@@ -312,16 +317,16 @@
 
 ---
 
-## Phase 7 — Legacy cleanup
+## Phase 8 — Legacy cleanup
 
 **Goal:** remove legacy tables and views, clean up.
 
-- [ ] Verify all functions work from new pipeline for ≥ 4 weeks
+- [ ] Verify all functions work from new pipeline for >= 4 weeks
 - [ ] Drop legacy SQL views (`vw_top40_*`, etc.)
 - [ ] Drop legacy tables — **only after backup confirmed**
 - [ ] Remove `legacy/` app from project
 - [ ] Remove old cron jobs
 - [ ] Archive `/root/TopQuaranta/` directory
-- [ ] Full test suite passes, coverage ≥ 70%
+- [ ] Full test suite passes, coverage >= 70%
 
 **This phase requires explicit approval before each destructive step.**
