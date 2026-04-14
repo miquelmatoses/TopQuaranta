@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from scipy.stats import percentileofscore
 
 from ingesta.clients.lastfm import get_track_info
 from music.models import Canco
@@ -146,3 +147,44 @@ class Command(BaseCommand):
                 f"    Total processed: {success + errors + skipped}"
             )
         )
+
+        # Normalization: compute score_entrada via percent_rank over the day's playcounts
+        updated = self._normalize_score_entrada(target_date)
+        self.stdout.write(f"  score_entrada normalized: {updated} rows updated")
+
+    def _normalize_score_entrada(self, target_date: date) -> int:
+        """Compute percent_rank(playcount) for all SenyalDiari of a given day.
+        playcount=0 or NULL → score_entrada=0.0. Returns number of rows updated.
+        """
+        rows = list(
+            SenyalDiari.objects.filter(
+                data=target_date,
+                error=False,
+                lastfm_playcount__isnull=False,
+            ).values_list("pk", "lastfm_playcount")
+        )
+        if not rows:
+            return 0
+
+        # Collect all playcounts for percent_rank
+        sorted_plays = sorted(pc for _, pc in rows if pc > 0)
+
+        # Compute scores
+        updates = []
+        for pk, playcount in rows:
+            if playcount > 0 and sorted_plays:
+                score = percentileofscore(sorted_plays, playcount, kind="rank")
+            else:
+                score = 0.0
+            updates.append((pk, score))
+
+        # Batch update in chunks of 500
+        updated = 0
+        for i in range(0, len(updates), 500):
+            batch = updates[i : i + 500]
+            with transaction.atomic():
+                for pk, score in batch:
+                    SenyalDiari.objects.filter(pk=pk).update(score_entrada=score)
+                    updated += 1
+
+        return updated

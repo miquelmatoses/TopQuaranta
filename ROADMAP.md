@@ -84,15 +84,23 @@
 
 ---
 
-## Phase 3 — Signal formula definition
+## Phase 3 — Signal formula definition `DONE`
 
 **Goal:** look at real data and decide how to normalize.
 
-- [ ] Write one-off analysis script → print distribution stats
-- [ ] Discuss formula in conversation (not in code)
-- [ ] Implement formula in `ranking/senyal.py::calcular_score_entrada()`
-- [ ] Implement `actualitzar_score_entrada` command and run backfill
-- [ ] Verify: `score_entrada` not NULL for ≥ 95% of rows, distribution 0–100
+- [x] Write one-off analysis script (`scripts/explorar_senyal.py`) → print distribution stats
+- [x] Discuss formula in conversation — chose Formula B (percent_rank)
+- [x] Ranking simulation (`scripts/simular_ranking.py`) validated algorithm with real data
+- [x] Implement formula inline in `obtenir_senyal` (normalization step at end of ingestion)
+- [x] Implement `actualitzar_score_entrada` command (`--data`, `--tots`)
+- [x] Backfill all 5 existing days: 4,523 rows updated, 0 NULL remaining
+- [x] Cron: `actualitzar_score_entrada` at 06:30 as safety net after `obtenir_senyal`
+- [x] Verify: `score_entrada` not NULL for 100% of success rows, distribution 0–100
+
+**Formula:** `score_entrada = percentileofscore(day_playcounts, playcount, kind='rank')`
+- playcount=0 → score_entrada=0.0
+- Computed per-day over all successful tracks
+- Average ~50, std ~29, full 0–100 range
 
 ---
 
@@ -267,6 +275,19 @@
 - New candidates appear in Wagtail admin
 - Website displays data from new models
 - Full pipeline: discovery → approval → metadata → signal → ranking → distribution
+
+---
+
+## Phase 6b — Control panel (deferred, post-publication)
+
+**Goal:** admin tooling for ongoing data quality.
+
+- [ ] Deezer audit table: low similarity matches, name mismatches
+- [ ] "Last.fm not found" filter + search link + inline editable `lastfm_nom`
+- [ ] Catalogue statistics: Last.fm coverage, errors per artist, pending false positives
+- [ ] PPCC global ranking view (aggregate territorial rankings)
+
+**Prerequisite:** ranking must be publishing weekly before building these tools.
 
 ---
 
