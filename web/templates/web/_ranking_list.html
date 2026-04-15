@@ -1,7 +1,34 @@
 {% if ranking %}
 <ol class="ranking-list">
   {% for entry in ranking %}
-  <li class="ranking-entry{% if entry.posicio <= 3 %} rank-podium{% endif %}">
+  {% if entry.posicio == 1 %}
+  <li class="rank-hero">
+    <span class="rank-position">{{ entry.posicio }}</span>
+    {% if entry.canco.album.imatge_url %}
+      <img class="rank-cover" src="{{ entry.canco.album.imatge_url }}" alt="" loading="lazy" width="160" height="160">
+    {% else %}
+      <span class="rank-cover rank-cover--placeholder"></span>
+    {% endif %}
+    <div class="rank-info">
+      <span class="rank-song">{{ entry.canco.nom }}</span>
+      <a href="{% url 'web:artista' slug=entry.canco.artista.slug %}" class="rank-artist-link">{{ entry.canco.artista.nom }}</a>
+    </div>
+  </li>
+  {% elif entry.posicio <= 3 %}
+  <li class="rank-podium">
+    <span class="rank-position">{{ entry.posicio }}</span>
+    {% if entry.canco.album.imatge_url %}
+      <img class="rank-cover" src="{{ entry.canco.album.imatge_url }}" alt="" loading="lazy" width="96" height="96">
+    {% else %}
+      <span class="rank-cover rank-cover--placeholder"></span>
+    {% endif %}
+    <div class="rank-info">
+      <span class="rank-song">{{ entry.canco.nom }}</span>
+      <a href="{% url 'web:artista' slug=entry.canco.artista.slug %}" class="rank-artist-link">{{ entry.canco.artista.nom }}</a>
+    </div>
+  </li>
+  {% else %}
+  <li class="ranking-entry">
     <span class="rank-position">{{ entry.posicio }}</span>
     {% if entry.canco.album.imatge_url %}
       <img class="rank-cover" src="{{ entry.canco.album.imatge_url }}" alt="" loading="lazy" width="48" height="48">
@@ -13,6 +40,7 @@
       <a href="{% url 'web:artista' slug=entry.canco.artista.slug %}" class="rank-artist-link">{{ entry.canco.artista.nom }}</a>
     </div>
   </li>
+  {% endif %}
   {% endfor %}
 </ol>
 {% else %}

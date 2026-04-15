@@ -14,17 +14,31 @@
 <body class="{% if territori_actiu %}territori-{{ territori_actiu|lower }}{% endif %}">
   <header class="site-header">
     <div class="container">
-      <a href="{% url 'web:homepage' %}" class="site-title-link">
-        <h1 class="site-title">TopQuaranta</h1>
-      </a>
-      <p class="site-subtitle">El rànquing setmanal de música en català</p>
+      <div class="header-top">
+        <a href="{% url 'web:homepage' %}" class="site-title-link">
+          <h1 class="site-title">TopQuaranta</h1>
+        </a>
+        <p class="site-subtitle">El rànquing setmanal de música en català</p>
+      </div>
       <nav class="territori-nav" aria-label="Territoris">
-        <a href="{% url 'web:ranking' territori='cat' %}" class="territori-link territori-link--cat{% if territori_actiu == 'CAT' %} is-active{% endif %}">Catalunya</a>
-        <a href="{% url 'web:ranking' territori='val' %}" class="territori-link territori-link--val{% if territori_actiu == 'VAL' %} is-active{% endif %}">País Valencià</a>
-        <a href="{% url 'web:ranking' territori='bal' %}" class="territori-link territori-link--bal{% if territori_actiu == 'BAL' %} is-active{% endif %}">Illes Balears</a>
-        <a href="{% url 'web:ranking' territori='ppcc' %}" class="territori-link territori-link--ppcc{% if territori_actiu == 'PPCC' %} is-active{% endif %}">PPCC</a>
-        <a href="{% url 'web:artistes' %}" class="territori-link">Artistes</a>
-        <a href="{% url 'web:mapa' %}" class="territori-link">Mapa</a>
+        <a href="{% url 'web:ranking' territori='cat' %}" class="territori-link territori-link--cat{% if territori_actiu == 'CAT' %} is-active{% endif %}">
+          <img src="{% static 'mm-design/icons/territories/territory-cat.svg' %}" alt="" class="territori-badge" width="20" height="20">
+          Catalunya
+        </a>
+        <a href="{% url 'web:ranking' territori='val' %}" class="territori-link territori-link--val{% if territori_actiu == 'VAL' %} is-active{% endif %}">
+          <img src="{% static 'mm-design/icons/territories/territory-val.svg' %}" alt="" class="territori-badge" width="20" height="20">
+          País Valencià
+        </a>
+        <a href="{% url 'web:ranking' territori='bal' %}" class="territori-link territori-link--bal{% if territori_actiu == 'BAL' %} is-active{% endif %}">
+          <img src="{% static 'mm-design/icons/territories/territory-bal.svg' %}" alt="" class="territori-badge" width="20" height="20">
+          Illes Balears
+        </a>
+        <a href="{% url 'web:ranking' territori='ppcc' %}" class="territori-link territori-link--ppcc{% if territori_actiu == 'PPCC' %} is-active{% endif %}">
+          <img src="{% static 'mm-design/icons/territories/territory-ppcc.svg' %}" alt="" class="territori-badge" width="20" height="20">
+          PPCC
+        </a>
+        <a href="{% url 'web:artistes' %}" class="territori-link territori-link--util">Artistes</a>
+        <a href="{% url 'web:mapa' %}" class="territori-link territori-link--util">Mapa</a>
       </nav>
     </div>
   </header>
@@ -35,7 +49,14 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>&copy; {{ current_year }} TopQuaranta</p>
+      <div class="footer-inner">
+        <p class="footer-copy">&copy; {{ current_year }} TopQuaranta</p>
+        <div class="footer-links">
+          <a href="{% url 'web:artistes' %}" class="footer-link">Artistes</a>
+          <a href="{% url 'web:mapa' %}" class="footer-link">Mapa</a>
+          <a href="{% url 'comptes:login' %}" class="footer-link">Accés</a>
+        </div>
+      </div>
     </div>
   </footer>
 </body>

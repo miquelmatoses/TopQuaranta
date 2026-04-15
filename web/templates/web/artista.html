@@ -3,8 +3,8 @@
 {% block title %}{{ artista.nom }} — TopQuaranta{% endblock %}
 
 {% block content %}
-<section class="ranking-header">
-  <h2 class="ranking-title">{{ artista.nom }}</h2>
+<section class="artista-header">
+  <h2 class="artista-nom">{{ artista.nom }}</h2>
   <div class="artista-meta">
     {% for codi in territoris %}
       <span class="territori-tag territori-tag--{{ codi|lower }}">{{ codi }}</span>
@@ -47,7 +47,7 @@
     <div class="disco-album">
       <div class="disco-header">
         {% if album.imatge_url %}
-          <img class="disco-cover" src="{{ album.imatge_url }}" alt="" loading="lazy" width="64" height="64">
+          <img class="disco-cover" src="{{ album.imatge_url }}" alt="" loading="lazy" width="72" height="72">
         {% else %}
           <span class="disco-cover disco-cover--placeholder"></span>
         {% endif %}
