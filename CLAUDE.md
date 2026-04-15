@@ -1,7 +1,7 @@
 # CLAUDE.md — TopQuaranta System Architecture
 
 > Persistent memory for Claude Code. Read this file before making any change.
-> Last updated: 2026-04-15 — Phase 6 done (S1–S6), domain flip done
+> Last updated: 2026-04-15 — Phase 7 done (staff panel + Wagtail removed)
 >
 > See **ROADMAP.md** for implementation status.
 
@@ -26,8 +26,9 @@ Cultural mission: demonstrate that Catalan-language music is alive and growing.
 
 **Current state (2026-04-15):** the pipeline (ingesta -> senyal -> ranking) is
 operational. Public website live at topquaranta.cat with ranking pages, artist
-profiles, geographic map, user accounts, and verified artist portal. Domain
-flipped: www.topquaranta.cat → new web (port 8083), legacy at legacy.topquaranta.cat.
+profiles, geographic map, user accounts, and verified artist portal. Staff panel
+at `/staff/` replaces all Django/Wagtail admin functionality. Wagtail and Django
+admin fully removed. Single gunicorn on port 8083 serves everything.
 
 > **Image generation + Telegram distribution: indefinitely shelved.**
 > The original Phase 5 planned Pillow image generation + Telegram sending for
@@ -38,7 +39,7 @@ flipped: www.topquaranta.cat → new web (port 8083), legacy at legacy.topquaran
 > - We have decided to build a **public website** (topquaranta.cat) as the primary
 >   distribution channel: public weekly ranking, artist database, geographic maps,
 >   temporal evolution, registered artist portal
-> - The web will be built on the new architecture (Django 5.2 + Wagtail 7.0 +
+> - The web will be built on the new architecture (Django 5.2 +
 >   new models), not on legacy
 
 ### Why this refactor
@@ -57,13 +58,13 @@ no transactions, sys.exit() throughout) is disabled. This is a full rewrite.
 - Reverse proxy: Caddy (auto TLS)
 - Database: PostgreSQL 14 (local), DB name `topquaranta`, user `topquaranta`
 - Runtime: Python 3.10
-- Legacy CMS: Django 5.1.11, Wagtail 6.4.2 (running at `/root/TopQuaranta/web_cms/`)
-- New project: Django 5.2, Wagtail 7.0
+- Legacy CMS: Django 5.1.11, Wagtail 6.4.2 (running at `/root/TopQuaranta/web_cms/`, port 8081)
+- New project: Django 5.2 (Wagtail removed in Phase 7)
 - Repo: https://github.com/miquelmatoses/TopQuaranta (private)
 - Process user: `topquaranta`
-- Admin URL: `https://www.topquaranta.cat/nou-admin/`
 - Public web: `https://www.topquaranta.cat/` → Caddy → gunicorn port 8083 (`web_server` settings)
 - Staff panel: `https://www.topquaranta.cat/staff/` → same gunicorn, requires `is_staff=True`
+- No Django admin or Wagtail admin — all management via `/staff/`
 
 ---
 
@@ -307,14 +308,15 @@ table/view can be dropped (Phase 8).
 | Deezer client | New: primary metadata source (replaces Spotify) |
 | Image generator | **Shelved indefinitely** — replaced by future web publica |
 | Telegram bot | **Shelved indefinitely** — replaced by future web publica |
-| CMS (Wagtail pages) | Will be rebuilt for new web publica (Phase 6) |
+| CMS (Wagtail pages) | Rebuilt as `web/` app (Phase 6). Wagtail removed (Phase 7) |
 
 ### Coexistence rules
 
 - New project: `topquaranta`. Legacy: `tqcms`
 - New tables: `music_artista`, `music_canco`, etc. Legacy tables untouched
-- Legacy CMS at `/root/TopQuaranta/web_cms/` moved to `legacy.topquaranta.cat` (port 8081)
-- New project runs pipeline + ranking + admin + public website (web/ app on port 8083)
+- Legacy CMS at `/root/TopQuaranta/web_cms/` at `legacy.topquaranta.cat` (port 8081)
+- New project runs pipeline + ranking + staff panel + public website (port 8083)
+- No Django admin or Wagtail admin — all management via `/staff/`
 
 ---
 
@@ -333,13 +335,14 @@ table/view can be dropped (Phase 8).
 │   │   ├── base.py
 │   │   ├── local.py
 │   │   ├── production.py
-│   │   ├── admin_server.py
+│   │   ├── web_server.py
 │   │   └── test.py
 │   ├── urls.py
 │   └── wsgi.py
 ├── music/                         # core models: Artista, Album, Canco, HistorialRevisio
 │   ├── models.py
-│   ├── admin.py                   # CancoAdmin, ArtistaAdmin, ArtistaPendentAdmin
+│   ├── services.py                # aprovar_canco, rebutjar_canco, rebutjar_artista, rebutjar_album
+│   ├── constants.py               # MOTIUS_REBUIG, MOTIUS_VALIDS
 │   ├── ml.py                      # Random Forest + heuristic classifier
 │   ├── verificacio.py             # crear_historial() — audit trail
 │   ├── migrations/
@@ -360,7 +363,6 @@ table/view can be dropped (Phase 8).
 │   └── tests/
 ├── ranking/                       # algorithm + signal storage
 │   ├── models.py                  # ConfiguracioGlobal, SenyalDiari, RankingSetmanal, RankingProvisional
-│   ├── admin.py                   # RankingProvisionalAdmin with rejection actions
 │   ├── algorisme.py               # 14-CTE SQL extracted from legacy views
 │   ├── management/commands/
 │   │   └── calcular_ranking.py    # weekly official + daily provisional
@@ -392,11 +394,7 @@ table/view can be dropped (Phase 8).
 │   ├── models.py                  # Usuari(AbstractUser), UserArtista
 │   ├── views.py                   # registre, login, dashboard, portal artista
 │   ├── forms.py                   # RegistreForm, SollicitudArtistaForm
-│   ├── admin.py                   # UserArtistaAdmin
-│   ├── wagtail_hooks.py           # UserArtistaViewSet (snippet)
 │   └── templates/comptes/
-├── distribucio/                   # SHELVED — placeholder only
-│   └── (empty models/admin/views)
 └── legacy/                        # read-only Django models for legacy tables
     ├── models.py                  # unmanaged models pointing to legacy tables
     └── README.md

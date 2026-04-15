@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-15 — Phase 7 P1-P6 staff panel DONE
+> Updated: 2026-04-15 — Phase 7 DONE (staff panel + Wagtail removal + consolidation)
 
 ---
 
@@ -383,7 +383,7 @@ Served via gunicorn port 8083 (`topquaranta.settings.web_server`), Caddy reverse
 
 ---
 
-## Phase 7 — Staff panel (`/staff/`) `IN PROGRESS`
+## Phase 7 — Staff panel (`/staff/`) `DONE`
 
 **Goal:** migrate all admin tools from Django/Wagtail admin to custom `/staff/` web interface, then remove Wagtail entirely.
 
@@ -434,21 +434,35 @@ Served via gunicorn port 8083 (`topquaranta.settings.web_server`), Caddy reverse
 - [x] `/staff/verificacio/` — UserArtista management with verify/unverify toggle
 - [x] `/staff/configuracio/` — ConfiguracioGlobal edit form (all 15 coefficients)
 
-### P7 — Eliminació Wagtail + Django admin `PENDING`
+### P7 — Eliminació Wagtail + Django admin `DONE`
 
-- [ ] Remove `wagtail.*` from INSTALLED_APPS
-- [ ] Remove Django admin URLs
-- [ ] Remove admin.py files across all apps
-- [ ] Remove wagtail_hooks.py files
-- [ ] Clean up dependencies (requirements.txt)
-- [ ] Eliminate gunicorn on port 8082 (admin_server)
-- [ ] Update Caddyfile (remove `/nou-admin/*` routes)
+- [x] Removed all 11 `wagtail.*` entries from INSTALLED_APPS
+- [x] Removed `django.contrib.admin` from INSTALLED_APPS
+- [x] Removed `modelcluster` and `taggit` from INSTALLED_APPS
+- [x] Removed Wagtail redirect middleware
+- [x] Removed `WAGTAIL_SITE_NAME` and `WAGTAILADMIN_BASE_URL` settings
+- [x] Removed Django admin + Wagtail URLs from `topquaranta/urls.py`
+- [x] Deleted all 6 `admin.py` files (music, ranking, comptes, distribucio, ingesta, legacy)
+- [x] Deleted `comptes/wagtail_hooks.py`
+- [x] Deleted `ranking/views.py` (old admin-only provisional ranking view)
+- [x] Deleted `ranking/templates/ranking/ranking_provisional.html`
+- [x] Removed `wagtail==7.0` from requirements.txt
+- [x] Removed unused deps: Pillow, python-telegram-bot, spotipy
+- [x] Uninstalled wagtail, modelcluster, taggit, Pillow, python-telegram-bot, spotipy from venv
+- [x] Deleted `topquaranta/settings/admin_server.py`
+- [x] Stopped and disabled `topquaranta_admin` systemd service (port 8082)
+- [x] Removed `/nou-admin/*` routes from Caddyfile
+- [x] Wagtail DB tables left in place (cleanup deferred to Phase 8)
 
-### P8 — Refactoring i consolidació `PENDING`
+### P8 — Refactoring i consolidació `DONE`
 
-- [ ] Analysis of dead code after Wagtail removal
-- [ ] Settings simplification (remove admin_server.py)
-- [ ] Template/CSS cleanup
+- [x] Dead code analysis: zero remaining wagtail/admin imports in codebase
+- [x] Removed `distribucio/` app entirely (shelved, empty, no models or migrations)
+- [x] Removed `distribucio` from INSTALLED_APPS and LOGGING
+- [x] Settings simplified: only `base.py`, `production.py`, `web_server.py`, `test.py`
+- [x] `django.contrib.admin` fully removed — no admin site, no admin URLs
+- [x] Verified: `manage.py check` passes with both production and web_server settings
+- [x] All public endpoints verified working (200 homepage, ranking, artistes; 403 staff)
 
 ---
 

@@ -16,15 +16,6 @@ topquaranta.cat {
 www.topquaranta.cat {
 	encode zstd gzip
 
-	# Django admin del projecte nou
-	handle_path /nou-admin/static/* {
-		root * /home/topquaranta/app/staticfiles
-		file_server
-	}
-	handle_path /nou-admin/* {
-		reverse_proxy 127.0.0.1:8082
-	}
-
 	# Static files
 	handle_path /static/* {
 		root * /home/topquaranta/app/staticfiles

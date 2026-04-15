@@ -3,22 +3,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 INSTALLED_APPS = [
-    # Wagtail
-    "wagtail.contrib.forms",
-    "wagtail.contrib.redirects",
-    "wagtail.embeds",
-    "wagtail.sites",
-    "wagtail.users",
-    "wagtail.snippets",
-    "wagtail.documents",
-    "wagtail.images",
-    "wagtail.search",
-    "wagtail.admin",
-    "wagtail",
-    "modelcluster",
-    "taggit",
     # Django
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -30,7 +15,6 @@ INSTALLED_APPS = [
     "music",
     "ingesta",
     "ranking",
-    "distribucio",
     "legacy",
     "web",
     "comptes",
@@ -46,7 +30,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
 ROOT_URLCONF = "topquaranta.urls"
@@ -95,9 +78,6 @@ ADMINS = [("TopQuaranta", "admin@topquaranta.cat")]
 DEFAULT_FROM_EMAIL = "noreply@topquaranta.cat"
 SERVER_EMAIL = "noreply@topquaranta.cat"
 
-WAGTAIL_SITE_NAME = "TopQuaranta"
-WAGTAILADMIN_BASE_URL = "https://www.topquaranta.cat"
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -120,6 +100,5 @@ LOGGING = {
     "loggers": {
         "ingesta": {"level": "INFO"},
         "ranking": {"level": "INFO"},
-        "distribucio": {"level": "INFO"},
     },
 }
