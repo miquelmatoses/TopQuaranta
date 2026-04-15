@@ -1,0 +1,32 @@
+{% extends "web/base.html" %}
+
+{% block title %}Iniciar sessió — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Iniciar sessió</h2>
+</section>
+
+<form class="auth-form" method="post">
+  {% csrf_token %}
+  {% for field in form %}
+  <div class="form-field">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}
+      {% for error in field.errors %}
+        <p class="form-error">{{ error }}</p>
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+      <p class="form-error">{{ error }}</p>
+    {% endfor %}
+  {% endif %}
+  <button class="filter-btn" type="submit">Entrar</button>
+</form>
+
+<p class="auth-link">No tens compte? <a href="{% url 'comptes:registre' %}" class="rank-artist-link">Registra't</a></p>
+{% endblock %}

@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.text import slugify
 
 
 class Territori(models.Model):
@@ -42,6 +43,7 @@ class Artista(models.Model):
         help_text="MusicBrainz ID — improves Last.fm lookup accuracy.",
     )
     nom = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=280, unique=True, blank=True)
     territoris = models.ManyToManyField(
         Territori,
         related_name="artistes",
@@ -89,6 +91,17 @@ class Artista(models.Model):
     def __str__(self) -> str:
         codis = ",".join(self.territoris.values_list("codi", flat=True))
         return f"{self.nom} ({codis})" if codis else self.nom
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            base = slugify(self.nom) or "artista"
+            slug = base
+            n = 1
+            while Artista.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                n += 1
+                slug = f"{base}-{n}"
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     def clean(self):
         if self.aprovat and not self.localitat:

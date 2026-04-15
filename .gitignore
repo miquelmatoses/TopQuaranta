@@ -25,6 +25,10 @@ venv/
 staticfiles/
 media/
 
+# Node
+node_modules/
+package-lock.json
+
 # OS
 .DS_Store
 Thumbs.db
@@ -43,3 +47,7 @@ music/ml_tfidf.joblib
 
 # Claude Code
 .claude/
+.claude.json
+
+# Temporary files
+temp/

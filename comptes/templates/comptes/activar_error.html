@@ -1,0 +1,10 @@
+{% extends "web/base.html" %}
+
+{% block title %}Error d'activació — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Enllaç no vàlid</h2>
+  <p class="ranking-date">L'enllaç d'activació no és vàlid o ha caducat. <a href="{% url 'comptes:registre' %}" class="rank-artist-link">Torna a registrar-te.</a></p>
+</section>
+{% endblock %}

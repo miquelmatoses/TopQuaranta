@@ -1,0 +1,39 @@
+{% extends "web/base.html" %}
+
+{% block title %}Dashboard — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">El meu compte</h2>
+</section>
+
+<div class="dashboard-info">
+  <div class="dashboard-field">
+    <span class="dashboard-label">Usuari</span>
+    <span class="dashboard-value">{{ user.username }}</span>
+  </div>
+  <div class="dashboard-field">
+    <span class="dashboard-label">Correu</span>
+    <span class="dashboard-value">{{ user.email }}</span>
+  </div>
+  <div class="dashboard-field">
+    <span class="dashboard-label">Artista</span>
+    <span class="dashboard-value">
+      {% if user_artista %}
+        {% if user_artista.verificat %}
+          {{ user_artista.artista.nom }} — <a href="{% url 'comptes:portal_artista' %}" class="rank-artist-link">Anar al portal</a>
+        {% else %}
+          {{ user_artista.artista.nom }} — <span class="provisional-badge">Pendent</span>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'comptes:sollicitud_artista' %}" class="rank-artist-link">Sol·licitar verificació d'artista</a>
+      {% endif %}
+    </span>
+  </div>
+</div>
+
+<form method="post" action="{% url 'comptes:logout' %}">
+  {% csrf_token %}
+  <button class="filter-btn" type="submit">Tancar sessió</button>
+</form>
+{% endblock %}

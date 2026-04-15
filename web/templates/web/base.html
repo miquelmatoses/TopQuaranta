@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TopQuaranta{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'mm-design/tokens/colors.css' %}">
+  <link rel="stylesheet" href="{% static 'mm-design/tokens/typography.css' %}">
+  <link rel="stylesheet" href="{% static 'mm-design/tokens/spacing.css' %}">
+  <link rel="stylesheet" href="{% static 'web/css/style.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% if territori_actiu %}territori-{{ territori_actiu|lower }}{% endif %}">
+  <header class="site-header">
+    <div class="container">
+      <a href="{% url 'web:homepage' %}" class="site-title-link">
+        <h1 class="site-title">TopQuaranta</h1>
+      </a>
+      <p class="site-subtitle">El rànquing setmanal de música en català</p>
+      <nav class="territori-nav" aria-label="Territoris">
+        <a href="{% url 'web:ranking' territori='cat' %}" class="territori-link territori-link--cat{% if territori_actiu == 'CAT' %} is-active{% endif %}">Catalunya</a>
+        <a href="{% url 'web:ranking' territori='val' %}" class="territori-link territori-link--val{% if territori_actiu == 'VAL' %} is-active{% endif %}">País Valencià</a>
+        <a href="{% url 'web:ranking' territori='bal' %}" class="territori-link territori-link--bal{% if territori_actiu == 'BAL' %} is-active{% endif %}">Illes Balears</a>
+        <a href="{% url 'web:ranking' territori='ppcc' %}" class="territori-link territori-link--ppcc{% if territori_actiu == 'PPCC' %} is-active{% endif %}">PPCC</a>
+        <a href="{% url 'web:artistes' %}" class="territori-link">Artistes</a>
+        <a href="{% url 'web:mapa' %}" class="territori-link">Mapa</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; {{ current_year }} TopQuaranta</p>
+    </div>
+  </footer>
+</body>
+</html>

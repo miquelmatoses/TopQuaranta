@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+
+{% block title %}Estat sol·licitud — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Sol·licitud d'artista</h2>
+</section>
+
+<div class="dashboard-info">
+  <div class="dashboard-field">
+    <span class="dashboard-label">Artista</span>
+    <span class="dashboard-value">{{ user_artista.artista.nom }}</span>
+  </div>
+  <div class="dashboard-field">
+    <span class="dashboard-label">Estat</span>
+    <span class="dashboard-value">
+      {% if user_artista.verificat %}
+        Verificat
+      {% else %}
+        Pendent de verificació
+      {% endif %}
+    </span>
+  </div>
+  <div class="dashboard-field">
+    <span class="dashboard-label">Data</span>
+    <span class="dashboard-value">{{ user_artista.created_at|date:"d/m/Y" }}</span>
+  </div>
+</div>
+
+{% if user_artista.verificat %}
+  <a href="{% url 'comptes:portal_artista' %}" class="filter-btn" style="display:inline-block; text-decoration:none;">Anar al portal</a>
+{% else %}
+  <p class="ranking-date">Rebràs una notificació quan l'equip revise la teua sol·licitud.</p>
+{% endif %}
+{% endblock %}

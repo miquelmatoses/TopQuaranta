@@ -1,0 +1,273 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Mapa — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Mapa d'artistes</h2>
+  <p class="ranking-date" id="breadcrumb">Fes clic en un territori per ampliar</p>
+</section>
+
+<div id="map" class="mapa-container"></div>
+<div id="tooltip" class="mapa-tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function() {
+  var cs = getComputedStyle(document.documentElement);
+  var TC = {
+    'Catalunya': cs.getPropertyValue('--mm-color-yellow').trim(),
+    'País Valencià': cs.getPropertyValue('--mm-color-red').trim(),
+    'Illes': cs.getPropertyValue('--mm-color-blue').trim(),
+    'Franja de Ponent': cs.getPropertyValue('--mm-color-green').trim(),
+    'Andorra': cs.getPropertyValue('--mm-color-green').trim(),
+    'Catalunya del Nord': cs.getPropertyValue('--mm-color-green').trim(),
+    "L'Alguer": cs.getPropertyValue('--mm-color-green').trim(),
+    'El Carxe': cs.getPropertyValue('--mm-color-green').trim()
+  };
+  var gray = cs.getPropertyValue('--mm-color-gray-200').trim();
+  var stroke = cs.getPropertyValue('--mm-color-border').trim();
+  var strokeDark = cs.getPropertyValue('--mm-color-text-muted').trim();
+  var textColor = cs.getPropertyValue('--mm-color-text-primary').trim();
+  var fontSans = cs.getPropertyValue('--mm-font-sans').trim();
+  var bgColor = cs.getPropertyValue('--mm-color-background').trim() || '#fff';
+
+  var comData = {{ comarques_json|safe }};
+  var munData = {{ municipis_json|safe }};
+
+  var el = document.getElementById('map');
+  var tip = document.getElementById('tooltip');
+  var bread = document.getElementById('breadcrumb');
+  var W = el.clientWidth || 800, H = el.clientHeight || 500;
+
+  var svg = d3.select('#map').append('svg')
+    .attr('viewBox', '0 0 ' + W + ' ' + H)
+    .attr('width', '100%').attr('height', '100%');
+  var g = svg.append('g');
+
+  function showTip(evt, text) {
+    tip.textContent = text;
+    tip.style.display = 'block';
+    tip.style.left = (evt.pageX + 12) + 'px';
+    tip.style.top = (evt.pageY - 28) + 'px';
+  }
+  function moveTip(evt) {
+    tip.style.left = (evt.pageX + 12) + 'px';
+    tip.style.top = (evt.pageY - 28) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+
+  function color(terr) { return TC[terr] || gray; }
+
+  // Load all three GeoJSON layers
+  Promise.all([
+    d3.json('{% static "web/data/territoris.geojson" %}'),
+    d3.json('{% static "web/data/comarques-ppcc.geojson" %}'),
+    d3.json('{% static "web/data/municipis.geojson" %}')
+  ]).then(function(data) {
+    var terrGeo = data[0];
+    var comGeo = data[1];
+    var munGeo = data[2];
+
+    drawLevel1();
+
+    // ── Level 1: Territory shapes (4 big polygons) ──
+    function drawLevel1() {
+      g.selectAll('*').remove();
+      bread.innerHTML = 'Fes clic en un territori per ampliar';
+
+      var proj = d3.geoMercator().fitSize([W * 0.9, H * 0.9], terrGeo);
+      // Center the projection
+      var translate = proj.translate();
+      proj.translate([translate[0] + W * 0.05, translate[1] + H * 0.05]);
+      var path = d3.geoPath().projection(proj);
+
+      g.selectAll('path.terr').data(terrGeo.features).enter().append('path')
+        .attr('class', 'terr')
+        .attr('d', path)
+        .attr('fill', function(d) { return color(d.properties.nom); })
+        .attr('fill-opacity', 0.55)
+        .attr('stroke', stroke)
+        .attr('stroke-width', 1)
+        .attr('cursor', 'pointer')
+        .on('mouseover', function(evt, d) {
+          d3.select(this).attr('fill-opacity', 0.85).attr('stroke-width', 2);
+          showTip(evt, d.properties.nom + ' — clic per ampliar');
+        })
+        .on('mousemove', moveTip)
+        .on('mouseout', function() {
+          d3.select(this).attr('fill-opacity', 0.55).attr('stroke-width', 1);
+          hideTip();
+        })
+        .on('click', function(evt, d) {
+          drawLevel2(d.properties.nom);
+        });
+
+      // Territory labels
+      terrGeo.features.forEach(function(d) {
+        var c = path.centroid(d);
+        if (c[0] && c[1]) {
+          g.append('text')
+            .attr('x', c[0]).attr('y', c[1])
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '13px')
+            .attr('font-weight', '600')
+            .attr('font-family', fontSans)
+            .attr('fill', textColor)
+            .attr('pointer-events', 'none')
+            .text(d.properties.nom);
+        }
+      });
+    }
+
+    // ── Level 2: Comarques of one territory ──
+    function drawLevel2(territori) {
+      g.selectAll('*').remove();
+      bread.innerHTML = '<a href="#" class="rank-artist-link" id="back-l1">Tots</a> → ' + territori + ' — clic en una comarca';
+      document.getElementById('back-l1').addEventListener('click', function(e) { e.preventDefault(); drawLevel1(); });
+
+      var features = comGeo.features.filter(function(f) {
+        return f.properties.territori === territori;
+      });
+      if (!features.length) return;
+
+      var fc = { type: 'FeatureCollection', features: features };
+      var proj = d3.geoMercator().fitSize([W * 0.9, H * 0.9], fc);
+      var translate = proj.translate();
+      proj.translate([translate[0] + W * 0.05, translate[1] + H * 0.05]);
+      var path = d3.geoPath().projection(proj);
+
+      g.selectAll('path.com').data(features).enter().append('path')
+        .attr('class', 'com')
+        .attr('d', path)
+        .attr('fill', function(d) {
+          var cd = comData[(d.properties.nom || '').toLowerCase()];
+          return (cd && cd.artista) ? color(territori) : color(territori);
+        })
+        .attr('fill-opacity', function(d) {
+          var cd = comData[(d.properties.nom || '').toLowerCase()];
+          return (cd && cd.artista) ? 0.65 : 0.25;
+        })
+        .attr('stroke', strokeDark)
+        .attr('stroke-width', 0.5)
+        .attr('cursor', 'pointer')
+        .on('mouseover', function(evt, d) {
+          d3.select(this).attr('fill-opacity', 0.85).attr('stroke-width', 1.5);
+          var nom = d.properties.nom || '';
+          var cd = comData[nom.toLowerCase()];
+          var text = nom;
+          if (cd && cd.artista) text += ': ' + cd.artista.nom;
+          showTip(evt, text);
+        })
+        .on('mousemove', moveTip)
+        .on('mouseout', function(evt, d) {
+          var cd = comData[(d.properties.nom || '').toLowerCase()];
+          d3.select(this).attr('fill-opacity', (cd && cd.artista) ? 0.65 : 0.25).attr('stroke-width', 0.5);
+          hideTip();
+        })
+        .on('click', function(evt, d) {
+          drawLevel3(d.properties.nom, territori);
+        });
+
+      // Comarca labels
+      features.forEach(function(d) {
+        var c = path.centroid(d);
+        var area = path.area(d);
+        // Only label comarques large enough to read
+        if (c[0] && c[1] && area > 200) {
+          var fontSize = area > 2000 ? '10px' : '8px';
+          g.append('text')
+            .attr('x', c[0]).attr('y', c[1])
+            .attr('text-anchor', 'middle')
+            .attr('font-size', fontSize)
+            .attr('font-family', fontSans)
+            .attr('fill', textColor)
+            .attr('pointer-events', 'none')
+            .text(d.properties.nom);
+        }
+      });
+    }
+
+    // ── Level 3: Municipalities of one comarca ──
+    function drawLevel3(comarca, territori) {
+      g.selectAll('*').remove();
+      bread.innerHTML = '<a href="#" class="rank-artist-link" id="back-l1b">Tots</a> → <a href="#" class="rank-artist-link" id="back-l2">' + territori + '</a> → ' + comarca;
+      document.getElementById('back-l1b').addEventListener('click', function(e) { e.preventDefault(); drawLevel1(); });
+      document.getElementById('back-l2').addEventListener('click', function(e) { e.preventDefault(); drawLevel2(territori); });
+
+      var comLower = (comarca || '').toLowerCase();
+      var features = munGeo.features.filter(function(f) {
+        return (f.properties.comarca || '').toLowerCase() === comLower;
+      });
+
+      if (!features.length) {
+        g.append('text')
+          .attr('x', W / 2).attr('y', H / 2)
+          .attr('text-anchor', 'middle')
+          .attr('font-family', fontSans).attr('font-size', '14px')
+          .attr('fill', strokeDark)
+          .text(comarca + ': sense dades de municipis');
+        return;
+      }
+
+      var fc = { type: 'FeatureCollection', features: features };
+      var proj = d3.geoMercator().fitSize([W * 0.85, H * 0.85], fc);
+      var translate = proj.translate();
+      proj.translate([translate[0] + W * 0.075, translate[1] + H * 0.075]);
+      var path = d3.geoPath().projection(proj);
+
+      g.selectAll('path.mun').data(features).enter().append('path')
+        .attr('class', 'mun')
+        .attr('d', path)
+        .attr('fill', function(d) {
+          var md = munData[(d.properties.nom || '').toLowerCase()];
+          return (md && md.n_artistes > 0) ? color(territori) : gray;
+        })
+        .attr('fill-opacity', function(d) {
+          var md = munData[(d.properties.nom || '').toLowerCase()];
+          return (md && md.n_artistes > 0) ? 0.7 : 0.2;
+        })
+        .attr('stroke', strokeDark)
+        .attr('stroke-width', 0.5)
+        .on('mouseover', function(evt, d) {
+          d3.select(this).attr('fill-opacity', 0.9).attr('stroke-width', 1.5);
+          var nom = d.properties.nom || '';
+          var md = munData[nom.toLowerCase()];
+          var text = nom;
+          if (md && md.artistes && md.artistes.length) {
+            text += ': ' + md.artistes.map(function(a) { return a.nom; }).join(', ');
+          }
+          showTip(evt, text);
+        })
+        .on('mousemove', moveTip)
+        .on('mouseout', function(evt, d) {
+          var md = munData[(d.properties.nom || '').toLowerCase()];
+          var has = md && md.n_artistes > 0;
+          d3.select(this).attr('fill-opacity', has ? 0.7 : 0.2).attr('stroke-width', 0.5);
+          hideTip();
+        });
+
+      // Municipality labels — only those with artists
+      features.forEach(function(d) {
+        var md = munData[(d.properties.nom || '').toLowerCase()];
+        if (md && md.n_artistes > 0) {
+          var c = path.centroid(d);
+          if (c[0] && c[1]) {
+            g.append('text')
+              .attr('x', c[0]).attr('y', c[1])
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '10px')
+              .attr('font-weight', '600')
+              .attr('font-family', fontSans)
+              .attr('fill', textColor)
+              .attr('pointer-events', 'none')
+              .text(d.properties.nom);
+          }
+        }
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,7 +1,7 @@
 # CLAUDE.md — TopQuaranta System Architecture
 
 > Persistent memory for Claude Code. Read this file before making any change.
-> Last updated: 2026-04-14 — Phase 5 done, reestructura docs
+> Last updated: 2026-04-15 — Phase 6 done (S1–S6), domain flip done
 >
 > See **ROADMAP.md** for implementation status.
 
@@ -24,9 +24,10 @@ and others (CNO, AND, FRA, ALG, CAR, ALT, PPCC).
 
 Cultural mission: demonstrate that Catalan-language music is alive and growing.
 
-**Current state (2026-04-14):** the pipeline (ingesta -> senyal -> ranking) is
-operational. Weekly Top 40 published via ranking provisional admin. Distribution
-via web publica is a future phase.
+**Current state (2026-04-15):** the pipeline (ingesta -> senyal -> ranking) is
+operational. Public website live at topquaranta.cat with ranking pages, artist
+profiles, geographic map, user accounts, and verified artist portal. Domain
+flipped: www.topquaranta.cat → new web (port 8083), legacy at legacy.topquaranta.cat.
 
 > **Image generation + Telegram distribution: indefinitely shelved.**
 > The original Phase 5 planned Pillow image generation + Telegram sending for
@@ -61,6 +62,8 @@ no transactions, sys.exit() throughout) is disabled. This is a full rewrite.
 - Repo: https://github.com/miquelmatoses/TopQuaranta (private)
 - Process user: `topquaranta`
 - Admin URL: `https://www.topquaranta.cat/nou-admin/`
+- Public web: `https://www.topquaranta.cat/` → Caddy → gunicorn port 8083 (`web_server` settings)
+- Staff panel: `https://www.topquaranta.cat/staff/` → same gunicorn, requires `is_staff=True`
 
 ---
 
@@ -310,8 +313,8 @@ table/view can be dropped (Phase 8).
 
 - New project: `topquaranta`. Legacy: `tqcms`
 - New tables: `music_artista`, `music_canco`, etc. Legacy tables untouched
-- Legacy CMS at `/root/TopQuaranta/web_cms/` keeps running until Phase 6
-- New project runs pipeline + ranking + admin. Does NOT serve public website yet
+- Legacy CMS at `/root/TopQuaranta/web_cms/` moved to `legacy.topquaranta.cat` (port 8081)
+- New project runs pipeline + ranking + admin + public website (web/ app on port 8083)
 
 ---
 
@@ -362,6 +365,31 @@ table/view can be dropped (Phase 8).
 │   ├── management/commands/
 │   │   └── calcular_ranking.py    # weekly official + daily provisional
 │   └── tests/
+├── web/                           # public website + staff panel
+│   ├── views/
+│   │   ├── __init__.py            # public views (homepage, ranking, artistes, mapa)
+│   │   └── staff/                 # staff panel views (/staff/)
+│   │       ├── __init__.py        # staff_required decorator, paginate() helper
+│   │       ├── dashboard.py       # staff landing page
+│   │       └── urls.py            # staff URL routing
+│   ├── urls.py
+│   ├── context_processors.py      # current_year for templates
+│   ├── templates/web/
+│   │   ├── base.html              # base template loading mm-design tokens
+│   │   ├── homepage.html          # Top 40 ranking page
+│   │   └── staff/                 # staff panel templates
+│   │       ├── base_staff.html    # staff layout (extends base.html)
+│   │       ├── confirmar_accio.html  # reusable confirmation page
+│   │       └── dashboard.html     # staff landing page
+│   └── static/web/css/
+│       └── style.css              # site CSS consuming mm-design tokens
+├── comptes/                       # user accounts + artist verification portal
+│   ├── models.py                  # Usuari(AbstractUser), UserArtista
+│   ├── views.py                   # registre, login, dashboard, portal artista
+│   ├── forms.py                   # RegistreForm, SollicitudArtistaForm
+│   ├── admin.py                   # UserArtistaAdmin
+│   ├── wagtail_hooks.py           # UserArtistaViewSet (snippet)
+│   └── templates/comptes/
 ├── distribucio/                   # SHELVED — placeholder only
 │   └── (empty models/admin/views)
 └── legacy/                        # read-only Django models for legacy tables
@@ -396,7 +424,51 @@ Load with `python-decouple`. Always read via `from django.conf import settings`.
 
 ---
 
-## 5. Testing
+## 5. Design System (mm-design)
+
+The public website uses **mm-design** (`github.com/miquelmatoses/mm-design`), a
+centralized design token system shared across all Miquel Matoses projects.
+
+### Installation
+
+Installed as an npm git dependency. No build step required.
+
+```bash
+npm install                        # reads package.json, installs to node_modules/
+```
+
+`package.json` at project root declares: `"mm-design": "github:miquelmatoses/mm-design"`.
+
+### Django integration
+
+```python
+# settings/base.py
+STATICFILES_DIRS = [
+    ("mm-design", BASE_DIR / "node_modules" / "mm-design"),
+]
+```
+
+In templates, load tokens via `{% static %}`:
+
+```html
+<link rel="stylesheet" href="{% static 'mm-design/tokens/colors.css' %}">
+<link rel="stylesheet" href="{% static 'mm-design/tokens/typography.css' %}">
+<link rel="stylesheet" href="{% static 'mm-design/tokens/spacing.css' %}">
+```
+
+After install or update: `python manage.py collectstatic --noinput`.
+
+### Rules (enforced by mm-design/CLAUDE.md)
+
+1. **Tokens**: all colors, fonts, spacing, and shadows come from mm-design. Never hardcode hex values.
+2. **Fonts**: Playfair Display (headings), Roboto (body). Loaded via Google Fonts `@import` in `typography.css`.
+3. **Naming**: all CSS custom properties use `--mm-[category]-[name]` (e.g. `--mm-color-primary`).
+4. **Brand colors**: red (`--mm-color-primary`), blue, yellow, green. Never place two brand colors directly on each other — always brand color + white or brand color + black.
+5. **Updating**: `npm update mm-design && python manage.py collectstatic --noinput`.
+
+---
+
+## 6. Testing
 
 ```ini
 # pytest.ini
@@ -413,7 +485,7 @@ Use `@pytest.mark.django_db` for any test touching the DB.
 
 ---
 
-## 6. Code Conventions
+## 7. Code Conventions
 
 - No `print()` -> `logging` or `self.stdout.write()`
 - No `sys.exit()` -> `raise CommandError(...)`
@@ -447,7 +519,7 @@ At the end of every work session, update `ROADMAP.md` to reflect the real state.
 
 ---
 
-## 7. Key Decisions and Rationale
+## 8. Key Decisions and Rationale
 
 | Decision | Rationale |
 |---|---|

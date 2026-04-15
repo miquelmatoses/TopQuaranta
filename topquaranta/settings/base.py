@@ -24,13 +24,19 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party
+    "rest_framework",
     # Project apps
     "music",
     "ingesta",
     "ranking",
     "distribucio",
     "legacy",
+    "web",
+    "comptes",
 ]
+
+AUTH_USER_MODEL = "comptes.Usuari"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -55,6 +61,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "web.context_processors.current_year",
             ],
         },
     },
@@ -76,10 +83,17 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [
+    ("mm-design", BASE_DIR / "node_modules" / "mm-design"),
+]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+ADMINS = [("TopQuaranta", "admin@topquaranta.cat")]
+DEFAULT_FROM_EMAIL = "noreply@topquaranta.cat"
+SERVER_EMAIL = "noreply@topquaranta.cat"
 
 WAGTAIL_SITE_NAME = "TopQuaranta"
 WAGTAILADMIN_BASE_URL = "https://www.topquaranta.cat"

@@ -1,0 +1,970 @@
+/* TopQuaranta public site — consumes mm-design tokens exclusively */
+
+/* ── Reset + base ── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-base);
+  line-height: var(--mm-leading-relaxed);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  max-width: var(--mm-width-content);
+  margin-inline: auto;
+  padding-inline: var(--mm-space-4);
+}
+
+/* ── Header ── */
+
+.site-header {
+  padding-block: var(--mm-space-6) var(--mm-space-4);
+  border-bottom: 2px solid var(--mm-color-primary);
+}
+
+.site-title-link {
+  display: inline-block;
+}
+
+.site-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-5xl);
+  font-weight: var(--mm-weight-bold);
+  line-height: var(--mm-leading-none);
+  color: var(--mm-color-primary);
+}
+
+.site-subtitle {
+  font-size: var(--mm-text-lg);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-2);
+}
+
+/* ── Territory navigation ── */
+
+.territori-nav {
+  display: flex;
+  gap: var(--mm-space-2);
+  margin-top: var(--mm-space-4);
+  flex-wrap: wrap;
+}
+
+.territori-link {
+  display: inline-block;
+  padding: var(--mm-space-1_5) var(--mm-space-4);
+  border-radius: var(--mm-radius-lg);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  border: 2px solid var(--mm-color-border);
+  color: var(--mm-color-text-primary);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* Territory accent colors via mm-design tokens */
+
+.territori-link--cat {
+  border-color: var(--mm-color-yellow);
+}
+
+.territori-link--cat:hover,
+.territori-link--cat.is-active {
+  background-color: var(--mm-color-yellow);
+  border-color: var(--mm-color-yellow);
+  color: var(--mm-color-black);
+}
+
+.territori-link--val {
+  border-color: var(--mm-color-red);
+}
+
+.territori-link--val:hover,
+.territori-link--val.is-active {
+  background-color: var(--mm-color-red);
+  border-color: var(--mm-color-red);
+  color: var(--mm-color-white);
+}
+
+.territori-link--bal {
+  border-color: var(--mm-color-blue);
+}
+
+.territori-link--bal:hover,
+.territori-link--bal.is-active {
+  background-color: var(--mm-color-blue);
+  border-color: var(--mm-color-blue);
+  color: var(--mm-color-white);
+}
+
+.territori-link--ppcc {
+  border-color: var(--mm-color-green);
+}
+
+.territori-link--ppcc:hover,
+.territori-link--ppcc.is-active {
+  background-color: var(--mm-color-green);
+  border-color: var(--mm-color-green);
+  color: var(--mm-color-white);
+}
+
+/* Territory accent on header border */
+
+.territori-cat .site-header { border-bottom-color: var(--mm-color-yellow); }
+.territori-val .site-header { border-bottom-color: var(--mm-color-red); }
+.territori-bal .site-header { border-bottom-color: var(--mm-color-blue); }
+.territori-ppcc .site-header { border-bottom-color: var(--mm-color-green); }
+
+/* ── Ranking header ── */
+
+.ranking-header {
+  padding-block: var(--mm-space-6);
+}
+
+.ranking-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-3xl);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-text-primary);
+}
+
+.ranking-date {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-1);
+}
+
+.provisional-badge {
+  display: inline-block;
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--mm-color-balance-caution-text);
+  background-color: var(--mm-color-balance-caution-bg);
+  padding: var(--mm-space-0_5) var(--mm-space-2);
+  border-radius: var(--mm-radius-sm);
+  margin-top: var(--mm-space-2);
+}
+
+/* ── Ranking list ── */
+
+.ranking-list {
+  list-style: none;
+  padding-bottom: var(--mm-space-8);
+}
+
+.ranking-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-3);
+  padding: var(--mm-space-3) var(--mm-space-4);
+  border-bottom: 1px solid var(--mm-color-border);
+  transition: background-color 0.15s ease;
+}
+
+.ranking-entry:hover {
+  background-color: var(--mm-color-hover-bg);
+}
+
+.ranking-entry:first-child {
+  border-top: 1px solid var(--mm-color-border);
+}
+
+/* ── Podium (top 3) ── */
+
+.rank-podium .rank-position {
+  color: var(--mm-color-primary);
+  font-weight: var(--mm-weight-bold);
+}
+
+.rank-podium .rank-song {
+  font-weight: var(--mm-weight-bold);
+}
+
+/* Territory-specific podium accent */
+
+.territori-cat .rank-podium .rank-position { color: var(--mm-color-yellow); }
+.territori-val .rank-podium .rank-position { color: var(--mm-color-red); }
+.territori-bal .rank-podium .rank-position { color: var(--mm-color-blue); }
+.territori-ppcc .rank-podium .rank-position { color: var(--mm-color-green); }
+
+/* ── Position number ── */
+
+.rank-position {
+  flex-shrink: 0;
+  width: var(--mm-space-8);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-text-lg);
+  font-weight: var(--mm-weight-medium);
+  text-align: center;
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Album cover ── */
+/* Cover size is a component dimension — no mm-design token exists for this. */
+
+.rank-cover {
+  flex-shrink: 0;
+  --cover-size: 48px;
+  width: var(--cover-size);
+  height: var(--cover-size);
+  border-radius: var(--mm-radius-base);
+  object-fit: cover;
+}
+
+.rank-cover--placeholder {
+  display: block;
+  background-color: var(--mm-color-gray-200);
+}
+
+/* ── Song + artist info ── */
+
+.rank-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rank-song {
+  font-size: var(--mm-text-base);
+  font-weight: var(--mm-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-artist {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Empty state ── */
+
+.ranking-empty {
+  padding-block: var(--mm-space-8);
+  text-align: center;
+  font-size: var(--mm-text-lg);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Footer ── */
+
+.site-footer {
+  padding-block: var(--mm-space-6);
+  border-top: 1px solid var(--mm-color-border);
+  text-align: center;
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Artist link in ranking ── */
+
+.rank-artist-link {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.rank-artist-link:hover {
+  color: var(--mm-color-primary);
+}
+
+/* ── Artist directory ── */
+
+.artistes-filters {
+  padding-bottom: var(--mm-space-4);
+}
+
+.filter-row {
+  display: flex;
+  gap: var(--mm-space-2);
+  margin-bottom: var(--mm-space-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-search {
+  flex: 1;
+  min-width: 0;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-base);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+}
+
+.filter-search:focus {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.filter-btn {
+  padding: var(--mm-space-2) var(--mm-space-4);
+  border: 1px solid var(--mm-color-primary);
+  border-radius: var(--mm-radius-base);
+  background-color: var(--mm-color-primary);
+  color: var(--mm-color-white);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  cursor: pointer;
+}
+
+.filter-btn:hover {
+  background-color: var(--mm-color-primary-dark);
+  border-color: var(--mm-color-primary-dark);
+}
+
+.artistes-list {
+  list-style: none;
+  padding-bottom: var(--mm-space-8);
+}
+
+.artistes-entry {
+  border-bottom: 1px solid var(--mm-color-border);
+}
+
+.artistes-entry:first-child {
+  border-top: 1px solid var(--mm-color-border);
+}
+
+.artistes-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--mm-space-3) var(--mm-space-4);
+  transition: background-color 0.15s ease;
+}
+
+.artistes-link:hover {
+  background-color: var(--mm-color-hover-bg);
+}
+
+.artistes-nom {
+  font-weight: var(--mm-weight-medium);
+}
+
+.artistes-meta {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Pagination ── */
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--mm-space-4);
+  padding-block: var(--mm-space-6);
+}
+
+.pagination-link {
+  color: var(--mm-color-primary);
+  font-weight: var(--mm-weight-medium);
+}
+
+.pagination-link:hover {
+  color: var(--mm-color-primary-dark);
+}
+
+.pagination-info {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Artist profile ── */
+
+.artista-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  margin-top: var(--mm-space-2);
+  flex-wrap: wrap;
+}
+
+.territori-tag {
+  display: inline-block;
+  padding: var(--mm-space-0_5) var(--mm-space-2);
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-wide);
+}
+
+.territori-tag--cat { background-color: var(--mm-color-yellow); color: var(--mm-color-black); }
+.territori-tag--val { background-color: var(--mm-color-red); color: var(--mm-color-white); }
+.territori-tag--bal { background-color: var(--mm-color-blue); color: var(--mm-color-white); }
+.territori-tag--ppcc { background-color: var(--mm-color-green); color: var(--mm-color-white); }
+
+.artista-location {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+.artista-section {
+  padding-block: var(--mm-space-4);
+}
+
+.section-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-xl);
+  font-weight: var(--mm-weight-bold);
+  margin-bottom: var(--mm-space-3);
+}
+
+/* ── Ranking history ── */
+
+.historial-week {
+  margin-bottom: var(--mm-space-4);
+}
+
+.historial-date {
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-color-text-muted);
+  margin-bottom: var(--mm-space-1);
+}
+
+.historial-entries {
+  list-style: none;
+}
+
+.historial-entry {
+  display: flex;
+  gap: var(--mm-space-2);
+  padding: var(--mm-space-1) 0;
+  font-size: var(--mm-text-sm);
+}
+
+.historial-pos {
+  font-family: var(--mm-font-mono);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-primary);
+  min-width: var(--mm-space-8);
+}
+
+.historial-territori {
+  color: var(--mm-color-text-muted);
+  min-width: var(--mm-space-8);
+}
+
+/* ── Discography ── */
+
+.disco-album {
+  margin-bottom: var(--mm-space-4);
+  padding: var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-lg);
+}
+
+.disco-header {
+  display: flex;
+  gap: var(--mm-space-3);
+  align-items: center;
+}
+
+.disco-cover {
+  flex-shrink: 0;
+  --cover-size: 64px;
+  width: var(--cover-size);
+  height: var(--cover-size);
+  border-radius: var(--mm-radius-base);
+  object-fit: cover;
+}
+
+.disco-cover--placeholder {
+  display: block;
+  background-color: var(--mm-color-gray-200);
+}
+
+.disco-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.disco-nom {
+  font-weight: var(--mm-weight-bold);
+}
+
+.disco-meta {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+.disco-tracks {
+  list-style: none;
+  margin-top: var(--mm-space-2);
+  padding-left: 0;
+}
+
+.disco-track {
+  padding: var(--mm-space-0_5) 0;
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-primary);
+  border-bottom: 1px solid var(--mm-color-gray-100);
+}
+
+.disco-track:last-child {
+  border-bottom: none;
+}
+
+/* ── Auth forms ── */
+
+.auth-form {
+  max-width: var(--mm-width-page);
+  padding-bottom: var(--mm-space-6);
+}
+
+.form-field {
+  margin-bottom: var(--mm-space-4);
+}
+
+.form-label {
+  display: block;
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  margin-bottom: var(--mm-space-1);
+}
+
+.form-field input {
+  width: 100%;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-base);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+}
+
+.form-field input:focus {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.form-error {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-error);
+  margin-top: var(--mm-space-1);
+}
+
+.auth-link {
+  margin-top: var(--mm-space-4);
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Dashboard ── */
+
+.dashboard-info {
+  padding-bottom: var(--mm-space-6);
+}
+
+.dashboard-field {
+  display: flex;
+  gap: var(--mm-space-4);
+  padding: var(--mm-space-2) 0;
+  border-bottom: 1px solid var(--mm-color-gray-100);
+}
+
+.dashboard-label {
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-color-text-muted);
+  min-width: var(--mm-space-8);
+}
+
+.dashboard-value {
+  font-size: var(--mm-text-base);
+}
+
+/* ── Map ── */
+
+.mapa-container {
+  width: 100%;
+  /* Map height is a component dimension — no mm-design token for this. */
+  --map-height: 500px;
+  height: var(--map-height);
+  border-radius: var(--mm-radius-lg);
+  border: 1px solid var(--mm-color-border);
+  margin-bottom: var(--mm-space-8);
+  position: relative;
+  overflow: hidden;
+}
+
+.mapa-container svg {
+  display: block;
+}
+
+.mapa-tooltip {
+  display: none;
+  position: absolute;
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+  background-color: var(--mm-color-text-primary);
+  color: var(--mm-color-background);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  border-radius: var(--mm-radius-base);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: var(--mm-z-overlay);
+}
+
+/* ── Artist portal chart ── */
+
+.chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--mm-space-1);
+  height: 160px;
+  padding: var(--mm-space-3) 0;
+  border-bottom: 1px solid var(--mm-color-border);
+}
+
+.chart-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: var(--mm-space-8);
+  background-color: var(--mm-color-primary);
+  border-radius: var(--mm-radius-sm) var(--mm-radius-sm) 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--mm-space-4);
+}
+
+.chart-label {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-white);
+  padding-top: var(--mm-space-0_5);
+}
+
+.chart-week {
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-1);
+}
+
+/* ── Form textarea ── */
+
+.form-field textarea {
+  width: 100%;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-base);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+  resize: vertical;
+}
+
+.form-field textarea:focus {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.form-field select {
+  width: 100%;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-base);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+}
+
+.form-field select:focus {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* ── Staff layout ── */
+
+.staff-layout {
+  padding-bottom: var(--mm-space-8);
+}
+
+.staff-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-3);
+  padding: var(--mm-space-3) 0;
+  border-bottom: 2px solid var(--mm-color-primary);
+  margin-bottom: var(--mm-space-4);
+  flex-wrap: wrap;
+}
+
+.staff-badge {
+  display: inline-block;
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--mm-color-white);
+  background-color: var(--mm-color-primary);
+  padding: var(--mm-space-0_5) var(--mm-space-2);
+  border-radius: var(--mm-radius-sm);
+}
+
+.staff-nav-link {
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-color-text-muted);
+  padding: var(--mm-space-1) var(--mm-space-2);
+  border-radius: var(--mm-radius-base);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.staff-nav-link:hover {
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-hover-bg);
+}
+
+.staff-nav-link.is-active {
+  color: var(--mm-color-primary);
+  font-weight: var(--mm-weight-bold);
+}
+
+/* ── Staff messages ── */
+
+.staff-messages {
+  margin-bottom: var(--mm-space-4);
+}
+
+.staff-msg {
+  padding: var(--mm-space-2) var(--mm-space-4);
+  border-radius: var(--mm-radius-base);
+  font-size: var(--mm-text-sm);
+  margin-bottom: var(--mm-space-2);
+}
+
+.staff-msg--success {
+  background-color: var(--mm-color-balance-good-bg);
+  color: var(--mm-color-balance-good-text);
+}
+
+.staff-msg--error {
+  background-color: var(--mm-color-balance-bad-bg);
+  color: var(--mm-color-balance-bad-text);
+}
+
+.staff-msg--warning {
+  background-color: var(--mm-color-balance-caution-bg);
+  color: var(--mm-color-balance-caution-text);
+}
+
+.staff-msg--info {
+  background-color: var(--mm-color-hover-bg);
+  color: var(--mm-color-text-primary);
+}
+
+/* ── Staff confirmation page ── */
+
+.staff-confirm {
+  max-width: var(--mm-width-page);
+}
+
+.staff-confirm-desc {
+  font-size: var(--mm-text-base);
+  margin-bottom: var(--mm-space-4);
+}
+
+.staff-confirm-list {
+  list-style: disc;
+  padding-left: var(--mm-space-6);
+  margin-bottom: var(--mm-space-4);
+  font-size: var(--mm-text-sm);
+}
+
+.staff-confirm-list li {
+  padding: var(--mm-space-0_5) 0;
+}
+
+.staff-confirm-actions {
+  display: flex;
+  gap: var(--mm-space-3);
+  margin-top: var(--mm-space-4);
+}
+
+.staff-btn--danger {
+  background-color: var(--mm-color-error);
+  border-color: var(--mm-color-error);
+}
+
+.staff-btn--danger:hover {
+  opacity: 0.9;
+}
+
+.staff-btn--cancel {
+  background-color: var(--mm-color-background);
+  border-color: var(--mm-color-border);
+  color: var(--mm-color-text-primary);
+}
+
+.staff-btn--cancel:hover {
+  background-color: var(--mm-color-hover-bg);
+}
+
+/* ── Staff tables ── */
+
+.staff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mm-text-sm);
+}
+
+.staff-table th {
+  text-align: left;
+  font-weight: var(--mm-weight-bold);
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border-bottom: 2px solid var(--mm-color-border);
+  white-space: nowrap;
+  color: var(--mm-color-text-muted);
+  font-size: var(--mm-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-wide);
+}
+
+.staff-table td {
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border-bottom: 1px solid var(--mm-color-gray-100);
+  vertical-align: middle;
+}
+
+.staff-table tr:hover td {
+  background-color: var(--mm-color-hover-bg);
+}
+
+.staff-table a {
+  color: var(--mm-color-primary);
+}
+
+.staff-table a:hover {
+  color: var(--mm-color-primary-dark);
+}
+
+/* ── Staff tools grid (dashboard) ── */
+
+.staff-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--mm-space-4);
+}
+
+.staff-tool-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--mm-space-4);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-lg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.staff-tool-card:hover {
+  border-color: var(--mm-color-primary);
+  background-color: var(--mm-color-hover-bg);
+}
+
+.staff-tool-title {
+  font-weight: var(--mm-weight-bold);
+  margin-bottom: var(--mm-space-1);
+}
+
+.staff-tool-desc {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+/* ── Staff filters ── */
+
+.staff-filters {
+  display: flex;
+  gap: var(--mm-space-2);
+  margin-bottom: var(--mm-space-4);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Staff bulk actions ── */
+
+.staff-actions-bar {
+  display: flex;
+  gap: var(--mm-space-2);
+  align-items: center;
+  padding: var(--mm-space-2) 0;
+  margin-bottom: var(--mm-space-3);
+}
+
+.staff-action-select {
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+  border: 1px solid var(--mm-color-border);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-background);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 640px) {
+  .site-title {
+    font-size: var(--mm-text-3xl);
+  }
+
+  .ranking-title {
+    font-size: var(--mm-text-2xl);
+  }
+
+  .ranking-entry {
+    padding: var(--mm-space-2) var(--mm-space-3);
+    gap: var(--mm-space-2);
+  }
+
+  .rank-cover {
+    --cover-size: 40px;
+  }
+
+  .territori-nav {
+    gap: var(--mm-space-1_5);
+  }
+
+  .territori-link {
+    padding: var(--mm-space-1) var(--mm-space-3);
+    font-size: var(--mm-text-xs);
+  }
+}

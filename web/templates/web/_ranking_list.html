@@ -1,0 +1,20 @@
+{% if ranking %}
+<ol class="ranking-list">
+  {% for entry in ranking %}
+  <li class="ranking-entry{% if entry.posicio <= 3 %} rank-podium{% endif %}">
+    <span class="rank-position">{{ entry.posicio }}</span>
+    {% if entry.canco.album.imatge_url %}
+      <img class="rank-cover" src="{{ entry.canco.album.imatge_url }}" alt="" loading="lazy" width="48" height="48">
+    {% else %}
+      <span class="rank-cover rank-cover--placeholder"></span>
+    {% endif %}
+    <div class="rank-info">
+      <span class="rank-song">{{ entry.canco.nom }}</span>
+      <a href="{% url 'web:artista' slug=entry.canco.artista.slug %}" class="rank-artist-link">{{ entry.canco.artista.nom }}</a>
+    </div>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="ranking-empty">Ranking no disponible.</p>
+{% endif %}

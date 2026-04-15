@@ -1,0 +1,75 @@
+{
+	# Rebràs avisos d'expiració i errors d'emissió
+	email admin@topquaranta.cat
+}
+
+# — Apex → WWW (canònic)
+topquaranta.cat {
+    # envia HSTS també en la redirecció de l'apex
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+    redir https://www.topquaranta.cat{uri} 301
+}
+
+# — Lloc principal (new web)
+www.topquaranta.cat {
+	encode zstd gzip
+
+	# Django admin del projecte nou
+	handle_path /nou-admin/static/* {
+		root * /home/topquaranta/app/staticfiles
+		file_server
+	}
+	handle_path /nou-admin/* {
+		reverse_proxy 127.0.0.1:8082
+	}
+
+	# Static files
+	handle_path /static/* {
+		root * /home/topquaranta/app/staticfiles
+		file_server
+	}
+
+	# All public routes → new web (port 8083)
+	handle {
+		reverse_proxy 127.0.0.1:8083
+	}
+
+	# Capçaleres de seguretat bàsiques
+	header {
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "upgrade-insecure-requests"
+	}
+	log {
+		output file /var/log/caddy/topquaranta_access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+# — Legacy Wagtail site
+legacy.topquaranta.cat {
+	encode zstd gzip
+
+	handle_path /static/* {
+		root * /root/TopQuaranta/web_cms/staticfiles
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	header {
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+	log {
+		output file /var/log/caddy/topquaranta_legacy_access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

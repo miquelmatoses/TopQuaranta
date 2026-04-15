@@ -1,0 +1,73 @@
+{% extends "web/base.html" %}
+
+{% block title %}{{ artista.nom }} — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">{{ artista.nom }}</h2>
+  <div class="artista-meta">
+    {% for codi in territoris %}
+      <span class="territori-tag territori-tag--{{ codi|lower }}">{{ codi }}</span>
+    {% endfor %}
+    {% if artista.localitat %}
+      <span class="artista-location">{{ artista.localitat }}{% if artista.comarca %}, {{ artista.comarca }}{% endif %}</span>
+    {% endif %}
+  </div>
+</section>
+
+<section class="artista-section">
+  <h3 class="section-title">Historial al rànquing</h3>
+  {% if historial_setmanes %}
+  <div class="historial-list">
+    {% for setmana, entries in historial_setmanes %}
+    <div class="historial-week">
+      <h4 class="historial-date">Setmana del {{ setmana|date:"j F Y" }}</h4>
+      <ul class="historial-entries">
+        {% for entry in entries %}
+        <li class="historial-entry">
+          <span class="historial-pos">#{{ entry.posicio }}</span>
+          <span class="historial-territori">{{ entry.territori }}</span>
+          <span class="historial-song">{{ entry.canco.nom }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="ranking-empty">Sense aparicions al rànquing.</p>
+  {% endif %}
+</section>
+
+<section class="artista-section">
+  <h3 class="section-title">Discografia</h3>
+  {% if discografia %}
+  <div class="disco-list">
+    {% for album in discografia %}
+    <div class="disco-album">
+      <div class="disco-header">
+        {% if album.imatge_url %}
+          <img class="disco-cover" src="{{ album.imatge_url }}" alt="" loading="lazy" width="64" height="64">
+        {% else %}
+          <span class="disco-cover disco-cover--placeholder"></span>
+        {% endif %}
+        <div class="disco-info">
+          <span class="disco-nom">{{ album.nom }}</span>
+          <span class="disco-meta">{{ album.get_tipus_display }}{% if album.data_llancament %} · {{ album.data_llancament|date:"Y" }}{% endif %}</span>
+        </div>
+      </div>
+      <ul class="disco-tracks">
+        {% for canco in album.cancons.all %}
+          {% if canco.verificada %}
+          <li class="disco-track">{{ canco.nom }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="ranking-empty">Sense discografia verificada.</p>
+  {% endif %}
+</section>
+{% endblock %}

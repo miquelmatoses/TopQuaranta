@@ -1,0 +1,19 @@
+{% extends "web/base.html" %}
+
+{% block title %}Top 40 Catalunya — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Top 40 Catalunya</h2>
+  {% if es_provisional %}
+    <span class="provisional-badge">Provisional</span>
+    {% if data_calcul %}
+      <p class="ranking-date">Dades del {{ data_calcul|date:"j F Y" }}</p>
+    {% endif %}
+  {% else %}
+    <p class="ranking-date">Setmana del {{ setmana|date:"j F Y" }}</p>
+  {% endif %}
+</section>
+
+{% include "web/_ranking_list.html" %}
+{% endblock %}

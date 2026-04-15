@@ -1,0 +1,34 @@
+{% extends "web/base.html" %}
+
+{% block title %}Sol·licitud artista — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Verificació d'artista</h2>
+  <p class="ranking-date">Selecciona el teu artista i explica per què el representes.</p>
+</section>
+
+<form class="auth-form" method="post">
+  {% csrf_token %}
+  <div class="form-field">
+    <label class="form-label" for="id_artista">{{ form.artista.label }}</label>
+    {{ form.artista }}
+    {% for error in form.artista.errors %}
+      <p class="form-error">{{ error }}</p>
+    {% endfor %}
+  </div>
+  <div class="form-field">
+    <label class="form-label" for="id_sollicitud_text">{{ form.sollicitud_text.label }}</label>
+    {{ form.sollicitud_text }}
+    {% for error in form.sollicitud_text.errors %}
+      <p class="form-error">{{ error }}</p>
+    {% endfor %}
+  </div>
+  {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+      <p class="form-error">{{ error }}</p>
+    {% endfor %}
+  {% endif %}
+  <button class="filter-btn" type="submit">Enviar sol·licitud</button>
+</form>
+{% endblock %}

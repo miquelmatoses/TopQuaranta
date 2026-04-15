@@ -1,0 +1,12 @@
+{% extends "web/base.html" %}
+
+{% block title %}Sol·licitud pendent — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Sol·licitud pendent de verificació</h2>
+  <p class="ranking-date">La teua sol·licitud està pendent de revisió per part de l'equip TopQuaranta. Rebràs una notificació quan siga verificada.</p>
+</section>
+
+<a href="{% url 'comptes:dashboard' %}" class="rank-artist-link">Tornar al dashboard</a>
+{% endblock %}

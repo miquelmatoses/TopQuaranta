@@ -1,0 +1,53 @@
+{% extends "web/base.html" %}
+
+{% block title %}Artistes — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Artistes</h2>
+</section>
+
+<form class="artistes-filters" method="get" action="{% url 'web:artistes' %}">
+  <div class="filter-row">
+    <input class="filter-search" type="search" name="q" value="{{ cerca }}" placeholder="Cercar artista…" aria-label="Cercar artista">
+    <button class="filter-btn" type="submit">Cercar</button>
+  </div>
+  <div class="filter-row">
+    <a href="{% url 'web:artistes' %}" class="territori-link{% if not territori_filtre %} is-active{% endif %}">Tots</a>
+    <a href="{% url 'web:artistes' %}?territori=CAT{% if cerca %}&q={{ cerca }}{% endif %}" class="territori-link territori-link--cat{% if territori_filtre == 'CAT' %} is-active{% endif %}">CAT</a>
+    <a href="{% url 'web:artistes' %}?territori=VAL{% if cerca %}&q={{ cerca }}{% endif %}" class="territori-link territori-link--val{% if territori_filtre == 'VAL' %} is-active{% endif %}">VAL</a>
+    <a href="{% url 'web:artistes' %}?territori=BAL{% if cerca %}&q={{ cerca }}{% endif %}" class="territori-link territori-link--bal{% if territori_filtre == 'BAL' %} is-active{% endif %}">BAL</a>
+  </div>
+</form>
+
+{% if page %}
+<ul class="artistes-list">
+  {% for artista in page %}
+  <li class="artistes-entry">
+    <a href="{% url 'web:artista' slug=artista.slug %}" class="artistes-link">
+      <span class="artistes-nom">{{ artista.nom }}</span>
+      <span class="artistes-meta">
+        {% for t in artista.territoris.all %}{{ t.codi }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        {% if artista.localitat %}· {{ artista.localitat }}{% endif %}
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if page.has_other_pages %}
+<nav class="pagination" aria-label="Paginació">
+  {% if page.has_previous %}
+    <a href="?page={{ page.previous_page_number }}{% if territori_filtre %}&territori={{ territori_filtre }}{% endif %}{% if cerca %}&q={{ cerca }}{% endif %}" class="pagination-link">&laquo; Anterior</a>
+  {% endif %}
+  <span class="pagination-info">Pàgina {{ page.number }} de {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}{% if territori_filtre %}&territori={{ territori_filtre }}{% endif %}{% if cerca %}&q={{ cerca }}{% endif %}" class="pagination-link">Següent &raquo;</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<p class="ranking-empty">Cap artista trobat.</p>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-14 — Phase 5 DONE: provisional ranking + admin review
+> Updated: 2026-04-15 — Phase 7 P1 staff infrastructure DONE
 
 ---
 
@@ -288,32 +288,164 @@
 
 ---
 
-## Phase 6 — Web publica
+## Phase 6 — Web pública `IN PROGRESS`
 
 **Goal:** build topquaranta.cat as the primary public distribution channel.
 
-- [ ] Ranking setmanal public: top 40 per territori, actualitzat cada dissabte
-- [ ] Base de dades d'artistes navegable: fitxa d'artista, discografia, territoris
-- [ ] Portal d'artista registrat: login, estadistiques de les seues cancons al ranking
-- [ ] Mapes de distribucio geografica dels artistes
-- [ ] Visualitzacions d'evolucio temporal (posicio setmanal, score)
-- [ ] Disseny responsive (mobile-first)
+Built on: Django 5.2 + Wagtail 7.0 + `web/` app + mm-design tokens.
+Served via gunicorn port 8083 (`topquaranta.settings.web_server`), Caddy reverse proxy.
 
-**Prerequisit:** ranking publicant setmanalment durant >= 4 setmanes.
-**Note:** disseny i planificacio en conversa dedicada. Construida sobre Django 5.2 + Wagtail 7.0 + models nous.
+### Architectural decisions (permanent reference)
+
+| Decision | Detail |
+|---|---|
+| **mm-design** | npm git dependency (`github:miquelmatoses/mm-design`), tokens via `STATICFILES_DIRS` + `{% static %}`. Never hardcode hex values. |
+| **Logo SVG** | Created from scratch (`web/static/web/img/logo-topquaranta.svg`). Original PNG was on an inaccessible local machine. All fills use `var(--mm-color-*)`. |
+| **Domain flip** | After S3 is complete: Caddy routes all public paths to port 8083 instead of legacy Wagtail. Legacy only keeps `/nou-admin/`. |
+| **Wagtail** | Keep admin for now. Migrate admin tools to web pública in Phase 7. Uninstall Wagtail when the last tool is migrated. |
+| **User architecture** | Three roles: anonymous, verified artist, admin. App `comptes/` with custom `Usuari` model extending `AbstractUser`. |
+| **API** | Django REST Framework under `/api/v1/`. Used for GeoJSON map data and future artist portal. |
+| **Territory colors** | CAT=`--mm-color-yellow`, VAL=`--mm-color-red`, BAL=`--mm-color-blue`, PPCC=`--mm-color-green`. Applied via CSS class `territori-<code>` on `<body>`. |
+
+### S1 — Homepage CAT `DONE`
+
+- [x] `web/` Django app: views, urls, apps, context_processors
+- [x] `web/templates/web/base.html` — loads mm-design tokens via `{% static %}`
+- [x] `web/templates/web/homepage.html` — Top 40 CAT, fallback RankingSetmanal → RankingProvisional
+- [x] `web/static/web/css/style.css` — zero hex colors, all mm-design tokens
+- [x] `topquaranta/settings/web_server.py` — gunicorn port 8083
+- [x] `topquaranta-web.service` systemd unit
+- [x] Caddy config: `/` + `/static/*` → port 8083
+
+### S2 — Ranking per territori + arxiu setmanal `DONE`
+
+- [x] `/ranking/<territori>/` — CAT, VAL, BAL, PPCC (current week)
+- [x] `/ranking/<territori>/<setmana>/` — specific week (YYYY-MM-DD, must be Monday)
+- [x] Territory nav in `base.html` with accent colors
+- [x] Invalid territory or date → 404
+- [x] PPCC: no RankingProvisional fallback — empty state if no RankingSetmanal
+- [x] Design audit: all border-radius, spacing, colors use mm-design tokens
+
+### S3 — Perfil artista + directori `DONE`
+
+- [x] `Artista.slug` field (SlugField, auto from `nom`, unique). Data migration to populate all.
+- [x] `/artistes/` — directory of approved artists, filterable by territory (CAT/VAL/BAL), searchable by name. Paginated (40/page).
+- [x] `/artista/<slug>/` — artist profile: nom, territories, location, last 10 weeks in `RankingSetmanal`, discography.
+- [x] Artist profiles linked from ranking entries.
+- [x] Caddy: `/artista/*` and `/artistes/*` routes to port 8083.
+
+### S4 — Mapa D3.js + GeoJSON `DONE`
+
+- [x] `djangorestframework` installed, `/api/v1/mapa/artistes/` endpoint.
+- [x] `/mapa/` — three-level zoomable SVG map with D3.js (CDN):
+  - Level 1: 8 territory shapes (merged from QGIS shapefiles via shapely)
+  - Level 2: 97 comarca shapes per territory
+  - Level 3: 1,826 municipality shapes per comarca, with artist data overlay
+- [x] GeoJSON files generated from original QGIS shapefiles (`temp/geodata/`):
+  - `territoris.geojson` (89 KB), `comarques-ppcc.geojson` (556 KB), `municipis.geojson` (2.3 MB)
+- [x] Territory accent colors from mm-design CSS variables via `getComputedStyle()`.
+- [x] Caddy: `/mapa/*` and `/api/*` routes to port 8083.
+
+### S5 — App `comptes/` — registre, login, dashboard `DONE`
+
+- [x] `comptes/` app with `Usuari(AbstractUser)` model, `AUTH_USER_MODEL`, migration.
+- [x] `/compte/registre/` — email + password form, verification email, inactive until confirmed.
+- [x] `/compte/login/` — login → redirect `/compte/dashboard/`.
+- [x] `/compte/logout/` — POST logout.
+- [x] `/compte/dashboard/` — login required, account info + artist verification status.
+- [x] All templates extend `web/base.html`, mm-design tokens only.
+- [x] Caddy: `/compte/*` route to port 8083.
+
+### S6 — Portal artista verificat `DONE`
+
+- [x] `UserArtista` model (OneToOne Usuari, FK Artista, `verificat`, `sollicitud_text`). Migration 0002.
+- [x] `/compte/artista/sol·licitud/` — login required, select artist + justification text. Creates `UserArtista(verificat=False)`. Shows status if already exists.
+- [x] `/compte/artista/` — login required + `verificat=True`. Shows: artist info, weekly evolution chart (HTML/CSS), last 10 weeks ranking history, provisional ranking, pending songs.
+- [x] `/compte/artista/` returns 403 for unverified users.
+- [x] Dashboard updated: shows link to solicitud/portal/pending status.
+- [x] Admin email notification (`mail_admins`) on new `UserArtista` creation.
+- [x] Wagtail admin: `UserArtistaViewSet` (snippet) for staff to set `verificat=True`.
+- [x] Django admin: `UserArtistaAdmin` with `list_editable = ("verificat",)`.
+
+### Domain flip `DONE`
+
+- [x] `www.topquaranta.cat` → port 8083 (new web) as default handler.
+- [x] `legacy.topquaranta.cat` → port 8081 (legacy Wagtail). DNS A record pending.
+- [x] `/nou-admin/*` → port 8082 (admin server, unchanged).
+- [x] `/static/*` → staticfiles directory (unchanged).
+- [x] Legacy gunicorn ALLOWED_HOSTS updated.
+
+### Pending (not yet scheduled)
+
+- [ ] Disseny responsive polish (mobile-first testing across devices)
+- [ ] SEO: meta tags, Open Graph, sitemap.xml
+- [ ] DNS A record for `legacy.topquaranta.cat` → `188.245.60.20`
 
 ---
 
-## Phase 7 — Control panel intern
+## Phase 7 — Staff panel (`/staff/`) `IN PROGRESS`
 
-**Goal:** admin tooling for ongoing data quality.
+**Goal:** migrate all admin tools from Django/Wagtail admin to custom `/staff/` web interface, then remove Wagtail entirely.
 
-- [ ] Deezer audit table: low similarity matches, name mismatches
-- [ ] "Last.fm not found" filter + search link + inline editable `lastfm_nom`
-- [ ] Catalogue statistics: Last.fm coverage, errors per artist, pending false positives
-- [ ] PPCC global ranking view (aggregate territorial rankings)
+### P1 — Infraestructura base `DONE`
 
-**Prerequisite:** ranking must be publishing weekly before building these tools.
+- [x] Convert `web/views.py` → `web/views/__init__.py` package
+- [x] Create `web/views/staff/` package with `staff_required` decorator and `paginate()` helper
+- [x] Create `base_staff.html` (extends `web/base.html`, staff nav, messages)
+- [x] Create `confirmar_accio.html` (reusable confirmation page with motiu select)
+- [x] Create `staff/dashboard.py` + template — landing page at `/staff/`
+- [x] Wire `/staff/` URL prefix in `topquaranta/urls.py`
+- [x] Staff CSS: nav, badge, messages, tables, filters, actions bar, tool cards
+- [x] Staff returns 403 for anonymous, 403 for non-staff, 200 for staff users
+
+### P2 — Cançons (`/staff/cancons/`) `PENDING`
+
+- [ ] List view: ML class, nom, artista, album, data, Deezer/Viasona links, ISRC, verificada, territoris
+- [ ] Filters: verificada (defaults to non-verified), ml_classe, data_llancament
+- [ ] Search by nom and artista__nom
+- [ ] Bulk actions: aprovar, rebutjar (esborrar), rebutjar àlbum sencer — with motiu confirmation
+- [ ] Ordered by -ml_confianca
+
+### P3 — Ranking provisional (`/staff/ranking/`) `PENDING`
+
+- [ ] Read-only list by territory (defaults to CAT)
+- [ ] Columns: posicio, artista, cançó, playcount, dies_en_top, Deezer/Last.fm links
+- [ ] Actions: rebutjar cançó, rebutjar artista — with motiu confirmation
+
+### P4 — Artistes (`/staff/artistes/`) `PENDING`
+
+- [ ] List view with inline-editable deezer_id, localitat, comarca
+- [ ] Edit page for individual artist
+- [ ] Actions: marcar sense Deezer, aprovar artista (with comarca→territory auto-assign)
+
+### P5 — Artistes pendents (`/staff/artistes/pendents/`) `PENDING`
+
+- [ ] Cascading selects: territori → comarca → localitat (JSON API endpoints)
+- [ ] Per-row approve/discard buttons (AJAX)
+- [ ] Ordered by verified tracks count (descending)
+
+### P6 — Eines restants (`/staff/historial/`, `/staff/senyal/`, etc.) `PENDING`
+
+- [ ] HistorialRevisio: read-only log
+- [ ] SenyalDiari: basic list
+- [ ] UserArtista: verification management
+- [ ] ConfiguracioGlobal: edit form
+
+### P7 — Eliminació Wagtail + Django admin `PENDING`
+
+- [ ] Remove `wagtail.*` from INSTALLED_APPS
+- [ ] Remove Django admin URLs
+- [ ] Remove admin.py files across all apps
+- [ ] Remove wagtail_hooks.py files
+- [ ] Clean up dependencies (requirements.txt)
+- [ ] Eliminate gunicorn on port 8082 (admin_server)
+- [ ] Update Caddyfile (remove `/nou-admin/*` routes)
+
+### P8 — Refactoring i consolidació `PENDING`
+
+- [ ] Analysis of dead code after Wagtail removal
+- [ ] Settings simplification (remove admin_server.py)
+- [ ] Template/CSS cleanup
 
 ---
 

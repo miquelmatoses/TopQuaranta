@@ -1,0 +1,24 @@
+{% extends "web/base.html" %}
+
+{% block title %}{% block staff_title %}Staff{% endblock %} — TopQuaranta{% endblock %}
+
+{% block content %}
+<div class="staff-layout">
+  <nav class="staff-nav" aria-label="Staff">
+    <span class="staff-badge">Staff</span>
+    <a href="{% url 'staff:dashboard' %}" class="staff-nav-link{% if staff_section == 'dashboard' %} is-active{% endif %}">Inici</a>
+  </nav>
+
+  {% if messages %}
+  <div class="staff-messages">
+    {% for message in messages %}
+    <div class="staff-msg staff-msg--{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="staff-content">
+    {% block staff_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

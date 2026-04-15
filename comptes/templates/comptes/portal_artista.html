@@ -1,0 +1,88 @@
+{% extends "web/base.html" %}
+
+{% block title %}Portal artista — {{ artista.nom }} — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">{{ artista.nom }}</h2>
+  <div class="artista-meta">
+    {% for terr in territoris %}
+      <span class="territori-tag territori-tag--{{ terr.codi|lower }}">{{ terr.get_codi_display }}</span>
+    {% endfor %}
+    {% if artista.localitat %}
+      <span class="artista-location">{{ artista.localitat }}{% if artista.comarca %}, {{ artista.comarca }}{% endif %}</span>
+    {% endif %}
+  </div>
+</section>
+
+{% if evolucio %}
+<section class="artista-section">
+  <h3 class="section-title">Evolució setmanal</h3>
+  <div class="chart-container">
+    {% for punt in evolucio %}
+    <div class="chart-bar-wrap">
+      <div class="chart-bar" style="height: {{ punt.height }}%;" title="Posició {{ punt.posicio }}">
+        <span class="chart-label">{{ punt.posicio }}</span>
+      </div>
+      <span class="chart-week">{{ punt.setmana|date:"d/m" }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if historial_setmanes %}
+<section class="artista-section">
+  <h3 class="section-title">Historial de rànquing</h3>
+  {% for setmana, entries in historial_setmanes %}
+  <div class="historial-week">
+    <p class="historial-date">Setmana {{ setmana|date:"d/m/Y" }}</p>
+    <ul class="historial-entries">
+      {% for entry in entries %}
+      <li class="historial-entry">
+        <span class="historial-pos">#{{ entry.posicio }}</span>
+        <span class="historial-territori">{{ entry.territori }}</span>
+        <span>{{ entry.canco.titol }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if provisional %}
+<section class="artista-section">
+  <h3 class="section-title">Rànquing provisional actual</h3>
+  <ul class="historial-entries">
+    {% for entry in provisional %}
+    <li class="historial-entry">
+      <span class="historial-pos">#{{ entry.posicio }}</span>
+      <span class="historial-territori">{{ entry.territori }}</span>
+      <span>{{ entry.canco.titol }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if pendents %}
+<section class="artista-section">
+  <h3 class="section-title">Cançons pendents de verificació</h3>
+  <ul class="historial-entries">
+    {% for canco in pendents %}
+    <li class="historial-entry">
+      <span class="historial-territori">{{ canco.data_llancament|date:"Y" }}</span>
+      <span>{{ canco.titol }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not historial_setmanes and not provisional %}
+<section class="artista-section">
+  <p class="ranking-empty">Encara no hi ha dades de rànquing per a aquest artista.</p>
+</section>
+{% endif %}
+{% endblock %}
