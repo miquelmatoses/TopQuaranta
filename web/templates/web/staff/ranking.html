@@ -1,0 +1,77 @@
+{% extends "web/staff/base_staff.html" %}
+
+{% block staff_title %}Ranking provisional{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Ranking provisional</h2>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="territori" class="staff-action-select" onchange="this.form.submit()">
+    {% for codi, nom in territoris %}
+    <option value="{{ codi }}"{% if territori == codi %} selected{% endif %}>{{ nom }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<form method="post" action="{% url 'staff:ranking_accio' %}">
+  {% csrf_token %}
+
+  <div class="staff-actions-bar">
+    <label><input type="checkbox" id="select-all"> Tot</label>
+    <select name="action" class="staff-action-select">
+      <option value="">-- Acció --</option>
+      <option value="rebutjar_canco">Rebutjar cançó</option>
+      <option value="rebutjar_artista">Rebutjar artista</option>
+    </select>
+    <select name="motiu" class="staff-action-select">
+      <option value="">-- Motiu --</option>
+      {% for value, label in motius %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="filter-btn">Executar</button>
+  </div>
+
+  <div class="staff-table-wrap">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Pos.</th>
+          <th>Artista</th>
+          <th>Cançó</th>
+          <th>Playcount</th>
+          <th>Dies top</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in ranking %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ entry.pk }}" class="row-check"></td>
+          <td class="rank-position">{{ entry.posicio }}</td>
+          <td>{{ entry.canco.artista.nom }}</td>
+          <td>{{ entry.canco.nom }}</td>
+          <td class="staff-cell-mono">{{ entry.lastfm_playcount|default:"-" }}</td>
+          <td class="staff-cell-mono">{{ entry.dies_en_top|default:"-" }}</td>
+          <td class="staff-cell-links">
+            {% if entry.canco.deezer_id %}<a href="https://www.deezer.com/track/{{ entry.canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
+            <a href="https://www.last.fm/music/{{ entry.canco.artista.nom|urlencode }}/_/{{ entry.canco.nom|urlencode }}" target="_blank" rel="noopener">Lf</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="ranking-empty">No hi ha ranking provisional per a {{ territori }}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+<script>
+document.getElementById('select-all').addEventListener('change', function() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

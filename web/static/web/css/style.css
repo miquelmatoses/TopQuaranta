@@ -877,6 +877,58 @@ a {
   color: var(--mm-color-primary-dark);
 }
 
+.staff-table-wrap {
+  overflow-x: auto;
+}
+
+.staff-cell-muted {
+  color: var(--mm-color-text-muted);
+  font-size: var(--mm-text-xs);
+}
+
+.staff-cell-mono {
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-text-xs);
+}
+
+.staff-cell-links {
+  white-space: nowrap;
+}
+
+.staff-cell-links a {
+  margin-right: var(--mm-space-1);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+}
+
+/* ── ML badges ── */
+
+.staff-ml {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  white-space: nowrap;
+}
+
+.staff-ml--good { color: var(--mm-color-balance-good-text); }
+.staff-ml--caution { color: var(--mm-color-balance-caution-text); }
+.staff-ml--bad { color: var(--mm-color-balance-bad-text); }
+.staff-ml--none { color: var(--mm-color-text-muted); }
+
+/* ── Status badges ── */
+
+.staff-badge-ok {
+  display: inline-block;
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-balance-good-text);
+}
+
+.staff-badge-no {
+  display: inline-block;
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-text-muted);
+}
+
 /* ── Staff tools grid (dashboard) ── */
 
 .staff-tools {

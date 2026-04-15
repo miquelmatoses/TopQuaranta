@@ -1,6 +1,6 @@
 # ROADMAP.md — TopQuaranta Implementation Phases
 
-> Updated: 2026-04-15 — Phase 7 P1 staff infrastructure DONE
+> Updated: 2026-04-15 — Phase 7 P1-P6 staff panel DONE
 
 ---
 
@@ -398,38 +398,41 @@ Served via gunicorn port 8083 (`topquaranta.settings.web_server`), Caddy reverse
 - [x] Staff CSS: nav, badge, messages, tables, filters, actions bar, tool cards
 - [x] Staff returns 403 for anonymous, 403 for non-staff, 200 for staff users
 
-### P2 — Cançons (`/staff/cancons/`) `PENDING`
+### P2 — Cançons (`/staff/cancons/`) `DONE`
 
-- [ ] List view: ML class, nom, artista, album, data, Deezer/Viasona links, ISRC, verificada, territoris
-- [ ] Filters: verificada (defaults to non-verified), ml_classe, data_llancament
-- [ ] Search by nom and artista__nom
-- [ ] Bulk actions: aprovar, rebutjar (esborrar), rebutjar àlbum sencer — with motiu confirmation
-- [ ] Ordered by -ml_confianca
+- [x] List view: ML class, nom, artista, album, data, Deezer/Viasona links, ISRC, verificada, territoris
+- [x] Filters: verificada (defaults to non-verified), ml_classe, data_llancament (year)
+- [x] Search by nom and artista__nom
+- [x] Bulk actions: aprovar, rebutjar (esborrar), rebutjar àlbum sencer — with motiu select
+- [x] Ordered by -ml_confianca
+- [x] Custom template tags: `ml_badge`, `territori_list`, `query_string`
 
-### P3 — Ranking provisional (`/staff/ranking/`) `PENDING`
+### P3 — Ranking provisional (`/staff/ranking/`) `DONE`
 
-- [ ] Read-only list by territory (defaults to CAT)
-- [ ] Columns: posicio, artista, cançó, playcount, dies_en_top, Deezer/Last.fm links
-- [ ] Actions: rebutjar cançó, rebutjar artista — with motiu confirmation
+- [x] List by territory (defaults to CAT), all 10 territories available
+- [x] Columns: posicio, artista, cançó, playcount, dies_en_top, Deezer/Last.fm links
+- [x] Actions: rebutjar cançó, rebutjar artista — with motiu select
 
-### P4 — Artistes (`/staff/artistes/`) `PENDING`
+### P4 — Artistes (`/staff/artistes/`) `DONE`
 
-- [ ] List view with inline-editable deezer_id, localitat, comarca
-- [ ] Edit page for individual artist
-- [ ] Actions: marcar sense Deezer, aprovar artista (with comarca→territory auto-assign)
+- [x] List view with filters (aprovat, deezer, territori), search by nom
+- [x] Edit page for individual artist (nom, lastfm_nom, deezer_id, localitat, comarca, territoris, aprovat)
+- [x] Actions: marcar sense Deezer, aprovar artista (with comarca→territory auto-assign)
+- [x] Deezer ID change triggers cleanup of old unverified tracks
 
-### P5 — Artistes pendents (`/staff/artistes/pendents/`) `PENDING`
+### P5 — Artistes pendents (`/staff/artistes/pendents/`) `DONE`
 
-- [ ] Cascading selects: territori → comarca → localitat (JSON API endpoints)
-- [ ] Per-row approve/discard buttons (AJAX)
-- [ ] Ordered by verified tracks count (descending)
+- [x] Cascading selects: territori → comarca → localitat (3 JSON API endpoints)
+- [x] Per-row approve/discard buttons (AJAX with fetch API)
+- [x] Ordered by verified tracks count (descending)
+- [x] Row fades on approve/discard
 
-### P6 — Eines restants (`/staff/historial/`, `/staff/senyal/`, etc.) `PENDING`
+### P6 — Eines restants `DONE`
 
-- [ ] HistorialRevisio: read-only log
-- [ ] SenyalDiari: basic list
-- [ ] UserArtista: verification management
-- [ ] ConfiguracioGlobal: edit form
+- [x] `/staff/historial/` — read-only log with decisio/motiu filters and search
+- [x] `/staff/senyal/` — daily signal list with date filter, errors-only filter, search
+- [x] `/staff/verificacio/` — UserArtista management with verify/unverify toggle
+- [x] `/staff/configuracio/` — ConfiguracioGlobal edit form (all 15 coefficients)
 
 ### P7 — Eliminació Wagtail + Django admin `PENDING`
 

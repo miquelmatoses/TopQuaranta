@@ -1,0 +1,98 @@
+{% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
+
+{% block staff_title %}Cançons{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Cançons</h2>
+  <p class="ranking-date">{{ page.paginator.count }} resultats</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="verificada" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Totes</option>
+    <option value="0"{% if verificada == "0" %} selected{% endif %}>No verificada</option>
+    <option value="1"{% if verificada == "1" %} selected{% endif %}>Verificada</option>
+  </select>
+  <select name="ml_classe" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">ML: Totes</option>
+    <option value="A"{% if ml_classe == "A" %} selected{% endif %}>A</option>
+    <option value="B"{% if ml_classe == "B" %} selected{% endif %}>B</option>
+    <option value="C"{% if ml_classe == "C" %} selected{% endif %}>C</option>
+  </select>
+  <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar nom o artista..." class="filter-search" style="max-width:240px">
+  <input type="text" name="any" value="{{ any_filtre }}" placeholder="Any" class="filter-search" style="max-width:80px">
+  <button type="submit" class="filter-btn">Filtrar</button>
+</form>
+
+<form method="post" action="{% url 'staff:cancons_accio' %}" id="cancons-form">
+  {% csrf_token %}
+
+  <div class="staff-actions-bar">
+    <label><input type="checkbox" id="select-all"> Tot</label>
+    <select name="action" class="staff-action-select">
+      <option value="">-- Acció --</option>
+      <option value="aprovar">Aprovar</option>
+      <option value="rebutjar">Rebutjar</option>
+      <option value="rebutjar_album">Rebutjar àlbum sencer</option>
+    </select>
+    <select name="motiu" class="staff-action-select">
+      <option value="">-- Motiu --</option>
+      {% for value, label in motius %}
+      <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="filter-btn">Executar</button>
+  </div>
+
+  <div class="staff-table-wrap">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>ML</th>
+          <th>Cançó</th>
+          <th>Artista</th>
+          <th>Àlbum</th>
+          <th>Data</th>
+          <th>Links</th>
+          <th>ISRC</th>
+          <th>Verif.</th>
+          <th>Territoris</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for canco in page %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ canco.pk }}" class="row-check"></td>
+          <td>{% ml_badge canco %}</td>
+          <td>{{ canco.nom }}</td>
+          <td>{{ canco.artista.nom }}</td>
+          <td class="staff-cell-muted">{{ canco.album.nom }}</td>
+          <td class="staff-cell-muted">{{ canco.data_llancament|date:"Y-m-d" }}</td>
+          <td class="staff-cell-links">
+            {% if canco.deezer_id %}<a href="https://www.deezer.com/track/{{ canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
+            {% if canco.artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ canco.artista.deezer_id }}" target="_blank" rel="noopener">DzA</a>{% endif %}
+            <a href="https://www.viasona.cat/cerca?que={{ canco.artista.nom|urlencode }}+{{ canco.nom|urlencode }}" target="_blank" rel="noopener">Vi</a>
+          </td>
+          <td class="staff-cell-mono">{{ canco.isrc|default:"-" }}</td>
+          <td>{% if canco.verificada %}<span class="staff-badge-ok">V</span>{% else %}<span class="staff-badge-no">-</span>{% endif %}</td>
+          <td class="staff-cell-muted">{% territori_list canco.artista %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="ranking-empty">Cap cançó trobada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+{% include "web/staff/_pagination.html" %}
+
+<script>
+document.getElementById('select-all').addEventListener('change', function() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

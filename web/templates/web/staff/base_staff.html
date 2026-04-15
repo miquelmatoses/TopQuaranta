@@ -7,6 +7,11 @@
   <nav class="staff-nav" aria-label="Staff">
     <span class="staff-badge">Staff</span>
     <a href="{% url 'staff:dashboard' %}" class="staff-nav-link{% if staff_section == 'dashboard' %} is-active{% endif %}">Inici</a>
+    <a href="{% url 'staff:cancons' %}" class="staff-nav-link{% if staff_section == 'cancons' %} is-active{% endif %}">Cançons</a>
+    <a href="{% url 'staff:ranking' %}" class="staff-nav-link{% if staff_section == 'ranking' %} is-active{% endif %}">Ranking</a>
+    <a href="{% url 'staff:artistes' %}" class="staff-nav-link{% if staff_section == 'artistes' %} is-active{% endif %}">Artistes</a>
+    <a href="{% url 'staff:artistes_pendents' %}" class="staff-nav-link{% if staff_section == 'pendents' %} is-active{% endif %}">Pendents</a>
+    <a href="{% url 'staff:historial' %}" class="staff-nav-link{% if staff_section == 'historial' %} is-active{% endif %}">Historial</a>
   </nav>
 
   {% if messages %}

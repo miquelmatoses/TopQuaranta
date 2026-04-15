@@ -1,0 +1,62 @@
+{% extends "web/staff/base_staff.html" %}
+
+{% block staff_title %}Editar {{ artista.nom }}{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Editar artista</h2>
+  <p class="ranking-date">{{ artista.nom }}</p>
+</section>
+
+<form method="post" class="auth-form">
+  {% csrf_token %}
+
+  <div class="form-field">
+    <label class="form-label" for="nom">Nom</label>
+    <input type="text" name="nom" id="nom" value="{{ artista.nom }}" required>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="lastfm_nom">Nom Last.fm</label>
+    <input type="text" name="lastfm_nom" id="lastfm_nom" value="{{ artista.lastfm_nom }}">
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="deezer_id">Deezer ID</label>
+    <input type="text" name="deezer_id" id="deezer_id" value="{{ artista.deezer_id|default_if_none:'' }}">
+    {% if artista.deezer_id %}
+    <a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener" style="font-size:var(--mm-text-sm)">Obrir a Deezer</a>
+    {% endif %}
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="localitat">Localitat</label>
+    <input type="text" name="localitat" id="localitat" value="{{ artista.localitat|default:'' }}">
+  </div>
+
+  <div class="form-field">
+    <label class="form-label" for="comarca">Comarca</label>
+    <input type="text" name="comarca" id="comarca" value="{{ artista.comarca|default:'' }}">
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">Territoris</label>
+    {% for t in tots_territoris %}
+    <label style="display:inline-block;margin-right:var(--mm-space-3);font-size:var(--mm-text-sm)">
+      <input type="checkbox" name="territoris" value="{{ t.codi }}"{% if t.codi in territoris_actuals %} checked{% endif %}> {{ t.codi }}
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="form-field">
+    <label style="font-size:var(--mm-text-sm)">
+      <input type="checkbox" name="aprovat"{% if artista.aprovat %} checked{% endif %}> Aprovat
+    </label>
+  </div>
+
+  <div class="staff-confirm-actions">
+    <button type="submit" class="filter-btn">Desar</button>
+    <a href="{% url 'staff:artistes' %}" class="filter-btn staff-btn--cancel">Tornar</a>
+  </div>
+</form>
+{% endblock %}

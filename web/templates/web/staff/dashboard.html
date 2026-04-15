@@ -9,6 +9,37 @@
 </section>
 
 <nav class="staff-tools">
-  <p class="ranking-empty">Les eines de gestió s'afegiran en les properes fases.</p>
+  <a href="{% url 'staff:cancons' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Cançons</span>
+    <span class="staff-tool-desc">Verificar, aprovar i rebutjar cançons</span>
+  </a>
+  <a href="{% url 'staff:ranking' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Ranking provisional</span>
+    <span class="staff-tool-desc">Revisar el ranking diari i rebutjar entrades</span>
+  </a>
+  <a href="{% url 'staff:artistes' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Artistes</span>
+    <span class="staff-tool-desc">Gestionar artistes aprovats</span>
+  </a>
+  <a href="{% url 'staff:artistes_pendents' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Artistes pendents</span>
+    <span class="staff-tool-desc">Aprovar o descartar artistes auto-descoberts</span>
+  </a>
+  <a href="{% url 'staff:historial' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Historial</span>
+    <span class="staff-tool-desc">Log de decisions d'aprovació i rebuig</span>
+  </a>
+  <a href="{% url 'staff:senyal' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Senyal diari</span>
+    <span class="staff-tool-desc">Dades Last.fm diàries</span>
+  </a>
+  <a href="{% url 'staff:verificacio_artistes' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Verificació artistes</span>
+    <span class="staff-tool-desc">Sol·licituds de verificació d'artistes</span>
+  </a>
+  <a href="{% url 'staff:configuracio' %}" class="staff-tool-card">
+    <span class="staff-tool-title">Configuració</span>
+    <span class="staff-tool-desc">Coeficients de l'algorisme de ranking</span>
+  </a>
 </nav>
 {% endblock %}

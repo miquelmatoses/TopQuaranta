@@ -371,7 +371,12 @@ table/view can be dropped (Phase 8).
 │   │   └── staff/                 # staff panel views (/staff/)
 │   │       ├── __init__.py        # staff_required decorator, paginate() helper
 │   │       ├── dashboard.py       # staff landing page
-│   │       └── urls.py            # staff URL routing
+│   │       ├── cancons.py         # track list, filters, bulk actions
+│   │       ├── ranking.py         # provisional ranking review
+│   │       ├── artistes.py        # artist list + edit page
+│   │       ├── pendents.py        # pending artists + cascading selects API
+│   │       ├── eines.py           # historial, senyal, verificació, configuració
+│   │       └── urls.py            # staff URL routing (19 endpoints)
 │   ├── urls.py
 │   ├── context_processors.py      # current_year for templates
 │   ├── templates/web/

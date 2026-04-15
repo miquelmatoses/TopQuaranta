@@ -1,0 +1,183 @@
+{% extends "web/staff/base_staff.html" %}
+
+{% block staff_title %}Artistes pendents{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Artistes pendents</h2>
+  <p class="ranking-date">{{ artistes|length }} artistes auto-descoberts per revisar</p>
+</section>
+
+<div class="staff-table-wrap">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Deezer</th>
+        <th>Viasona</th>
+        <th>Canç. verif.</th>
+        <th>Territori</th>
+        <th>Comarca</th>
+        <th>Localitat</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for artista in artistes %}
+      <tr id="row-{{ artista.pk }}">
+        <td>{{ artista.nom }}</td>
+        <td class="staff-cell-links">
+          {% if artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% else %}-{% endif %}
+        </td>
+        <td class="staff-cell-links">
+          <a href="https://www.viasona.cat/cerca?que={{ artista.nom|urlencode }}" target="_blank" rel="noopener">Vi</a>
+        </td>
+        <td class="staff-cell-mono">{{ artista.nb_verif }}</td>
+        <td>
+          <select class="tq-territori staff-action-select" data-id="{{ artista.pk }}">
+            <option value="">-- Territori --</option>
+          </select>
+        </td>
+        <td>
+          <select class="tq-comarca staff-action-select" data-id="{{ artista.pk }}" disabled>
+            <option value="">-- Comarca --</option>
+          </select>
+        </td>
+        <td>
+          <select class="tq-localitat staff-action-select" data-id="{{ artista.pk }}" disabled>
+            <option value="">-- Localitat --</option>
+          </select>
+        </td>
+        <td class="staff-cell-links" style="white-space:nowrap">
+          <button type="button" class="tq-aprovar filter-btn" data-id="{{ artista.pk }}" disabled
+            style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Aprovar</button>
+          <button type="button" class="tq-descartar filter-btn staff-btn--danger" data-id="{{ artista.pk }}"
+            style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Descartar</button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="ranking-empty">No hi ha artistes pendents.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+const API = {
+  territoris: '{% url "staff:api_territoris" %}',
+  comarques: '{% url "staff:api_comarques" %}',
+  municipis: '{% url "staff:api_municipis" %}',
+  aprovar: id => `/staff/artistes/pendents/${id}/aprovar/`,
+  descartar: id => `/staff/artistes/pendents/${id}/descartar/`,
+};
+
+// Load territories on page load
+fetch(API.territoris).then(r => r.json()).then(data => {
+  document.querySelectorAll('.tq-territori').forEach(sel => {
+    data.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.codi;
+      opt.textContent = t.nom;
+      sel.appendChild(opt);
+    });
+  });
+});
+
+// Cascading: territori → comarca
+document.querySelectorAll('.tq-territori').forEach(sel => {
+  sel.addEventListener('change', function() {
+    const id = this.dataset.id;
+    const comarcaSel = document.querySelector(`.tq-comarca[data-id="${id}"]`);
+    const locSel = document.querySelector(`.tq-localitat[data-id="${id}"]`);
+    comarcaSel.innerHTML = '<option value="">-- Comarca --</option>';
+    locSel.innerHTML = '<option value="">-- Localitat --</option>';
+    locSel.disabled = true;
+    comarcaSel.disabled = !this.value;
+    updateAprovarBtn(id);
+    if (!this.value) return;
+    fetch(`${API.comarques}?territori=${this.value}`).then(r => r.json()).then(data => {
+      data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        comarcaSel.appendChild(opt);
+      });
+    });
+  });
+});
+
+// Cascading: comarca → localitat
+document.querySelectorAll('.tq-comarca').forEach(sel => {
+  sel.addEventListener('change', function() {
+    const id = this.dataset.id;
+    const locSel = document.querySelector(`.tq-localitat[data-id="${id}"]`);
+    locSel.innerHTML = '<option value="">-- Localitat --</option>';
+    locSel.disabled = !this.value;
+    updateAprovarBtn(id);
+    if (!this.value) return;
+    fetch(`${API.municipis}?comarca=${encodeURIComponent(this.value)}`).then(r => r.json()).then(data => {
+      data.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        locSel.appendChild(opt);
+      });
+    });
+  });
+});
+
+// Enable approve button when localitat is selected
+document.querySelectorAll('.tq-localitat').forEach(sel => {
+  sel.addEventListener('change', function() {
+    updateAprovarBtn(this.dataset.id);
+  });
+});
+
+function updateAprovarBtn(id) {
+  const loc = document.querySelector(`.tq-localitat[data-id="${id}"]`);
+  const btn = document.querySelector(`.tq-aprovar[data-id="${id}"]`);
+  btn.disabled = !loc.value;
+}
+
+// Approve
+document.querySelectorAll('.tq-aprovar').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    const comarca = document.querySelector(`.tq-comarca[data-id="${id}"]`).value;
+    const localitat = document.querySelector(`.tq-localitat[data-id="${id}"]`).value;
+    fetch(API.aprovar(id), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+      body: JSON.stringify({comarca, localitat}),
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        const row = document.getElementById(`row-${id}`);
+        row.style.opacity = '0.3';
+        row.querySelectorAll('button,select').forEach(el => el.disabled = true);
+      } else {
+        alert(data.error || 'Error');
+      }
+    });
+  });
+});
+
+// Discard
+document.querySelectorAll('.tq-descartar').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    if (!confirm('Descartar aquest artista?')) return;
+    fetch(API.descartar(id), {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF},
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        const row = document.getElementById(`row-${id}`);
+        row.style.opacity = '0.3';
+        row.querySelectorAll('button,select').forEach(el => el.disabled = true);
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
+
+{% block staff_title %}Senyal diari{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Senyal diari</h2>
+  <p class="ranking-date">{{ page.paginator.count }} registres</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <input type="date" name="data" value="{{ data_filtre }}" class="filter-search" style="max-width:160px">
+  <select name="errors" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Tots</option>
+    <option value="1"{% if errors_only == "1" %} selected{% endif %}>Només errors</option>
+  </select>
+  <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar..." class="filter-search" style="max-width:200px">
+  <button type="submit" class="filter-btn">Filtrar</button>
+</form>
+
+<div class="staff-table-wrap">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>Cançó</th>
+        <th>Artista</th>
+        <th>Data</th>
+        <th>Playcount</th>
+        <th>Listeners</th>
+        <th>Score</th>
+        <th>Error</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in page %}
+      <tr>
+        <td>{{ s.canco.nom }}</td>
+        <td class="staff-cell-muted">{{ s.canco.artista.nom }}</td>
+        <td class="staff-cell-muted">{{ s.data|date:"d/m/Y" }}</td>
+        <td class="staff-cell-mono">{{ s.lastfm_playcount|default:"-" }}</td>
+        <td class="staff-cell-mono">{{ s.lastfm_listeners|default:"-" }}</td>
+        <td class="staff-cell-mono">{% if s.score_entrada is not None %}{{ s.score_entrada|floatformat:1 }}{% else %}-{% endif %}</td>
+        <td>
+          {% if s.error %}<span class="staff-ml staff-ml--bad" title="{{ s.error_msg }}">Error</span>
+          {% else %}<span class="staff-badge-ok">OK</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="ranking-empty">Cap registre trobat.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "web/staff/_pagination.html" %}
+{% endblock %}

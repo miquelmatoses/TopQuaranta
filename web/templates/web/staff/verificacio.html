@@ -1,0 +1,56 @@
+{% extends "web/staff/base_staff.html" %}
+
+{% block staff_title %}Verificació artistes{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Verificació artistes</h2>
+  <p class="ranking-date">Sol·licituds d'artistes verificats</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="verificat" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Tots</option>
+    <option value="0"{% if verificat == "0" %} selected{% endif %}>Pendents</option>
+    <option value="1"{% if verificat == "1" %} selected{% endif %}>Verificats</option>
+  </select>
+</form>
+
+<div class="staff-table-wrap">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>Usuari</th>
+        <th>Artista</th>
+        <th>Justificació</th>
+        <th>Verificat</th>
+        <th>Data</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ua in page %}
+      <tr>
+        <td>{{ ua.usuari.email }}</td>
+        <td>{{ ua.artista.nom }}</td>
+        <td class="staff-cell-muted">{{ ua.sollicitud_text|truncatewords:15 }}</td>
+        <td>{% if ua.verificat %}<span class="staff-badge-ok">Sí</span>{% else %}<span class="staff-badge-no">No</span>{% endif %}</td>
+        <td class="staff-cell-muted">{{ ua.created_at|date:"d/m/Y" }}</td>
+        <td>
+          <form method="post" action="{% url 'staff:verificacio_toggle' pk=ua.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">
+              {% if ua.verificat %}Desverificar{% else %}Verificar{% endif %}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="ranking-empty">Cap sol·licitud trobada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "web/staff/_pagination.html" %}
+{% endblock %}

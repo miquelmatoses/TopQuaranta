@@ -1,0 +1,91 @@
+{% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
+
+{% block staff_title %}Artistes{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Artistes</h2>
+  <p class="ranking-date">{{ page.paginator.count }} resultats</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="aprovat" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Tots</option>
+    <option value="1"{% if aprovat == "1" %} selected{% endif %}>Aprovats</option>
+    <option value="0"{% if aprovat == "0" %} selected{% endif %}>No aprovats</option>
+  </select>
+  <select name="deezer" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Deezer: Tots</option>
+    <option value="si"{% if deezer == "si" %} selected{% endif %}>Amb Deezer</option>
+    <option value="no"{% if deezer == "no" %} selected{% endif %}>Sense Deezer</option>
+  </select>
+  <select name="territori" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Territori: Tots</option>
+    <option value="CAT"{% if territori == "CAT" %} selected{% endif %}>CAT</option>
+    <option value="VAL"{% if territori == "VAL" %} selected{% endif %}>VAL</option>
+    <option value="BAL"{% if territori == "BAL" %} selected{% endif %}>BAL</option>
+  </select>
+  <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar nom..." class="filter-search" style="max-width:200px">
+  <button type="submit" class="filter-btn">Filtrar</button>
+</form>
+
+<form method="post" action="{% url 'staff:artistes_accio' %}">
+  {% csrf_token %}
+
+  <div class="staff-actions-bar">
+    <label><input type="checkbox" id="select-all"> Tot</label>
+    <select name="action" class="staff-action-select">
+      <option value="">-- Acció --</option>
+      <option value="aprovar">Aprovar</option>
+      <option value="marcar_sense_deezer">Marcar sense Deezer</option>
+    </select>
+    <button type="submit" class="filter-btn">Executar</button>
+  </div>
+
+  <div class="staff-table-wrap">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Nom</th>
+          <th>Territoris</th>
+          <th>Deezer</th>
+          <th>Localitat</th>
+          <th>Comarca</th>
+          <th>Aprovat</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for artista in page %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ artista.pk }}" class="row-check"></td>
+          <td>{{ artista.nom }}</td>
+          <td class="staff-cell-muted">{% territori_list artista %}</td>
+          <td class="staff-cell-links">
+            {% if artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener">{{ artista.deezer_id }}</a>
+            {% elif artista.deezer_no_trobat %}<span class="staff-badge-no">No trobat</span>
+            {% else %}-{% endif %}
+          </td>
+          <td class="staff-cell-muted">{{ artista.localitat|default:"-" }}</td>
+          <td class="staff-cell-muted">{{ artista.comarca|default:"-" }}</td>
+          <td>{% if artista.aprovat %}<span class="staff-badge-ok">V</span>{% else %}<span class="staff-badge-no">-</span>{% endif %}</td>
+          <td><a href="{% url 'staff:artista_editar' pk=artista.pk %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Editar</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="ranking-empty">Cap artista trobat.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</form>
+
+{% include "web/staff/_pagination.html" %}
+
+<script>
+document.getElementById('select-all').addEventListener('change', function() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}
