@@ -16,6 +16,13 @@ def query_string(context, **kwargs):
     return mark_safe(params.urlencode())
 
 
+@register.filter
+def lastfm_encode(value):
+    """Encode a string for Last.fm URL path segments (spaces → +)."""
+    from urllib.parse import quote
+    return quote(str(value), safe="")
+
+
 @register.simple_tag
 def ml_badge(canco):
     """Render ML classification badge with color."""

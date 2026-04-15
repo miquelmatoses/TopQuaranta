@@ -1,4 +1,5 @@
 {% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
 
 {% block staff_title %}Ranking provisional{% endblock %}
 
@@ -58,7 +59,7 @@
           <td class="staff-cell-mono">{{ entry.dies_en_top|default:"-" }}</td>
           <td class="staff-cell-links">
             {% if entry.canco.deezer_id %}<a href="https://www.deezer.com/track/{{ entry.canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
-            <a href="https://www.last.fm/music/{{ entry.canco.artista.nom|urlencode }}/_/{{ entry.canco.nom|urlencode }}" target="_blank" rel="noopener">Lf</a>
+            <a href="https://www.last.fm/music/{{ entry.canco.artista.nom|lastfm_encode }}/_/{{ entry.canco.nom|lastfm_encode }}" target="_blank" rel="noopener">Lf</a>
           </td>
         </tr>
         {% empty %}
