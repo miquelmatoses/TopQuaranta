@@ -19,8 +19,8 @@ def query_string(context, **kwargs):
 @register.filter
 def lastfm_encode(value):
     """Encode a string for Last.fm URL path segments (spaces → +)."""
-    from urllib.parse import quote
-    return quote(str(value), safe="")
+    from urllib.parse import quote_plus
+    return quote_plus(str(value))
 
 
 @register.simple_tag
