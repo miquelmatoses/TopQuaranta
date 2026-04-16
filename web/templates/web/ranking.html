@@ -43,4 +43,12 @@
 </section>
 
 {% include "web/_ranking_list.html" %}
+
+<!-- Φ4 · Link to transparency page -->
+<section class="container" style="padding:var(--mm-space-10) 0;text-align:center">
+  <p style="color:var(--mm-color-text-muted);font-size:var(--mm-text-sm);margin-bottom:var(--mm-space-3)">
+    Vols saber per què aquestes cançons, i per què en aquest ordre?
+  </p>
+  <a href="{% url 'web:com_funciona' %}" class="mm-btn">Com es calcula el top</a>
+</section>
 {% endblock %}
