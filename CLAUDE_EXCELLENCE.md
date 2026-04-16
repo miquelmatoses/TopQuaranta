@@ -42,8 +42,18 @@
 |---|---|---|
 | **R9** `StaffAuditLog` model + helper + integració cross-views + `/staff/auditlog/` | ✅ | 3 commits (model, integració, UI) |
 
+**Sessió 4 — Staff 2FA (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **S11** TOTP 2FA (django-otp) + backup codes + enrollment/challenge/mgmt UI + `reset_2fa` admin command | ✅ | 3 commits (deps, views, enforcement) |
+
+Tancament associat: `root` staff user (sense 2FA enrollat) desactivat amb
+`is_staff=False`. Queda només el compte `admin` amb 2FA confirmat + 10
+backup codes. La IP allowlist queda fora d'aquesta sessió — additiva, a
+fer quan es decideixi.
+
 Queda pendent de Tier 1 + 2:
-- **S11** 2FA + IP allowlist per a staff — sessió pròpia, canvi UX gran
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin
 - **R10, R11** Resoldre doble font de veritat (deezer_id + legacy location)
