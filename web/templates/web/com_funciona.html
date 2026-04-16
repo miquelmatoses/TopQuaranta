@@ -1,0 +1,179 @@
+{% extends "web/base.html" %}
+
+{% block title %}Com funciona — TopQuaranta{% endblock %}
+
+{% block content %}
+<article class="container" style="max-width:720px;padding:var(--mm-space-10) 0;line-height:1.75">
+
+  <!-- ── Editorial intro ── -->
+  <header style="margin-bottom:var(--mm-space-10)">
+    <p class="section-label" style="margin-bottom:var(--mm-space-2)">transparència</p>
+    <h1 class="ranking-title" style="font-size:var(--mm-text-6xl);margin:0 0 var(--mm-space-5);line-height:1.1">
+      Com es construeix el top de TopQuaranta
+    </h1>
+    <p style="font-size:var(--mm-text-lg);color:var(--mm-color-text-muted);margin:0">
+      Els rànquings són decisions disfressades de números. Aquest és el nostre
+      compromís de no esconder-les.
+    </p>
+  </header>
+
+  <!-- ── Section 1: the source ── -->
+  <section style="margin-bottom:var(--mm-space-10)">
+    <h2>1 · D'on surt la música que comptem</h2>
+    <p>
+      Cada nit, a les sis del matí, el sistema consulta <strong>Last.fm</strong>
+      — una plataforma on milions de persones del món senyalen què escolten — i
+      demana quants cops s'ha reproduït cada cançó del nostre catàleg durant
+      l'últim dia. Això ens dona dues xifres per cançó: el total acumulat
+      (<em>playcount</em>) i el nombre de persones úniques que l'han escoltada
+      (<em>listeners</em>).
+    </p>
+    <p>
+      El catàleg no és qualsevol música. Una cançó hi entra només si es compleixen
+      tres condicions:
+    </p>
+    <ul>
+      <li>L'artista és <strong>aprovat</strong> per l'equip de TopQuaranta — hi
+        ha una revisió humana perquè els algorismes automàtics s'equivoquen amb
+        coses com el K-pop o el metal anglosaxó.</li>
+      <li>La cançó és <strong>verificada</strong>: algú del nostre equip ha
+        confirmat que és en català i correspon realment a l'artista.</li>
+      <li>Té menys de <strong>dotze mesos</strong>. TopQuaranta no és un museu;
+        mira què sona <em>ara</em>.</li>
+    </ul>
+    <details>
+      <summary style="cursor:pointer;color:var(--mm-color-text-muted)">Detall tècnic: com detectem que Last.fm ens ha corregit</summary>
+      <p style="margin-top:var(--mm-space-3)">
+        Last.fm fa auto-correcció: si li demanes una cançó amb un nom lleugerament
+        equivocat, ell "endevina" la que creu que volies. Això ha provocat durant
+        temps que acumulàssim playcounts d'artistes diferents del que crèiem.
+        Des del 2026-04, cada resposta inclou comprovacions de similitud
+        (normalitzant accents, apòstrofs i anotacions com "(Remaster 2015)")
+        i marca les divergències perquè el nostre equip les revisi.
+      </p>
+    </details>
+  </section>
+
+  <!-- ── Section 2: normalization ── -->
+  <section style="margin-bottom:var(--mm-space-10)">
+    <h2>2 · Del playcount brut a l'score</h2>
+    <p>
+      Una cançó amb 10.000 reproduccions diàries no és "deu vegades millor"
+      que una amb 1.000. Les distribucions són molt sesgades — unes poques
+      cançons concentren la majoria dels <em>listens</em> — i comparar-les
+      directament enterraria tota la diversitat del panorama.
+    </p>
+    <p>
+      Per això, cada dia, convertim els playcounts en una posició relativa:
+      una xifra de 0 a 100 que respon a la pregunta "quina fracció del
+      catàleg té menys reproduccions que aquesta cançó". Si avui la teva
+      cançó ha tingut més reproduccions que el 75% de les cançons del
+      catàleg, el seu <em>score_entrada</em> per aquell dia és 75.
+    </p>
+    <p>
+      Aquesta normalització és la clau perquè cançons de gèneres i públics
+      molt diferents puguin coexistir a un mateix top. Una cançó minoritària
+      amb el seu públic dedicat pot competir amb un hit generalista sense
+      que els números enterrin la primera.
+    </p>
+  </section>
+
+  <!-- ── Section 3: the weekly formula ── -->
+  <section style="margin-bottom:var(--mm-space-10)">
+    <h2>3 · De la cançó a la setmana</h2>
+    <p>
+      Tenir un score diari no és suficient per fer un rànquing setmanal decent.
+      Cada dissabte al matí recollim els scores dels últims set dies i els
+      combinem amb una fórmula que:
+    </p>
+    <ul>
+      <li><strong>Prioritza la música viva</strong> sobre l'antiga: una cançó
+        llançada fa dues setmanes competeix en millors condicions que una
+        d'onze mesos.</li>
+      <li><strong>Castiga les caigudes</strong>: si una cançó ha perdut molta
+        tracció respecte de la setmana passada, la fórmula s'ho nota.</li>
+      <li><strong>Limita els monopolis</strong>: si un mateix àlbum o artista
+        acaparen massa posicions del top 40, cada cançó addicional seva rep
+        una rebaixa proporcional. La idea és senzilla — un top 40 amb cinc
+        cançons d'un sol disc no reflecteix què està sonant.</li>
+      <li><strong>Té memòria</strong>: les cançons que portin molt de temps
+        a les posicions més altes comencen a perdre gravetat. Els primers
+        llocs són per a la música que empeny, no per als estàndards.</li>
+      <li><strong>Protegeix les novetats</strong>: una cançó acabada de sortir
+        no pot competir en dades amb una que ja porta sis mesos acumulant
+        reproduccions. Els primers dies reben un petit ajust a favor.</li>
+    </ul>
+    <p>
+      Cada peça d'aquest conjunt té un nombre que la quantifica. Aquests
+      nombres els pots veure — i canviar — tots just aquí:
+    </p>
+  </section>
+
+  <!-- ── Coefficients ── -->
+  <section style="margin-bottom:var(--mm-space-10)">
+    <h2>4 · Els coeficients actuals</h2>
+    <p>
+      Aquests són els 14 paràmetres que governen la fórmula setmanal, tal
+      com estan configurats en aquest mateix moment. Canvien quan l'equip
+      decideix afinar alguna cosa — i cada canvi queda registrat
+      <a href="{% url 'web:com_funciona_historial' %}">aquí al costat</a>.
+    </p>
+    <div class="staff-table-wrap" style="margin-top:var(--mm-space-5)">
+      <table class="staff-table">
+        <thead>
+          <tr><th style="width:30%">Nom</th><th style="width:12%">Valor</th><th>Descripció</th></tr>
+        </thead>
+        <tbody>
+        {% for c in coeficients %}
+        <tr>
+          <td><strong>{{ c.label }}</strong><br><code style="font-size:var(--mm-text-xs);color:var(--mm-color-text-muted)">{{ c.field }}</code></td>
+          <td class="staff-cell-mono">{{ c.value }}</td>
+          <td>{{ c.blurb }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Section 4: reproducibility ── -->
+  <section style="margin-bottom:var(--mm-space-10)">
+    <h2>5 · Per què els tops d'abans no canvien mai</h2>
+    <p>
+      Cada top setmanal que TopQuaranta publica queda congelat amb els
+      coeficients que el van generar. Si demà aquest equip decideix, per
+      exemple, castigar més durament les caigudes, el top d'aquesta setmana
+      reflectirà la nova decisió — però els tops de les setmanes anteriors
+      romandran com estaven, amb els coeficients d'aleshores.
+    </p>
+    <p>
+      Així evitem una temptació que ronda qualsevol sistema de rànquings:
+      reescriure retroactivament la història. Un top publicat és un
+      document; no es pot retocar amb un canvi de paràmetres.
+    </p>
+    <p style="color:var(--mm-color-text-muted);font-size:var(--mm-text-sm)">
+      <em>Ho garanteix el camp <code>config_snapshot</code> que cada registre
+      de <code>RankingSetmanal</code> carrega individualment, i l'etiqueta
+      <code>algorithm_version</code> que identifica la fórmula vigent en
+      el moment del càlcul. El codi és obert al repositori del projecte.</em>
+    </p>
+  </section>
+
+  <!-- ── Closing ── -->
+  <section style="padding-top:var(--mm-space-8);border-top:1px solid var(--mm-color-border)">
+    <p style="font-size:var(--mm-text-lg);margin-bottom:var(--mm-space-5)">
+      Hi ha preguntes que aquesta pàgina no respon? Busques detalls que no
+      hi hauria de ser? Trobes que un paràmetre no hauria de valer el que
+      val?
+    </p>
+    <p>
+      Escriu-nos. TopQuaranta no es fa sol.
+    </p>
+    <div style="display:flex;gap:var(--mm-space-3);flex-wrap:wrap;margin-top:var(--mm-space-6)">
+      <a href="{% url 'web:ranking' %}" class="mm-btn mm-btn--primary">Torna al top</a>
+      <a href="{% url 'web:com_funciona_historial' %}" class="mm-btn">Historial de canvis de l'algorisme</a>
+    </div>
+  </section>
+
+</article>
+{% endblock %}

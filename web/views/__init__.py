@@ -6,8 +6,142 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader
 
 from music.constants import TERRITORI_NOMS, TERRITORIS_VALIDS  # noqa: F401 (re-exported)
-from music.models import Album, Artista, Canco, Municipi
-from ranking.models import RankingProvisional, RankingSetmanal
+from music.models import Album, Artista, Canco, Municipi, StaffAuditLog
+from ranking.models import ConfiguracioGlobal, RankingProvisional, RankingSetmanal
+
+
+# ── Φ4 · Transparència algorítmica ───────────────────────────────────────
+# Human-readable descriptions of every coefficient in ConfiguracioGlobal.
+# Shown publicly on /com-funciona/. The tone matches the site's editorial
+# register: explains WHAT each number does in Catalan prose, not formulas.
+# Keep in sync with ranking/models.py ConfiguracioGlobal fields.
+
+COEFICIENTS_DESCRIPCIO = {
+    "penalitzacio_descens": {
+        "label": "Penalització per caiguda",
+        "blurb":
+            "Quan una cançó perd posicions respecte de la setmana passada, "
+            "aquest valor decideix com de dur és el cop. Més alt = més "
+            "càstig quan una cançó s'enfonsa a la llista.",
+    },
+    "exponent_penalitzacio_antiguitat": {
+        "label": "Exponent d'antiguitat",
+        "blurb":
+            "Controla com de ràpidament perden força les cançons antigues. "
+            "Els singles de fa 11 mesos desapareixen del top molt més "
+            "amunt d'aquest exponent que amb un valor baix — el top és "
+            "per a música viva, no per a canons.",
+    },
+    "max_factor_a": {
+        "label": "Factor A màxim (fase de posicionament)",
+        "blurb":
+            "El primer multiplicador que s'aplica al signal brut. "
+            "Posa un sostre a la primera ronda del càlcul perquè les "
+            "cançons amb xifres extremes no arrosseguin tot el top.",
+    },
+    "max_factor_b": {
+        "label": "Factor B màxim (fase de monopolis)",
+        "blurb":
+            "Sostre del segon multiplicador. Intervé quan s'aplica la "
+            "penalització per monopoli — si un àlbum o un artista es "
+            "cruspeixen massa cançons del top.",
+    },
+    "max_factor_c": {
+        "label": "Factor C màxim (fase de novetats)",
+        "blurb":
+            "Sostre del tercer multiplicador. Protegeix les cançons noves "
+            "que encara no han acumulat història perquè no quedin "
+            "infravalorades pel càlcul.",
+    },
+    "max_factor_final": {
+        "label": "Factor final màxim",
+        "blurb":
+            "El sostre global de la fórmula. Evita que cap cançó pugui "
+            "dominar els rànquings amb un score desmesurat.",
+    },
+    "penalitzacio_album_per_canco": {
+        "label": "Penalització per àlbum",
+        "blurb":
+            "Si un mateix àlbum té tres, quatre o més cançons al top, "
+            "aquest valor redueix el score de cada una addicional. "
+            "La idea: un top 40 on només sonen dos àlbums no és un top.",
+    },
+    "penalitzacio_artista_per_canco": {
+        "label": "Penalització per artista",
+        "blurb":
+            "Mateixa lògica que l'anterior, però aplicada a l'artista "
+            "en comptes de l'àlbum. Si un artista acumula massa cançons "
+            "al top, cada una de més pateix una petita rebaixa.",
+    },
+    "coeficient_penalitzacio_top": {
+        "label": "Penalització per alta posició",
+        "blurb":
+            "Les cançons que portin moltes setmanes al top 3 o top 5 "
+            "reben una penalització creixent perquè no es perpetuïn "
+            "indefinidament al capdamunt. Els hits no són eterns.",
+    },
+    "penalitzacio_setmana_0": {
+        "label": "Penalització setmana 0 (acabada de sortir)",
+        "blurb":
+            "Una cançó que ha sortit aquesta mateixa setmana encara no "
+            "té un signal representatiu de Last.fm. Aquest valor corre "
+            "el benefici del dubte: alt = costa molt entrar al top la "
+            "setmana de l'estrena.",
+    },
+    "penalitzacio_setmana_1": {
+        "label": "Penalització setmana 1",
+        "blurb":
+            "Igual que l'anterior però per cançons de la segona setmana. "
+            "Normalment més baix que setmana 0.",
+    },
+    "penalitzacio_setmana_2": {
+        "label": "Penalització setmana 2",
+        "blurb":
+            "A partir de la tercera setmana habitualment ja no cal "
+            "ajustar res; aquest valor pot ser zero si l'entrada ja "
+            "té prou dades.",
+    },
+    "suavitat": {
+        "label": "Factor de suavitat",
+        "blurb":
+            "Quan més alt, els canvis de posició entre setmana i setmana "
+            "són més lents — un top més estable. Més baix = el top es "
+            "mou setmana a setmana amb més agressivitat.",
+    },
+    "min_cancons_ranking_propi": {
+        "label": "Llindar per a ranquing propi",
+        "blurb":
+            "Un territori (diguem-ne l'Alguer o la Franja) només rep un "
+            "top 40 propi si hi ha almenys aquesta quantitat de cançons "
+            "elegibles. Per sota, els artistes d'aquell territori "
+            "s'integren al top 'Altres territoris'.",
+    },
+    "dia_setmana_ranking": {
+        "label": "Dia de la setmana del tancament",
+        "blurb":
+            "Quin dia de la setmana es congela el top oficial. "
+            "Codi intern: 0 = dilluns, 6 = diumenge.",
+    },
+}
+
+
+def _coeficients_context() -> list[dict]:
+    """Build the list of coefficients with human labels for /com-funciona/.
+
+    Reads ConfiguracioGlobal.load() live so if staff tweaks a value the
+    page updates immediately. Preserves the order of COEFICIENTS_DESCRIPCIO
+    for a consistent editorial flow.
+    """
+    cfg = ConfiguracioGlobal.load()
+    rows = []
+    for field_name, meta in COEFICIENTS_DESCRIPCIO.items():
+        rows.append({
+            "field": field_name,
+            "label": meta["label"],
+            "blurb": meta["blurb"],
+            "value": getattr(cfg, field_name),
+        })
+    return rows
 
 TERRITORI_DESCRIPCIONS = {
     "PPCC": "El rànquing agregat de tots els territoris de parla catalana",
@@ -375,3 +509,54 @@ def handler_500(request: HttpRequest) -> HttpResponse:
 def handler_403(request: HttpRequest, exception=None) -> HttpResponse:
     template = loader.get_template("web/403.html")
     return HttpResponseForbidden(template.render({"request": request}, request))
+
+
+# ── Φ4 · public-facing transparency pages ────────────────────────────────
+
+def com_funciona(request: HttpRequest) -> HttpResponse:
+    """The editorial explanation page: how TopQuaranta computes its ranking.
+
+    Always reflects the LIVE ConfiguracioGlobal values so the page is
+    always honest about what's in effect right now. The per-week
+    coefficient snapshots live on RankingSetmanal (R1) and could be
+    surfaced alongside each week if we ever want to; the linked
+    /com-funciona/historial/ page is a lighter stepping stone.
+    """
+    return render(request, "web/com_funciona.html", {
+        "coeficients": _coeficients_context(),
+    })
+
+
+def com_funciona_historial(request: HttpRequest) -> HttpResponse:
+    """Anonymised public history of ConfiguracioGlobal changes.
+
+    Reads StaffAuditLog rows with action='config_update' and exposes the
+    diff metadata; actor email is stripped. Rationale: users have a
+    right to know WHEN and HOW the algorithm changed, but the identity
+    of the staff member who ran the edit is a staff concern, not public.
+    """
+    entries = (
+        StaffAuditLog.objects.filter(action="config_update")
+        .order_by("-created_at")
+        [:100]
+    )
+    # Flatten the diff metadata for the template. Each entry becomes a
+    # dict with date + a list of (field, human_label, before, after).
+    rows = []
+    for e in entries:
+        diff_map = (e.metadata or {}).get("diff") or {}
+        changes = []
+        for field, beforeafter in diff_map.items():
+            meta = COEFICIENTS_DESCRIPCIO.get(field, {"label": field, "blurb": ""})
+            changes.append({
+                "field": field,
+                "label": meta["label"],
+                "before": beforeafter.get("before", "—"),
+                "after": beforeafter.get("after", "—"),
+            })
+        if changes:
+            rows.append({"date": e.created_at, "changes": changes})
+
+    return render(request, "web/com_funciona_historial.html", {
+        "rows": rows,
+    })
