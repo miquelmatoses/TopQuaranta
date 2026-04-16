@@ -151,12 +151,13 @@ def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> flo
 
 def _build_features(canco) -> list[float]:
     """Extract feature vector from a Canco."""
+    from music.models import Canco  # lazy: ml.py may be imported before apps ready
+
     artista = canco.artista
     isrc = canco.isrc or ""
     es, digital, intl, empty = _isrc_category(isrc)
     nb_decisions, ratio_reb = _get_rejection_ratio(artista.nom)
     nb_col = canco.artistes_col.count()
-    from music.models import Canco
     nb_approved = Canco.objects.filter(
         artista=artista, verificada=True
     ).count()
@@ -232,13 +233,13 @@ def _build_features_from_historial(rec) -> list[float]:
 
 def _artista_aprovat_from_historial(rec) -> int:
     """Look up whether the artist is currently approved."""
-    from music.models import Artista
+    from music.models import ArtistaDeezer
     if rec.artista_deezer_id:
-        try:
-            a = Artista.objects.get(deezer_id=rec.artista_deezer_id)
-            return 1 if a.aprovat else 0
-        except Artista.DoesNotExist:
-            pass
+        ad = ArtistaDeezer.objects.filter(
+            deezer_id=rec.artista_deezer_id
+        ).select_related("artista").first()
+        if ad:
+            return 1 if ad.artista.aprovat else 0
     return 0
 
 

@@ -18,12 +18,13 @@ logger = logging.getLogger(__name__)
 
 def rebutjar_canco(canco: Canco, motiu: str) -> None:
     """
-    Reject a single track: record historial, set verificada=False.
-    Does NOT delete the track — only marks it as unverified.
+    Reject a single track: record historial, set verificada=False and activa=False.
+    The track stays in DB for audit but won't appear in pending lists or rankings.
     """
     crear_historial(canco, "rebutjada", motiu)
     canco.verificada = False
-    canco.save(update_fields=["verificada"])
+    canco.activa = False
+    canco.save(update_fields=["verificada", "activa"])
 
 
 def aprovar_canco(canco: Canco) -> None:
@@ -60,6 +61,7 @@ def rebutjar_artista(artista: Artista, motiu: str) -> int:
     deleted = cancons.count()
     cancons.delete()
 
+    artista.deezer_ids.all().delete()
     artista.deezer_id = None
     artista.deezer_no_trobat = True
     artista.save(update_fields=["deezer_id", "deezer_no_trobat"])

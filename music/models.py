@@ -21,14 +21,48 @@ class Territori(models.Model):
         return self.nom
 
 
+class Municipi(models.Model):
+    """
+    Municipality within the Catalan-speaking territories.
+
+    Populated from the legacy 'municipis' table. Each municipality belongs
+    to a comarca and a territory. Used as FK target for ArtistaLocalitat.
+    """
+
+    nom = models.CharField(max_length=255)
+    comarca = models.CharField(max_length=255)
+    territori = models.ForeignKey(
+        Territori,
+        on_delete=models.PROTECT,
+        related_name="municipis",
+    )
+
+    class Meta:
+        ordering = ["nom"]
+        verbose_name = "Municipi"
+        verbose_name_plural = "Municipis"
+        unique_together = [("nom", "comarca")]
+
+    def __str__(self) -> str:
+        return f"{self.nom} ({self.comarca})"
+
+
 class Artista(models.Model):
     """
     A music artist tracked by TopQuaranta.
 
-    Territory is a manually curated field — Last.fm has no geographic signal.
+    Territories are derived from ArtistaLocalitat → Municipi → Territori.
+    The M2M 'territoris' is kept in sync automatically via signals.
     Artists can belong to multiple territories (e.g. Marala → CAT, VAL, BAL).
     A track appears in territory T if ANY of its artists belongs to T.
     """
+
+    PERCENTATGE_FEMENI_CHOICES = [
+        ("100", "100%"),
+        ("50+", "50% o més"),
+        ("<50", "Menys del 50%"),
+        ("0", "0%"),
+    ]
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
@@ -48,7 +82,7 @@ class Artista(models.Model):
         Territori,
         related_name="artistes",
         blank=True,
-        help_text="Territories this artist belongs to. Tracks appear in all.",
+        help_text="Auto-synced from ArtistaLocalitat. Do not edit directly.",
     )
     deezer_no_trobat = models.BooleanField(
         default=False,
@@ -63,7 +97,8 @@ class Artista(models.Model):
     )
     aprovat = models.BooleanField(
         default=True,
-        help_text="False = pending human review in Wagtail admin.",
+        db_index=True,
+        help_text="False = pending human review in staff panel.",
     )
 
     # Deezer metadata (populated by obtenir_metadata)
@@ -72,10 +107,33 @@ class Artista(models.Model):
     deezer_nom = models.CharField(max_length=255, blank=True)
     deezer_nom_similitud = models.FloatField(null=True, blank=True)
 
-    # Location (from legacy artistes table)
+    # Legacy location fields — kept for backwards compat during migration.
+    # New code should use ArtistaLocalitat instead.
     localitat = models.CharField(max_length=255, blank=True)
     comarca = models.CharField(max_length=255, blank=True)
     provincia = models.CharField(max_length=255, blank=True)
+
+    # Genre and gender representation
+    genere = models.CharField(
+        max_length=255, blank=True,
+        help_text="Musical genre (free text).",
+    )
+    percentatge_femeni = models.CharField(
+        max_length=10, blank=True, choices=PERCENTATGE_FEMENI_CHOICES,
+        help_text="Female representation percentage.",
+    )
+
+    # Social links
+    spotify_url = models.URLField(blank=True)
+    viasona_url = models.URLField(blank=True)
+    web_url = models.URLField(blank=True)
+    bandcamp_url = models.URLField(blank=True)
+    myspace_url = models.URLField(blank=True)
+    youtube_url = models.URLField(blank=True)
+    viquipedia_url = models.URLField(blank=True)
+    soundcloud_url = models.URLField(blank=True)
+    tiktok_url = models.URLField(blank=True)
+    facebook_url = models.URLField(blank=True)
 
     last_checked_deezer = models.DateTimeField(
         null=True, blank=True,
@@ -104,14 +162,150 @@ class Artista(models.Model):
         super().save(*args, **kwargs)
 
     def clean(self):
-        if self.aprovat and not self.localitat:
-            raise ValidationError("No es pot aprovar un artista sense localitat.")
-        if self.aprovat and not self.comarca:
-            raise ValidationError("No es pot aprovar un artista sense comarca.")
+        # Validate that approved artists have at least one location.
+        # Check new ArtistaLocalitat first; fall back to legacy fields.
+        if self.aprovat and self.pk:
+            has_new_loc = self.localitats.exists()
+            has_legacy_loc = bool(self.localitat and self.comarca)
+            if not has_new_loc and not has_legacy_loc:
+                raise ValidationError(
+                    "No es pot aprovar un artista sense almenys una localitat."
+                )
+
+    @property
+    def deezer_id_principal(self) -> int | None:
+        """Primary Deezer ID from ArtistaDeezer (backwards compat)."""
+        ad = self.deezer_ids.filter(principal=True).first()
+        if ad:
+            return ad.deezer_id
+        ad = self.deezer_ids.first()
+        return ad.deezer_id if ad else self.deezer_id
+
+    @property
+    def all_deezer_ids(self) -> list[int]:
+        """All Deezer IDs for this artist."""
+        return list(self.deezer_ids.values_list("deezer_id", flat=True))
 
     def get_territoris(self) -> list[str]:
         """Return list of territory codes for this artist."""
         return list(self.territoris.values_list("codi", flat=True))
+
+    def sync_territoris_from_localitats(self) -> None:
+        """Recompute M2M territoris from ArtistaLocalitat → Municipi → Territori.
+
+        Called automatically by ArtistaLocalitat signals. If artist has no
+        localitats at all, the M2M is left unchanged (preserves legacy data
+        during migration). If all localitats have municipi=NULL, territory
+        defaults to ALT.
+        """
+        if not self.pk:
+            return
+        localitats_qs = self.localitats.all()
+        if not localitats_qs.exists():
+            return  # No ArtistaLocalitat entries — keep legacy M2M
+        # Collect territories from municipis
+        territori_ids = set(
+            localitats_qs.filter(municipi__isnull=False)
+            .values_list("municipi__territori_id", flat=True)
+        )
+        # If all entries have municipi=NULL → non-PPCC artist → ALT
+        if not territori_ids:
+            territori_ids = {"ALT"}
+        self.territoris.set(list(territori_ids))
+
+    SOCIAL_LINK_FIELDS = [
+        ("spotify_url", "Spotify"),
+        ("viasona_url", "Viasona"),
+        ("web_url", "Web"),
+        ("bandcamp_url", "Bandcamp"),
+        ("myspace_url", "Myspace"),
+        ("youtube_url", "YouTube"),
+        ("viquipedia_url", "Viquipèdia"),
+        ("soundcloud_url", "SoundCloud"),
+        ("tiktok_url", "TikTok"),
+        ("facebook_url", "Facebook"),
+    ]
+
+
+class ArtistaDeezer(models.Model):
+    """Links an Artista to one or more Deezer artist IDs."""
+
+    artista = models.ForeignKey(
+        Artista, on_delete=models.CASCADE, related_name="deezer_ids",
+    )
+    deezer_id = models.BigIntegerField(unique=True)
+    principal = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Artista Deezer ID"
+        verbose_name_plural = "Artista Deezer IDs"
+
+    def __str__(self) -> str:
+        return f"{self.artista.nom} → {self.deezer_id}"
+
+
+class ArtistaLocalitat(models.Model):
+    """Links an artist to one or more municipalities (locations).
+
+    Each entry represents one location the artist is associated with.
+    Territories are derived automatically from municipi → territori.
+    For non-PPCC artists, municipi is NULL and localitat_manual is used.
+    """
+
+    artista = models.ForeignKey(
+        Artista,
+        on_delete=models.CASCADE,
+        related_name="localitats",
+    )
+    municipi = models.ForeignKey(
+        Municipi,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="artistes_localitat",
+        help_text="NULL for non-PPCC artists (Altres).",
+    )
+    localitat_manual = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Free text for non-PPCC locations or display override.",
+    )
+    descripcio = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional qualifier, e.g. 'nascut a' or 'resident a'.",
+    )
+
+    class Meta:
+        verbose_name = "Localitat d'artista"
+        verbose_name_plural = "Localitats d'artista"
+
+    def __str__(self) -> str:
+        if self.municipi:
+            return f"{self.artista.nom} → {self.municipi.nom}"
+        return f"{self.artista.nom} → {self.localitat_manual} (Altres)"
+
+    @property
+    def nom_display(self) -> str:
+        """Human-readable location name."""
+        if self.municipi:
+            return self.municipi.nom
+        return self.localitat_manual or "Altres"
+
+    @property
+    def comarca_display(self) -> str:
+        """Human-readable comarca."""
+        if self.municipi:
+            return self.municipi.comarca
+        return ""
+
+    @property
+    def territori_display(self) -> str:
+        """Territory code derived from municipi."""
+        if self.municipi:
+            return self.municipi.territori_id
+        return "ALT"
 
 
 class Album(models.Model):
@@ -125,15 +319,18 @@ class Album(models.Model):
     deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
     artista = models.ForeignKey(Artista, on_delete=models.CASCADE, related_name="albums")
     nom = models.CharField(max_length=500)
+    slug = models.SlugField(max_length=550, unique=True, blank=True)
     data_llancament = models.DateField(null=True, blank=True)
     tipus = models.CharField(max_length=10, choices=TIPUS_CHOICES, default="album")
     imatge_url = models.URLField(blank=True)
     cancons_obtingudes = models.BooleanField(
         default=False,
+        db_index=True,
         help_text="True when tracks have been fetched from Deezer.",
     )
     descartat = models.BooleanField(
         default=False,
+        db_index=True,
         help_text="True if all tracks were rejected. Skipped by obtenir_novetats.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -143,6 +340,17 @@ class Album(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nom} — {self.artista.nom}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            base = slugify(self.nom) or "album"
+            slug = base
+            n = 1
+            while Album.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                n += 1
+                slug = f"{base}-{n}"
+            self.slug = slug
+        super().save(*args, **kwargs)
 
 
 class Canco(models.Model):
@@ -189,11 +397,13 @@ class Canco(models.Model):
     data_llancament = models.DateField(
         null=True,
         blank=True,
+        db_index=True,
         help_text="Tracks older than 12 months are excluded from ingestion.",
     )
-    activa = models.BooleanField(default=True)
+    activa = models.BooleanField(default=True, db_index=True)
     verificada = models.BooleanField(
         default=False,
+        db_index=True,
         help_text="False = pending admin review. Only verified tracks enter the ranking.",
     )
     ml_classe = models.CharField(max_length=1, blank=True, db_index=True)
