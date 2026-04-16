@@ -25,14 +25,25 @@
 | **S7** `json_script` a `/mapa/` (XSS-safe) | ✅ | `57a225c` |
 | **S8** URL scheme allowlist (`http`/`https`) a `PropostaArtista` | ✅ | `d85e226` |
 | **S10** Argon2 password hashing | ✅ | `96ec17b` |
-| **S13** Templates 404 / 500 / 403 amb branding | ✅ | (inclòs a commits següents) |
-| **R8** Min/Max validators a `ConfiguracioGlobal` | ✅ | `b33197a` |
+| **S13** Templates 404 / 500 / 403 amb branding | ✅ | `47fc449` |
+| **R8** Min/Max validators a `ConfiguracioGlobal` | ✅ | `b33197a` (+ `e0cf68b` Decimal-str fix) |
 
-Queda pendent de Tier 1:
+**Sessió 2 — Tier 2 Reliability + rate limiting (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **S9** Rate limit `/api/v1/*` (60/min anon, 300/min user, DB-cache) | ✅ | `5247bad` |
+| **R1** `algorithm_version` + `config_snapshot` a `RankingSetmanal` | ✅ | (R1+R2 together) |
+| **R2** `CASCADE` → `SET_NULL` + name snapshots per preservar història | ✅ | (R1+R2 together) |
+
+Queda pendent de Tier 1 + 2:
 - **S11** 2FA + IP allowlist per a staff — sessió pròpia, canvi UX gran
-- **S9** Rate limit a `/api/v1/*` — sessió curta, bona candidata a la següent
+- **R9** Staff audit log — sessió pròpia (model nou + integració cross-views)
+- **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
+- **R7** Retry automàtic de crons que fallin
+- **R10, R11** Resoldre doble font de veritat (deezer_id + legacy location)
 
-Tier 2 (Reliability) i Tier 3 (Architecture) queden per a sessions futures.
+Tier 3 (Architecture), Tier 4 (Culture), Tier 5 (Exquisitesa) per a sessions futures.
 
 ---
 
