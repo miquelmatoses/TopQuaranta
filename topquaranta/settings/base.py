@@ -58,6 +58,33 @@ AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "web/403.html"
 
+# S9: rate-limit public API. DRF applies these to every @api_view handler
+# under /api/v1/*. Anonymous traffic is keyed by client IP; authenticated
+# traffic by user ID. A scraper hammering /api/v1/mapa/artistes/ or the
+# location endpoints now gets HTTP 429 after 60 requests in a minute.
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/min",
+        "user": "300/min",
+    },
+}
+
+# DRF throttling stores counters in Django's cache. With 2 gunicorn
+# workers a per-process LocMemCache would split the rate limit per
+# worker (effectively doubling it). Use a PostgreSQL-backed cache so
+# the counter is coherent across workers. Table created via
+# `manage.py createcachetable django_cache`.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+    },
+}
+
 ROOT_URLCONF = "topquaranta.urls"
 
 TEMPLATES = [

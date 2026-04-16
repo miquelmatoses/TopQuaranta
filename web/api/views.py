@@ -1,5 +1,4 @@
 from django.db.models import Count
-from django.http import HttpRequest, JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -15,9 +14,13 @@ from ranking.models import RankingSetmanal
 # approval). There is no reason to require auth for these GET endpoints.
 # Both web/api/urls.py and web/views/staff/urls.py route to these same
 # functions so staff template {% url %} tags keep working without change.
+#
+# S9: all @api_view-decorated handlers inherit the DRF throttle classes
+# configured at settings.REST_FRAMEWORK — 60/min anon, 300/min user.
 
 
-def api_territoris(request: HttpRequest) -> JsonResponse:
+@api_view(["GET"])
+def api_territoris(request: Request) -> Response:
     """List territories that have municipis."""
     result = []
     seen: set[str] = set()
@@ -27,50 +30,53 @@ def api_territoris(request: HttpRequest) -> JsonResponse:
             result.append({"codi": codi, "nom": m["territori__nom"]})
             seen.add(codi)
     result.sort(key=lambda x: x["codi"])
-    return JsonResponse(result, safe=False)
+    return Response(result)
 
 
-def api_comarques(request: HttpRequest) -> JsonResponse:
+@api_view(["GET"])
+def api_comarques(request: Request) -> Response:
     """List comarques for a territory."""
     territori = request.GET.get("territori", "")
     if not territori:
-        return JsonResponse([], safe=False)
+        return Response([])
     comarques = list(
         Municipi.objects.filter(territori__codi=territori)
         .values_list("comarca", flat=True)
         .distinct()
         .order_by("comarca")
     )
-    return JsonResponse(comarques, safe=False)
+    return Response(comarques)
 
 
-def api_municipis(request: HttpRequest) -> JsonResponse:
+@api_view(["GET"])
+def api_municipis(request: Request) -> Response:
     """List municipis for a comarca."""
     comarca = request.GET.get("comarca", "")
     if not comarca:
-        return JsonResponse([], safe=False)
+        return Response([])
     municipis = list(
         Municipi.objects.filter(comarca=comarca)
         .values_list("nom", flat=True)
         .order_by("nom")
     )
-    return JsonResponse(municipis, safe=False)
+    return Response(municipis)
 
 
-def api_municipi_lookup(request: HttpRequest) -> JsonResponse:
+@api_view(["GET"])
+def api_municipi_lookup(request: Request) -> Response:
     """Find a municipi by name and comarca, return its PK."""
     nom = request.GET.get("nom", "").strip()
     comarca = request.GET.get("comarca", "").strip()
     if not nom or not comarca:
-        return JsonResponse({"error": "Cal nom i comarca"}, status=400)
+        return Response({"error": "Cal nom i comarca"}, status=400)
     try:
         m = Municipi.objects.get(nom=nom, comarca=comarca)
-        return JsonResponse({
+        return Response({
             "pk": m.pk, "nom": m.nom, "comarca": m.comarca,
             "territori": m.territori_id,
         })
     except Municipi.DoesNotExist:
-        return JsonResponse({"error": "Municipi no trobat"}, status=404)
+        return Response({"error": "Municipi no trobat"}, status=404)
 
 
 @api_view(["GET"])
