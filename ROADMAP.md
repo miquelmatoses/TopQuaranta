@@ -155,6 +155,15 @@ Tactical items not tied to specific CLAUDE_EXCELLENCE findings:
       (Hetzner Hosted Mail, Fastmail o servidor propi). Aboliria el
       pseudofailback FileEmailBackend actual i permetria enviar correus
       de verificació, recuperacions, notificacions admin reals.
+- [ ] **Redisseny estètic**: revisió visual completa del projecte. Les
+      pàgines s'han anat afegint iterativament i barregen patrons
+      diferents (staff-tool-card, ranking-entry, historial-entry,
+      chart-bar...). Cal decidir un sistema visual coherent per a
+      tot el projecte (public + staff), probablement basat en
+      components nous de mm-design, i aplicar-lo transversalment.
+      Inclou: tipografia jeràrquica, consistència d'espais, dark
+      mode, accessibilitat (a11y WCAG AA), mobile polish real
+      testing cross-device.
 
 ---
 
