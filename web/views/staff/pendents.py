@@ -75,43 +75,39 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
         return JsonResponse({"error": "Cal seleccionar un municipi"}, status=400)
 
     with transaction.atomic():
-        # Create ArtistaLocalitat
+        # R11: only ArtistaLocalitat is updated; legacy fields are gone.
         if municipi_id:
             try:
                 municipi = Municipi.objects.get(pk=int(municipi_id))
-                ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
-                # Update legacy fields
-                artista.localitat = municipi.nom
-                artista.comarca = municipi.comarca
-                territori = municipi.territori_id
             except Municipi.DoesNotExist:
                 return JsonResponse({"error": "Municipi no trobat"}, status=404)
+            ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
+            audit_loc = f"{municipi.nom}, {municipi.comarca}"
+            territori = municipi.territori_id
         else:
-            # Fallback: try to match by name
+            # Fallback: try to match by name+comarca
             try:
                 municipi = Municipi.objects.get(nom=localitat, comarca=comarca)
                 ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
-                artista.localitat = municipi.nom
-                artista.comarca = municipi.comarca
+                audit_loc = f"{municipi.nom}, {municipi.comarca}"
                 territori = municipi.territori_id
             except Municipi.DoesNotExist:
-                # Manual entry
+                # Manual entry — Municipi unknown, store free text
                 ArtistaLocalitat.objects.create(
-                    artista=artista, municipi=None, localitat_manual=f"{localitat}, {comarca}",
+                    artista=artista, municipi=None,
+                    localitat_manual=f"{localitat}, {comarca}",
                 )
-                artista.localitat = localitat
-                artista.comarca = comarca
+                audit_loc = f"{localitat}, {comarca} (manual)"
                 territori = "ALT"
 
         artista.aprovat = True
-        artista.save(update_fields=["aprovat", "localitat", "comarca"])
+        artista.save(update_fields=["aprovat"])
         # Signal auto-syncs territories
 
     log_staff_action(
         request, "pendent_aprovar", target=artista,
         territori=territori,
-        localitat=artista.localitat,
-        comarca=artista.comarca,
+        localitat=audit_loc,
     )
     return JsonResponse({"ok": True, "territori": territori})
 

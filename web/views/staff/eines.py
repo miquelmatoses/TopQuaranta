@@ -382,14 +382,8 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
                         if not first_loc:
                             first_loc = al
 
-                # Update legacy fields
-                if first_loc and first_loc.municipi:
-                    artista.localitat = first_loc.municipi.nom
-                    artista.comarca = first_loc.municipi.comarca
-                elif first_loc:
-                    artista.localitat = first_loc.localitat_manual
-                    artista.comarca = "Altres"
-                artista.save(update_fields=["localitat", "comarca"])
+                # R11: legacy localitat/comarca/provincia removed; the
+                # ArtistaLocalitat rows above are the sole source of truth.
             except (json.JSONDecodeError, TypeError):
                 pass
 

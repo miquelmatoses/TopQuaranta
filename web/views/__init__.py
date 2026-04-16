@@ -439,9 +439,12 @@ def mapa(request: HttpRequest) -> HttpResponse:
     artista_by_localitat: dict[str, list[dict]] = {}
     artista_by_comarca: dict[str, dict] = {}
     if artist_ids:
+        # R11: read locations through ArtistaLocalitat → Municipi instead of
+        # the dropped legacy fields. An artist with multiple locations
+        # appears in each one.
         for artista in Artista.objects.filter(
             aprovat=True, id__in=artist_ids.keys()
-        ).prefetch_related("territoris"):
+        ).prefetch_related("territoris", "localitats__municipi"):
             terrs = list(artista.territoris.values_list("codi", flat=True))
             info = {
                 "nom": artista.nom,
@@ -449,10 +452,12 @@ def mapa(request: HttpRequest) -> HttpResponse:
                 "aparicions": artist_ids.get(artista.id, 0),
                 "territori": terrs[0] if terrs else "",
             }
-            if artista.localitat:
-                artista_by_localitat.setdefault(artista.localitat.lower(), []).append(info)
-            if artista.comarca:
-                com = artista.comarca.lower()
+            for loc in artista.localitats.all():
+                if loc.municipi is None:
+                    continue
+                town = loc.municipi.nom.lower()
+                com = loc.municipi.comarca.lower()
+                artista_by_localitat.setdefault(town, []).append(info)
                 if com not in artista_by_comarca or info["aparicions"] > artista_by_comarca[com]["aparicions"]:
                     artista_by_comarca[com] = info
 

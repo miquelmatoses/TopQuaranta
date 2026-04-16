@@ -110,20 +110,8 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
                 ArtistaLocalitat.objects.create(
                     artista=artista, municipi=None, localitat_manual=manual,
                 )
-        # Signal auto-syncs territories
-
-        # Also update legacy fields for backwards compat
-        first_loc = artista.localitats.select_related("municipi").first()
-        if first_loc and first_loc.municipi:
-            artista.localitat = first_loc.municipi.nom
-            artista.comarca = first_loc.municipi.comarca
-        elif first_loc:
-            artista.localitat = first_loc.localitat_manual
-            artista.comarca = "Altres"
-        else:
-            artista.localitat = ""
-            artista.comarca = ""
-        artista.save(update_fields=["localitat", "comarca"])
+        # Signal auto-syncs territories.
+        # R11: legacy localitat/comarca/provincia gone — nothing to sync back.
 
         # ── Handle multiple Deezer IDs ──
         new_deezer_ids_raw = request.POST.getlist("deezer_ids")
@@ -210,7 +198,8 @@ def accio(request: HttpRequest) -> HttpResponse:
         ok = 0
         errors = []
         for artista in queryset.prefetch_related("localitats"):
-            has_loc = artista.localitats.exists() or (artista.localitat and artista.comarca)
+            # R11: only ArtistaLocalitat counts now (legacy fields gone).
+            has_loc = artista.localitats.exists()
             if not has_loc:
                 errors.append(f"{artista.nom}: falta localitat")
                 continue

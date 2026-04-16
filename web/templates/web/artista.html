@@ -17,8 +17,6 @@
     {% endfor %}
     {% for loc in artista.localitats.all %}
       <span class="artista-location">{% if loc.municipi %}{{ loc.municipi.nom }}, {{ loc.municipi.comarca }}{% else %}{{ loc.localitat_manual }}{% endif %}</span>
-    {% empty %}
-      {% if artista.localitat %}<span class="artista-location">{{ artista.localitat }}{% if artista.comarca %}, {{ artista.comarca }}{% endif %}</span>{% endif %}
     {% endfor %}
   </div>
 </section>

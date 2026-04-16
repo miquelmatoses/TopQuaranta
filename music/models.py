@@ -110,11 +110,9 @@ class Artista(models.Model):
     deezer_nom = models.CharField(max_length=255, blank=True)
     deezer_nom_similitud = models.FloatField(null=True, blank=True)
 
-    # Legacy location fields — kept for backwards compat during migration.
-    # New code should use ArtistaLocalitat instead.
-    localitat = models.CharField(max_length=255, blank=True)
-    comarca = models.CharField(max_length=255, blank=True)
-    provincia = models.CharField(max_length=255, blank=True)
+    # R11: legacy location fields (localitat, comarca, provincia) dropped
+    # 2026-04-16. ArtistaLocalitat is the sole source of truth. Read via
+    # `localitat_principal` property or iterate `localitats.all()`.
 
     # Genre and gender representation
     genere = models.CharField(
@@ -165,12 +163,10 @@ class Artista(models.Model):
         super().save(*args, **kwargs)
 
     def clean(self):
-        # Validate that approved artists have at least one location.
-        # Check new ArtistaLocalitat first; fall back to legacy fields.
+        # R11: approved artists must have at least one ArtistaLocalitat.
+        # No fallback to legacy fields — they don't exist anymore.
         if self.aprovat and self.pk:
-            has_new_loc = self.localitats.exists()
-            has_legacy_loc = bool(self.localitat and self.comarca)
-            if not has_new_loc and not has_legacy_loc:
+            if not self.localitats.exists():
                 raise ValidationError(
                     "No es pot aprovar un artista sense almenys una localitat."
                 )
@@ -194,6 +190,23 @@ class Artista(models.Model):
     def all_deezer_ids(self) -> list[int]:
         """All Deezer IDs for this artist."""
         return list(self.deezer_ids.values_list("deezer_id", flat=True))
+
+    @property
+    def localitat_principal(self) -> str:
+        """Display string of the artist's primary location.
+
+        R11: the legacy `localitat/comarca/provincia` columns were dropped;
+        ArtistaLocalitat is now the sole source of truth. Reads the first
+        linked location and composes "Town, Comarca" (or the manual text
+        if there's no linked municipi). Empty string for artists with no
+        location yet.
+        """
+        loc = self.localitats.select_related("municipi").first()
+        if loc is None:
+            return ""
+        if loc.municipi is not None:
+            return f"{loc.municipi.nom}, {loc.municipi.comarca}"
+        return loc.localitat_manual or ""
 
     def get_territoris(self) -> list[str]:
         """Return list of territory codes for this artist."""

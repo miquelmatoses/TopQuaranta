@@ -9,8 +9,8 @@
     {% for terr in territoris %}
       <span class="territori-tag territori-tag--{{ terr.codi|lower }}">{{ terr.get_codi_display }}</span>
     {% endfor %}
-    {% if artista.localitat %}
-      <span class="artista-location">{{ artista.localitat }}{% if artista.comarca %}, {{ artista.comarca }}{% endif %}</span>
+    {% if artista.localitat_principal %}
+      <span class="artista-location">{{ artista.localitat_principal }}</span>
     {% endif %}
   </div>
 </section>
