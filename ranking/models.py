@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -30,45 +32,61 @@ class ConfiguracioGlobal(models.Model):
     Migrated from legacy `configuracio_global`.
     """
 
+    # Defaults are Decimal(str) — never float — so full_clean() doesn't trip
+    # on imprecise float → Decimal round-tripping (e.g. 0.025 becoming
+    # 0.02500000000000000138...).
     dia_setmana_ranking = models.IntegerField(default=6, validators=_DAY_RANGE)
     penalitzacio_descens = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.025, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.025"),
+        validators=_PENALTY_RANGE,
     )
     exponent_penalitzacio_antiguitat = models.DecimalField(
-        max_digits=5, decimal_places=2, default=2.5, validators=_EXPONENT_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("2.5"),
+        validators=_EXPONENT_RANGE,
     )
     max_factor_a = models.DecimalField(
-        max_digits=5, decimal_places=2, default=1.0, validators=_FACTOR_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        validators=_FACTOR_RANGE,
     )
     max_factor_b = models.DecimalField(
-        max_digits=5, decimal_places=2, default=1.0, validators=_FACTOR_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        validators=_FACTOR_RANGE,
     )
     max_factor_c = models.DecimalField(
-        max_digits=5, decimal_places=2, default=1.0, validators=_FACTOR_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        validators=_FACTOR_RANGE,
     )
     max_factor_final = models.DecimalField(
-        max_digits=5, decimal_places=2, default=1.5, validators=_FACTOR_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("1.5"),
+        validators=_FACTOR_RANGE,
     )
     penalitzacio_album_per_canco = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.25, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.25"),
+        validators=_PENALTY_RANGE,
     )
     penalitzacio_artista_per_canco = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.2, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.2"),
+        validators=_PENALTY_RANGE,
     )
     coeficient_penalitzacio_top = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.075, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.075"),
+        validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_0 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.1, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.1"),
+        validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_1 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.05, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.05"),
+        validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_2 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=0.0, validators=_PENALTY_RANGE,
+        max_digits=5, decimal_places=3, default=Decimal("0.0"),
+        validators=_PENALTY_RANGE,
     )
     suavitat = models.DecimalField(
-        max_digits=5, decimal_places=2, default=5.0, validators=_SMOOTH_RANGE,
+        max_digits=5, decimal_places=2, default=Decimal("5.0"),
+        validators=_SMOOTH_RANGE,
     )
     min_cancons_ranking_propi = models.IntegerField(
         default=20, validators=_COUNT_RANGE,
