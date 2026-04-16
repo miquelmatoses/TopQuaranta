@@ -1,18 +1,45 @@
 {% extends "web/base.html" %}
+{% load static %}
 
 {% block title %}Top 40 {{ nom_territori }} — TopQuaranta{% endblock %}
 
 {% block content %}
-<section class="ranking-header">
-  <h2 class="ranking-title">Top 40 {{ nom_territori }}</h2>
-  {% if es_provisional %}
-    <span class="provisional-badge">Provisional</span>
-    {% if data_calcul %}
-      <p class="ranking-date">Dades del {{ data_calcul|date:"j F Y" }}</p>
+<!-- ═══ Territory sub-nav — switch between rankings ═══ -->
+<nav class="ranking-subnav" aria-label="Territoris">
+  <a href="{% url 'web:ranking' %}?t=ppcc" class="ranking-subnav-link{% if territori == 'PPCC' %} is-active{% endif %}">
+    <img src="{% static 'mm-design/icons/territories/territory-ppcc.svg' %}" alt="" class="ranking-subnav-badge" width="20" height="20">
+    PPCC
+  </a>
+  {% for t in territoris_nav %}
+  <a href="{% url 'web:ranking' %}?t={{ t.codi|lower }}" class="ranking-subnav-link{% if territori == t.codi %} is-active{% endif %}">
+    <img src="{% static 'mm-design/icons/territories/territory-' %}{{ t.codi|lower }}.svg" alt="" class="ranking-subnav-badge" width="20" height="20">
+    {{ t.nom }}
+  </a>
+  {% endfor %}
+</nav>
+
+<!-- ═══ Territory identity — large badge + title ═══ -->
+<section class="territori-identity">
+  <img src="{% static 'mm-design/icons/territories/territory-' %}{{ territori|lower }}.svg" alt="" class="territori-badge-large" aria-hidden="true">
+  <div class="territori-identity-info">
+    <p class="ranking-eyebrow">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 4px;">
+        <rect x="4" y="14" width="4" height="7" rx="0.8" stroke-width="1.7"/>
+        <rect x="10" y="9" width="4" height="12" rx="0.8" stroke-width="1.7"/>
+        <rect x="16" y="4" width="4" height="17" rx="0.8" stroke-width="1.7"/>
+      </svg>
+      Ranquing setmanal
+    </p>
+    <h2 class="ranking-title">Top 40 {{ nom_territori }}</h2>
+    {% if es_provisional %}
+      <span class="provisional-badge">Provisional</span>
+      {% if data_calcul %}
+        <p class="ranking-date">Dades del {{ data_calcul|date:"j F Y" }}</p>
+      {% endif %}
+    {% else %}
+      <p class="ranking-date">Setmana del {{ setmana|date:"j F Y" }}</p>
     {% endif %}
-  {% else %}
-    <p class="ranking-date">Setmana del {{ setmana|date:"j F Y" }}</p>
-  {% endif %}
+  </div>
 </section>
 
 {% include "web/_ranking_list.html" %}

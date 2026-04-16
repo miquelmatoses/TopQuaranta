@@ -1,23 +1,36 @@
-/* TopQuaranta — editorial design system
-   Built on mm-design tokens. Zero hardcoded hex values.
-   Aesthetic reference: cultural magazine, not SaaS dashboard. */
+/* TopQuaranta — Redisseny editorial
+   Estètica: revista cultural militante (NME '77, Les Inrockuptibles '92).
+   Built entirely on mm-design tokens. Zero hardcoded hex values.
 
-/* ── Project-level layout tokens ── */
+   Design decisions:
+   - Territory colors as IDENTITY, not decoration. When you switch territory
+     the whole page atmosphere changes — accent bar, position numbers, hero bg.
+   - #1 is the PROTAGONIST — full-width cinematic treatment with territory accent.
+   - Territory badge SVGs used LARGE (watermark/atmosphere element on ranking pages).
+   - Mobile-first hamburger navigation with sliding panel.
+   - Welcome hero on homepage explains the mission before showing data.
+   - Logo SVG in header, always visible.
+   - Register CTA always visible in header.
+   - Footer carries the cultural mission statement. */
+
+/* ── Project-level tokens ── */
 
 :root {
-  --tq-width-site: 75rem;       /* 1200px — wider than mm-design content width */
+  --tq-width-site: 75rem;       /* 1200px */
   --tq-cover-sm: 48px;
   --tq-cover-md: 72px;
   --tq-cover-lg: 96px;
-  --tq-cover-hero: 160px;
-  --tq-header-accent: var(--mm-color-primary);
+  --tq-cover-hero: 200px;
+  --tq-accent: var(--mm-color-primary);
+  --tq-accent-text: var(--mm-color-white);
 }
 
-/* Territory accent color override via body class */
-.territori-cat { --tq-header-accent: var(--mm-color-yellow); }
-.territori-val { --tq-header-accent: var(--mm-color-red); }
-.territori-bal { --tq-header-accent: var(--mm-color-blue); }
-.territori-ppcc { --tq-header-accent: var(--mm-color-green); }
+/* Territory accent overrides — each territory has its own atmosphere */
+.territori-cat { --tq-accent: var(--mm-color-yellow); --tq-accent-text: var(--mm-color-black); }
+.territori-val { --tq-accent: var(--mm-color-red); --tq-accent-text: var(--mm-color-white); }
+.territori-bal { --tq-accent: var(--mm-color-blue); --tq-accent-text: var(--mm-color-white); }
+.territori-ppcc { --tq-accent: var(--mm-color-green); --tq-accent-text: var(--mm-color-white); }
+.territori-alt { --tq-accent: var(--mm-color-gray-600); --tq-accent-text: var(--mm-color-white); }
 
 /* ── Reset ── */
 
@@ -56,121 +69,291 @@ img {
 }
 
 /* ══════════════════════════════════════
-   HEADER — editorial masthead
+   HEADER — editorial masthead with logo
    ══════════════════════════════════════ */
 
 .site-header {
-  border-bottom: 4px solid var(--tq-header-accent);
-  padding-block: var(--mm-space-8) var(--mm-space-6);
-}
-
-.header-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--mm-space-4);
-  flex-wrap: wrap;
-}
-
-.site-title-link {
-  display: inline-block;
-}
-
-.site-title {
-  font-family: var(--mm-font-display);
-  font-size: var(--mm-text-6xl);
-  font-weight: var(--mm-weight-bold);
-  line-height: var(--mm-leading-none);
+  background-color: var(--mm-color-white);
   color: var(--mm-color-text-primary);
-  letter-spacing: -0.02em;
+  position: sticky;
+  top: 0;
+  z-index: var(--mm-z-overlay);
+  border-bottom: 1px solid var(--mm-color-gray-100);
 }
 
-.site-subtitle {
-  font-family: var(--mm-font-display);
-  font-size: var(--mm-text-lg);
-  font-weight: var(--mm-weight-normal);
-  font-style: italic;
-  color: var(--mm-color-text-muted);
-}
-
-/* ── Territory navigation with SVG badges ── */
-
-.territori-nav {
+.header-bar {
   display: flex;
-  gap: var(--mm-space-1);
-  margin-top: var(--mm-space-6);
-  align-items: stretch;
-  border-top: 1px solid var(--mm-color-border);
-  padding-top: var(--mm-space-4);
+  align-items: center;
+  justify-content: space-between;
+  height: 5rem;
+  gap: var(--mm-space-4);
 }
 
-.territori-link {
+/* Logo SVG in header — large, prominent */
+.site-logo {
+  display: block;
+  height: 4rem;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* Territory accent bar beneath header */
+.header-accent {
+  display: block;
+  height: 4px;
+  background-color: var(--tq-accent);
+}
+
+/* ── Header actions (register CTA + hamburger) ── */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-3);
+}
+
+.header-cta {
   display: inline-flex;
   align-items: center;
   gap: var(--mm-space-2);
-  padding: var(--mm-space-2) var(--mm-space-4);
-  border-radius: var(--mm-radius-base);
-  font-size: var(--mm-text-sm);
-  font-weight: var(--mm-weight-medium);
-  color: var(--mm-color-text-muted);
-  transition: color 0.2s ease, background-color 0.2s ease;
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: var(--mm-tracking-wide);
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--mm-color-text-primary);
+  background-color: transparent;
+  border: 1px solid var(--mm-color-text-primary);
+  border-radius: var(--mm-radius-base);
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+  transition: background-color 0.15s, color 0.15s;
 }
 
-.territori-link:hover {
+.header-cta:hover {
+  background-color: var(--mm-color-text-primary);
+  color: var(--mm-color-white);
+}
+
+.header-cta svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ── Hamburger button ── */
+
+.nav-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--mm-color-text-primary);
+  padding: 0;
+}
+
+.nav-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-toggle .icon-close {
+  display: none;
+}
+
+.nav-toggle[aria-expanded="true"] .icon-hamburger {
+  display: none;
+}
+
+.nav-toggle[aria-expanded="true"] .icon-close {
+  display: block;
+}
+
+/* ── Slide-out navigation panel ── */
+
+.nav-panel {
+  display: none;
+  position: fixed;
+  top: calc(5rem + 4px + 1px); /* below header bar + accent bar + border */
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--mm-color-white);
+  z-index: var(--mm-z-overlay);
+  overflow-y: auto;
+  padding: var(--mm-space-6);
+}
+
+.nav-panel.is-open {
+  display: block;
+}
+
+.nav-links {
+  list-style: none;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-3);
+  padding: var(--mm-space-3) var(--mm-space-4);
+  font-size: var(--mm-text-lg);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-color-text-muted);
+  border-radius: var(--mm-radius-base);
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.nav-link:hover,
+.nav-link.is-active {
   color: var(--mm-color-text-primary);
   background-color: var(--mm-color-gray-50);
 }
 
-.territori-link .territori-badge {
+.nav-link svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
+  opacity: 0.6;
 }
 
-.territori-link:hover .territori-badge,
-.territori-link.is-active .territori-badge {
+.nav-link:hover svg,
+.nav-link.is-active svg {
   opacity: 1;
 }
 
-/* Active territory link */
-.territori-link.is-active {
-  color: var(--mm-color-text-primary);
-  font-weight: var(--mm-weight-bold);
-  background-color: var(--mm-color-gray-50);
-}
+/* Desktop: inline nav instead of hamburger panel */
+@media (min-width: 1024px) {
+  .nav-toggle {
+    display: none;
+  }
 
-/* Territory-specific active accent */
-.territori-link--cat.is-active { color: var(--mm-color-black); background-color: var(--mm-color-yellow); }
-.territori-link--val.is-active { color: var(--mm-color-white); background-color: var(--mm-color-red); }
-.territori-link--bal.is-active { color: var(--mm-color-white); background-color: var(--mm-color-blue); }
-.territori-link--ppcc.is-active { color: var(--mm-color-white); background-color: var(--mm-color-green); }
+  .nav-panel {
+    display: flex;
+    position: static;
+    background: transparent;
+    padding: 0;
+    overflow: visible;
+    align-items: center;
+    gap: var(--mm-space-1);
+    flex: 1;
+    justify-content: flex-end;
+  }
 
-.territori-link--cat:hover { color: var(--mm-color-black); background-color: var(--mm-color-yellow); }
-.territori-link--val:hover { color: var(--mm-color-white); background-color: var(--mm-color-red); }
-.territori-link--bal:hover { color: var(--mm-color-white); background-color: var(--mm-color-blue); }
-.territori-link--ppcc:hover { color: var(--mm-color-white); background-color: var(--mm-color-green); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
 
-/* Utility nav links (Artistes, Mapa) */
-.territori-link--util {
-  margin-left: auto;
-}
+  .nav-link {
+    font-size: var(--mm-text-sm);
+    padding: var(--mm-space-1_5) var(--mm-space-3);
+    gap: var(--mm-space-2);
+  }
 
-.territori-link--util + .territori-link--util {
-  margin-left: 0;
+  .nav-link svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 /* ══════════════════════════════════════
-   RANKING HEADER — editorial section intro
+   WELCOME HERO — homepage mission statement
+   ══════════════════════════════════════ */
+
+.welcome-hero {
+  padding: var(--mm-space-8) 0;
+  border-bottom: 2px solid var(--mm-color-text-primary);
+}
+
+.welcome-inner {
+  max-width: 40rem;
+}
+
+.welcome-eyebrow {
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--tq-accent);
+  margin-bottom: var(--mm-space-3);
+}
+
+.welcome-headline {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-5xl);
+  font-weight: var(--mm-weight-bold);
+  line-height: var(--mm-leading-tight);
+  color: var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-4);
+}
+
+.welcome-body {
+  font-size: var(--mm-text-lg);
+  line-height: var(--mm-leading-relaxed);
+  color: var(--mm-color-text-muted);
+  margin-bottom: var(--mm-space-6);
+}
+
+.welcome-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-wide);
+  color: var(--tq-accent-text);
+  background-color: var(--tq-accent);
+  padding: var(--mm-space-3) var(--mm-space-6);
+  border-radius: var(--mm-radius-base);
+  transition: opacity 0.15s;
+}
+
+.welcome-cta:hover {
+  opacity: 0.9;
+}
+
+.welcome-cta svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ══════════════════════════════════════
+   RANKING HEADER — editorial section title
    ══════════════════════════════════════ */
 
 .ranking-header {
-  padding-block: var(--mm-space-8) var(--mm-space-4);
-  border-bottom: 1px solid var(--mm-color-border);
-  margin-bottom: var(--mm-space-6);
+  padding: var(--mm-space-8) 0 var(--mm-space-4);
+  border-bottom: 2px solid var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-2);
+  position: relative;
+}
+
+/* Large territory badge as atmospheric watermark */
+.ranking-header .territori-watermark {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 120px;
+  height: 120px;
+  opacity: 0.08;
+  color: var(--tq-accent);
+  pointer-events: none;
+}
+
+.ranking-eyebrow {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--tq-accent);
+  margin-bottom: var(--mm-space-2);
 }
 
 .ranking-title {
@@ -210,25 +393,57 @@ img {
   padding-bottom: var(--mm-space-8);
 }
 
-/* ── Hero entry (#1) — editorial cover treatment ── */
+/* ── Hero entry (#1) — cinematic full-width moment ── */
 
 .rank-hero {
   display: grid;
-  grid-template-columns: auto var(--tq-cover-hero) 1fr;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  margin: 0 calc(-1 * var(--mm-space-6)); /* bleed to edges */
+  background-color: var(--tq-accent);
+  color: var(--tq-accent-text);
+  position: relative;
+  overflow: hidden;
+}
+
+.rank-hero-inner {
+  display: grid;
+  grid-template-columns: var(--tq-cover-hero) 1fr;
   gap: var(--mm-space-6);
   align-items: center;
-  padding: var(--mm-space-8) 0;
-  border-bottom: 2px solid var(--mm-color-text-primary);
+  padding: var(--mm-space-8) var(--mm-space-6);
+  max-width: var(--tq-width-site);
+  margin-inline: auto;
+  width: 100%;
+  position: relative;
+  z-index: var(--mm-z-raised);
+}
+
+/* Large territory badge behind the #1 entry */
+.rank-hero .territori-watermark {
+  position: absolute;
+  right: var(--mm-space-6);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 280px;
+  height: 280px;
+  opacity: 0.12;
+  color: var(--tq-accent-text);
+  pointer-events: none;
 }
 
 .rank-hero .rank-position {
+  position: absolute;
+  left: var(--mm-space-6);
+  bottom: var(--mm-space-3);
   font-family: var(--mm-font-display);
-  font-size: var(--mm-text-6xl);
+  font-size: 8rem;
   font-weight: var(--mm-weight-bold);
   line-height: var(--mm-leading-none);
-  color: var(--tq-header-accent);
-  width: auto;
-  text-align: left;
+  color: var(--tq-accent-text);
+  opacity: 0.15;
+  z-index: var(--mm-z-base);
 }
 
 .rank-hero .rank-cover {
@@ -236,10 +451,27 @@ img {
   height: var(--tq-cover-hero);
   border-radius: var(--mm-radius-lg);
   box-shadow: var(--mm-shadow-lg);
+  object-fit: cover;
+  z-index: var(--mm-z-raised);
+}
+
+.rank-hero .rank-cover--placeholder {
+  display: block;
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .rank-hero .rank-info {
+  z-index: var(--mm-z-raised);
   gap: var(--mm-space-2);
+}
+
+.rank-hero .rank-eyebrow {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  opacity: 0.8;
+  margin-bottom: var(--mm-space-1);
 }
 
 .rank-hero .rank-song {
@@ -250,16 +482,46 @@ img {
   white-space: normal;
 }
 
-.rank-hero .rank-artist-link {
+/* Hero artist links — explicit contrast colors for readability on accent bg.
+   IMPORTANT: must override .rank-artist-link:hover which sets color: var(--tq-accent)
+   — same as the hero background. Use !important-free higher specificity. */
+.rank-hero .rank-artist-link--hero {
   font-size: var(--mm-text-lg);
-  color: var(--mm-color-text-muted);
+  color: var(--tq-accent-text);
+  opacity: 0.85;
 }
 
-/* ── Podium entries (#2, #3) — prominent but not hero ── */
+.rank-hero .rank-artist-link--hero:hover {
+  color: var(--tq-accent-text);
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Hero artists wrapper */
+.rank-artists--hero {
+  color: var(--tq-accent-text);
+}
+
+/* Hero metadata (album + year) — must be legible on accent bg */
+.rank-hero .rank-meta--hero {
+  display: block;
+  font-size: var(--mm-text-sm);
+  color: var(--tq-accent-text);
+  opacity: 0.7;
+  margin-top: var(--mm-space-1);
+}
+
+.rank-hero .rank-meta--hero:hover {
+  color: var(--tq-accent-text);
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* ── Podium entries (#2, #3) — prominent editorial treatment ── */
 
 .rank-podium {
   display: grid;
-  grid-template-columns: var(--mm-space-8) var(--tq-cover-lg) 1fr;
+  grid-template-columns: 3.5rem var(--tq-cover-lg) 1fr;
   gap: var(--mm-space-5);
   align-items: center;
   padding: var(--mm-space-6) 0;
@@ -270,7 +532,8 @@ img {
   font-family: var(--mm-font-display);
   font-size: var(--mm-text-3xl);
   font-weight: var(--mm-weight-bold);
-  color: var(--tq-header-accent);
+  color: var(--tq-accent);
+  text-align: center;
 }
 
 .rank-podium .rank-cover {
@@ -278,6 +541,7 @@ img {
   height: var(--tq-cover-lg);
   border-radius: var(--mm-radius-lg);
   box-shadow: var(--mm-shadow-md);
+  object-fit: cover;
 }
 
 .rank-podium .rank-song {
@@ -292,11 +556,11 @@ img {
   font-size: var(--mm-text-base);
 }
 
-/* ── Standard entries (#4-40) ── */
+/* ── Standard entries (#4–40) ── */
 
 .ranking-entry {
   display: grid;
-  grid-template-columns: var(--mm-space-8) var(--tq-cover-sm) 1fr;
+  grid-template-columns: 3.5rem var(--tq-cover-sm) 1fr;
   gap: var(--mm-space-4);
   align-items: center;
   padding: var(--mm-space-3) 0;
@@ -308,7 +572,7 @@ img {
   background-color: var(--mm-color-gray-50);
 }
 
-/* ── Position number ── */
+/* ── Shared ranking element styles ── */
 
 .rank-position {
   font-family: var(--mm-font-mono);
@@ -317,8 +581,6 @@ img {
   text-align: center;
   color: var(--mm-color-text-muted);
 }
-
-/* ── Album cover ── */
 
 .rank-cover {
   width: var(--tq-cover-sm);
@@ -332,8 +594,6 @@ img {
   display: block;
   background-color: var(--mm-color-gray-200);
 }
-
-/* ── Song + artist info ── */
 
 .rank-info {
   display: flex;
@@ -350,17 +610,36 @@ img {
   text-overflow: ellipsis;
 }
 
-.rank-artist-link {
+.rank-artists {
   font-size: var(--mm-text-sm);
   color: var(--mm-color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rank-artist-link {
+  color: var(--mm-color-text-muted);
   transition: color 0.15s ease;
 }
 
 .rank-artist-link:hover {
-  color: var(--tq-header-accent);
+  color: var(--tq-accent);
+}
+
+.rank-meta {
+  display: block;
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.15s ease;
+}
+
+a.rank-meta:hover {
+  opacity: 1;
 }
 
 /* ── Empty state ── */
@@ -374,45 +653,181 @@ img {
 }
 
 /* ══════════════════════════════════════
-   FOOTER — minimal, understated
+   RANKING SUB-NAV — territory switcher bar
    ══════════════════════════════════════ */
 
-.site-footer {
-  padding-block: var(--mm-space-8);
-  border-top: 1px solid var(--mm-color-border);
-  margin-top: var(--mm-space-8);
-}
-
-.footer-inner {
+.ranking-subnav {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  gap: var(--mm-space-1);
+  padding: var(--mm-space-3) 0;
+  border-bottom: 2px solid var(--tq-accent);
+  margin-bottom: 0;
   flex-wrap: wrap;
-  gap: var(--mm-space-4);
+  overflow-x: auto;
 }
 
-.footer-copy {
+.ranking-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-1_5);
   font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
   color: var(--mm-color-text-muted);
+  padding: var(--mm-space-1) var(--mm-space-2_5);
+  border-radius: var(--mm-radius-base);
+  white-space: nowrap;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.footer-links {
-  display: flex;
-  gap: var(--mm-space-4);
-}
-
-.footer-link {
-  font-size: var(--mm-text-sm);
-  color: var(--mm-color-text-muted);
-  transition: color 0.15s ease;
-}
-
-.footer-link:hover {
+.ranking-subnav-link:hover {
   color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-gray-50);
+}
+
+.ranking-subnav-link.is-active {
+  color: var(--mm-color-text-primary);
+  font-weight: var(--mm-weight-bold);
+  background-color: var(--mm-color-gray-50);
+}
+
+.ranking-subnav-badge {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 /* ══════════════════════════════════════
-   ARTIST DIRECTORY
+   TERRITORY RANKING — atmosphere elements
+   ══════════════════════════════════════ */
+
+/* Large territory badge as page identity on ranking pages */
+.territori-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-6);
+  padding: var(--mm-space-8) 0;
+  border-bottom: 2px solid var(--mm-color-text-primary);
+  position: relative;
+}
+
+.territori-identity .territori-badge-large {
+  width: 80px;
+  height: 80px;
+  color: var(--tq-accent);
+  flex-shrink: 0;
+}
+
+.territori-identity-info {
+  flex: 1;
+}
+
+/* ══════════════════════════════════════
+   FOOTER — militant, with mission
+   ══════════════════════════════════════ */
+
+.site-footer {
+  background-color: var(--mm-color-black);
+  color: var(--mm-color-gray-300);
+  padding: var(--mm-space-8) 0;
+  margin-top: var(--mm-space-8);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--mm-space-8);
+}
+
+.footer-mission-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-lg);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-white);
+  margin-bottom: var(--mm-space-3);
+}
+
+.footer-mission-text {
+  font-size: var(--mm-text-sm);
+  line-height: var(--mm-leading-relaxed);
+  color: var(--mm-color-gray-400);
+  margin-bottom: var(--mm-space-4);
+}
+
+.footer-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--mm-color-white);
+  border: 1px solid var(--mm-color-gray-600);
+  padding: var(--mm-space-2) var(--mm-space-4);
+  border-radius: var(--mm-radius-base);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.footer-cta:hover {
+  border-color: var(--mm-color-white);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.footer-cta svg {
+  width: 16px;
+  height: 16px;
+}
+
+.footer-nav-title {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--mm-color-gray-400);
+  margin-bottom: var(--mm-space-3);
+}
+
+.footer-nav-list {
+  list-style: none;
+}
+
+.footer-nav-link {
+  display: block;
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-gray-300);
+  padding: var(--mm-space-1) 0;
+  transition: color 0.15s;
+}
+
+.footer-nav-link:hover {
+  color: var(--mm-color-white);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--mm-space-8);
+  padding-top: var(--mm-space-4);
+  border-top: 1px solid var(--mm-color-gray-800);
+  flex-wrap: wrap;
+  gap: var(--mm-space-3);
+}
+
+.footer-copy {
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-gray-500);
+}
+
+.footer-logo {
+  height: 1.25rem;
+  width: auto;
+  opacity: 0.4;
+}
+
+/* ══════════════════════════════════════
+   ARTIST DIRECTORY — card grid
    ══════════════════════════════════════ */
 
 .artistes-filters {
@@ -463,6 +878,42 @@ img {
   opacity: 0.85;
 }
 
+/* Territory filter pills */
+.filter-territori {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-1_5);
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+  border-radius: var(--mm-radius-full);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-wide);
+  color: var(--mm-color-text-muted);
+  border: 1px solid var(--mm-color-gray-200);
+  transition: all 0.15s;
+}
+
+.filter-territori:hover {
+  border-color: var(--mm-color-text-primary);
+  color: var(--mm-color-text-primary);
+}
+
+.filter-territori.is-active {
+  border-color: transparent;
+}
+
+.filter-territori--cat.is-active { background-color: var(--mm-color-yellow); color: var(--mm-color-black); }
+.filter-territori--val.is-active { background-color: var(--mm-color-red); color: var(--mm-color-white); }
+.filter-territori--bal.is-active { background-color: var(--mm-color-blue); color: var(--mm-color-white); }
+.filter-territori--tots.is-active { background-color: var(--mm-color-text-primary); color: var(--mm-color-background); }
+
+.filter-territori .territori-badge-filter {
+  width: 14px;
+  height: 14px;
+}
+
+/* Artist cards grid */
 .artistes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -473,15 +924,16 @@ img {
 .artistes-card {
   display: flex;
   flex-direction: column;
-  padding: var(--mm-space-4) var(--mm-space-5);
+  padding: var(--mm-space-5);
   border: 1px solid var(--mm-color-gray-100);
   border-radius: var(--mm-radius-lg);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .artistes-card:hover {
-  border-color: var(--mm-color-border);
-  box-shadow: var(--mm-shadow-sm);
+  border-color: var(--tq-accent);
+  box-shadow: var(--mm-shadow-md);
+  transform: translateY(-2px);
 }
 
 .artistes-nom {
@@ -495,6 +947,12 @@ img {
   font-size: var(--mm-text-sm);
   color: var(--mm-color-text-muted);
   margin-top: var(--mm-space-1);
+}
+
+.artistes-territori-tags {
+  display: flex;
+  gap: var(--mm-space-1);
+  margin-top: var(--mm-space-3);
 }
 
 /* Legacy list layout (kept for compatibility) */
@@ -539,7 +997,7 @@ img {
 }
 
 .pagination-link:hover {
-  color: var(--tq-header-accent);
+  color: var(--tq-accent);
 }
 
 .pagination-info {
@@ -552,31 +1010,33 @@ img {
    ══════════════════════════════════════ */
 
 .artista-header {
-  padding-block: var(--mm-space-8) var(--mm-space-4);
-  border-bottom: 1px solid var(--mm-color-border);
+  padding: var(--mm-space-8) 0 var(--mm-space-4);
+  border-bottom: 2px solid var(--mm-color-text-primary);
   margin-bottom: var(--mm-space-6);
+  position: relative;
 }
 
 .artista-nom {
   font-family: var(--mm-font-display);
-  font-size: var(--mm-text-5xl);
+  font-size: var(--mm-text-6xl);
   font-weight: var(--mm-weight-bold);
   line-height: var(--mm-leading-none);
+  letter-spacing: -0.02em;
 }
 
 .artista-meta {
   display: flex;
   align-items: center;
   gap: var(--mm-space-3);
-  margin-top: var(--mm-space-3);
+  margin-top: var(--mm-space-4);
   flex-wrap: wrap;
 }
 
 .territori-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--mm-space-1);
-  padding: var(--mm-space-0_5) var(--mm-space-3);
+  gap: var(--mm-space-1_5);
+  padding: var(--mm-space-1) var(--mm-space-3);
   border-radius: var(--mm-radius-sm);
   font-size: var(--mm-text-xs);
   font-weight: var(--mm-weight-bold);
@@ -584,20 +1044,15 @@ img {
   letter-spacing: var(--mm-tracking-wide);
 }
 
-.territori-tag .territori-badge {
-  width: 14px;
-  height: 14px;
-}
-
 .territori-tag--cat { background-color: var(--mm-color-yellow); color: var(--mm-color-black); }
 .territori-tag--val { background-color: var(--mm-color-red); color: var(--mm-color-white); }
 .territori-tag--bal { background-color: var(--mm-color-blue); color: var(--mm-color-white); }
 .territori-tag--ppcc { background-color: var(--mm-color-green); color: var(--mm-color-white); }
-.territori-tag--cno { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
-.territori-tag--and { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
-.territori-tag--fra { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
-.territori-tag--alg { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
-.territori-tag--car { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
+.territori-tag--cno,
+.territori-tag--and,
+.territori-tag--fra,
+.territori-tag--alg,
+.territori-tag--car,
 .territori-tag--alt { background-color: var(--mm-color-gray-600); color: var(--mm-color-white); }
 
 .artista-location {
@@ -651,7 +1106,7 @@ img {
 .historial-pos {
   font-family: var(--mm-font-mono);
   font-weight: var(--mm-weight-bold);
-  color: var(--tq-header-accent);
+  color: var(--tq-accent);
   min-width: var(--mm-space-8);
 }
 
@@ -769,6 +1224,13 @@ img {
   resize: vertical;
 }
 
+.form-hint {
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-1);
+  font-style: italic;
+}
+
 .form-error {
   font-size: var(--mm-text-sm);
   color: var(--mm-color-error);
@@ -805,6 +1267,106 @@ img {
 
 .dashboard-value {
   font-size: var(--mm-text-base);
+}
+
+/* ══════════════════════════════════════
+   UNVERIFIED ARTIST NOTICE
+   ══════════════════════════════════════ */
+
+.unverified-notice {
+  max-width: 36rem;
+}
+
+.unverified-text {
+  font-size: var(--mm-text-lg);
+  line-height: var(--mm-leading-relaxed);
+  color: var(--mm-color-text-muted);
+  margin-bottom: var(--mm-space-6);
+}
+
+.unverified-action {
+  padding: var(--mm-space-6);
+  border: 1px solid var(--mm-color-gray-100);
+  border-radius: var(--mm-radius-lg);
+  background-color: var(--mm-color-gray-50);
+}
+
+.unverified-hint {
+  font-size: var(--mm-text-base);
+  color: var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-4);
+}
+
+.unverified-login-hint {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-4);
+}
+
+/* ── Dashboard card grid (user dashboard) ── */
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--mm-space-4);
+  margin-top: var(--mm-space-6);
+}
+
+.accedir-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--mm-space-4);
+  margin-top: var(--mm-space-6);
+  max-width: 40rem;
+}
+
+.dashboard-logout {
+  margin-top: var(--mm-space-8);
+  padding-top: var(--mm-space-4);
+  border-top: 1px solid var(--mm-color-gray-100);
+}
+
+/* Disabled card state (pending verification) */
+.staff-tool-card--disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.staff-tool-card--disabled:hover {
+  border-color: var(--mm-color-border);
+  background-color: transparent;
+}
+
+/* ── Dashboard stats grid ── */
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--mm-space-4);
+}
+
+.dashboard-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--mm-space-5) var(--mm-space-4);
+  border: 1px solid var(--mm-color-gray-100);
+  border-radius: var(--mm-radius-lg);
+  text-align: center;
+}
+
+.dashboard-stat-value {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-3xl);
+  font-weight: var(--mm-weight-bold);
+  color: var(--tq-accent);
+  line-height: var(--mm-leading-tight);
+}
+
+.dashboard-stat-label {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-1);
 }
 
 /* ══════════════════════════════════════
@@ -866,7 +1428,7 @@ img {
 .chart-bar {
   width: 100%;
   max-width: var(--mm-space-8);
-  background-color: var(--tq-header-accent);
+  background-color: var(--tq-accent);
   border-radius: var(--mm-radius-sm) var(--mm-radius-sm) 0 0;
   display: flex;
   align-items: flex-start;
@@ -888,7 +1450,7 @@ img {
 }
 
 /* ══════════════════════════════════════
-   STAFF PANEL (unchanged — separate design context)
+   STAFF PANEL — visual coherence with main identity
    ══════════════════════════════════════ */
 
 .staff-layout {
@@ -985,48 +1547,338 @@ img {
 .staff-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--mm-space-4); }
 .staff-tool-card { display: flex; flex-direction: column; padding: var(--mm-space-4); border: 1px solid var(--mm-color-border); border-radius: var(--mm-radius-lg); transition: border-color 0.15s ease, background-color 0.15s ease; }
 .staff-tool-card:hover { border-color: var(--mm-color-primary); background-color: var(--mm-color-hover-bg); }
+.staff-tool-icon { width: 28px; height: 28px; margin-bottom: var(--mm-space-3); opacity: 0.5; transition: opacity 0.15s; }
+.staff-tool-card:hover .staff-tool-icon { opacity: 0.8; }
 .staff-tool-title { font-weight: var(--mm-weight-bold); margin-bottom: var(--mm-space-1); }
 .staff-tool-desc { font-size: var(--mm-text-sm); color: var(--mm-color-text-muted); }
+
+.staff-sort-link { color: var(--mm-color-text-muted); text-decoration: none; transition: color 0.15s; white-space: nowrap; }
+.staff-sort-link:hover { color: var(--mm-color-text-primary); }
+.staff-sort-link.is-active { color: var(--mm-color-primary); }
+
+.staff-edit-link { color: var(--mm-color-text-primary); text-decoration: none; }
+.staff-edit-link:hover { color: var(--mm-color-primary); text-decoration: underline; }
+
+.social-hidden { display: none !important; }
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--mm-space-4);
+}
+@media (max-width: 1200px) { .config-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .config-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .config-grid { grid-template-columns: 1fr; } }
 
 .staff-filters { display: flex; gap: var(--mm-space-2); margin-bottom: var(--mm-space-4); flex-wrap: wrap; align-items: center; }
 .staff-actions-bar { display: flex; gap: var(--mm-space-2); align-items: center; padding: var(--mm-space-2) 0; margin-bottom: var(--mm-space-3); }
 .staff-action-select { padding: var(--mm-space-1_5) var(--mm-space-3); border: 1px solid var(--mm-color-border); border-radius: var(--mm-radius-base); font-family: var(--mm-font-sans); font-size: var(--mm-text-sm); color: var(--mm-color-text-primary); background-color: var(--mm-color-background); }
 
-.rank-position.rank-position { /* specificity for staff ranking */ }
+/* ══════════════════════════════════════
+   RANKING SELECTOR — territory choice page
+   ══════════════════════════════════════ */
+
+.selector-page {
+  padding: var(--mm-space-8) 0;
+}
+
+.selector-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-5xl);
+  font-weight: var(--mm-weight-bold);
+  line-height: var(--mm-leading-tight);
+  color: var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-2);
+}
+
+.selector-subtitle {
+  font-size: var(--mm-text-lg);
+  color: var(--mm-color-text-muted);
+  margin-bottom: var(--mm-space-8);
+}
+
+.selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--mm-space-5);
+}
+
+.selector-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--mm-space-8) var(--mm-space-6);
+  border: 2px solid var(--mm-color-gray-100);
+  border-radius: var(--mm-radius-lg);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.selector-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--mm-shadow-lg);
+}
+
+.selector-card--cat:hover { border-color: var(--mm-color-yellow); }
+.selector-card--val:hover { border-color: var(--mm-color-red); }
+.selector-card--bal:hover { border-color: var(--mm-color-blue); }
+.selector-card--ppcc:hover { border-color: var(--mm-color-green); }
+.selector-card--alt:hover { border-color: var(--mm-color-gray-600); }
+.selector-card--and:hover,
+.selector-card--cno:hover,
+.selector-card--fra:hover,
+.selector-card--alg:hover { border-color: var(--mm-color-gray-400); }
+
+/* Featured PPCC card — larger, more prominent */
+.selector-featured {
+  margin-bottom: var(--mm-space-5);
+}
+
+.selector-card--featured {
+  padding: var(--mm-space-8);
+}
+
+.selector-card--featured .selector-badge {
+  width: 100px;
+  height: 100px;
+  margin-bottom: var(--mm-space-4);
+}
+
+.selector-card--featured .selector-card-title {
+  font-size: var(--mm-text-3xl);
+}
+
+.selector-badge {
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--mm-space-4);
+}
+
+.selector-card-title {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-2xl);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-2);
+}
+
+.selector-card-desc {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  line-height: var(--mm-leading-relaxed);
+}
+
+/* ══════════════════════════════════════
+   ALBUM PAGE
+   ══════════════════════════════════════ */
+
+.album-header {
+  padding: var(--mm-space-8) 0;
+  border-bottom: 2px solid var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-6);
+}
+
+.album-header-inner {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--mm-space-8);
+  align-items: center;
+}
+
+.album-cover-large {
+  width: 280px;
+  height: 280px;
+  border-radius: var(--mm-radius-lg);
+  box-shadow: var(--mm-shadow-lg);
+  object-fit: cover;
+}
+
+.album-cover-large--placeholder {
+  display: block;
+  width: 280px;
+  height: 280px;
+  background-color: var(--mm-color-gray-200);
+  border-radius: var(--mm-radius-lg);
+}
+
+.album-type {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  color: var(--tq-accent);
+  margin-bottom: var(--mm-space-2);
+}
+
+.album-nom {
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-5xl);
+  font-weight: var(--mm-weight-bold);
+  line-height: var(--mm-leading-tight);
+  color: var(--mm-color-text-primary);
+  margin-bottom: var(--mm-space-2);
+}
+
+.album-artista {
+  font-size: var(--mm-text-xl);
+  color: var(--mm-color-text-muted);
+}
+
+.album-artista a {
+  color: var(--mm-color-text-primary);
+  transition: color 0.15s ease;
+}
+
+.album-artista a:hover {
+  color: var(--tq-accent);
+}
+
+.album-data {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  font-style: italic;
+  margin-top: var(--mm-space-2);
+}
+
+.album-tracks {
+  list-style: none;
+  counter-reset: track;
+}
+
+.album-track {
+  display: flex;
+  align-items: baseline;
+  gap: var(--mm-space-3);
+  padding: var(--mm-space-2_5) 0;
+  border-bottom: 1px solid var(--mm-color-gray-100);
+  counter-increment: track;
+  font-size: var(--mm-text-base);
+}
+
+.album-track::before {
+  content: counter(track);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+  min-width: var(--mm-space-6);
+  text-align: right;
+}
+
+.album-track-nom {
+  font-weight: var(--mm-weight-medium);
+  flex: 1;
+}
+
+.album-track-artists {
+  font-size: var(--mm-text-sm);
+  color: var(--mm-color-text-muted);
+}
+
+.album-track-artists a {
+  color: var(--mm-color-text-muted);
+  transition: color 0.15s;
+}
+
+.album-track-artists a:hover {
+  color: var(--tq-accent);
+}
+
+.album-track--ranked {
+  background-color: var(--mm-color-gray-50);
+  margin-inline: calc(-1 * var(--mm-space-3));
+  padding-inline: var(--mm-space-3);
+  border-radius: var(--mm-radius-base);
+}
+
+.album-track-badge {
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-wide);
+  color: var(--tq-accent);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════
+   BACK BUTTON — contextual navigation
+   ══════════════════════════════════════ */
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-color-text-muted);
+  padding: var(--mm-space-4) 0 0;
+  transition: color 0.15s;
+}
+
+.back-link:hover {
+  color: var(--mm-color-text-primary);
+}
+
+.back-link svg {
+  width: 16px;
+  height: 16px;
+}
 
 /* ══════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════ */
 
 @media (max-width: 768px) {
-  .site-title {
-    font-size: var(--mm-text-5xl);
-  }
-
   .ranking-title {
     font-size: var(--mm-text-3xl);
   }
 
-  .rank-hero {
-    grid-template-columns: auto 1fr;
-    gap: var(--mm-space-4);
-    padding: var(--mm-space-6) 0;
+  .welcome-headline {
+    font-size: var(--mm-text-3xl);
   }
 
-  .rank-hero .rank-position {
-    font-size: var(--mm-text-5xl);
+  .album-header-inner {
+    grid-template-columns: 1fr;
+    gap: var(--mm-space-4);
+    text-align: center;
+  }
+
+  .album-cover-large,
+  .album-cover-large--placeholder {
+    width: 200px;
+    height: 200px;
+    margin-inline: auto;
+  }
+
+  .album-nom {
+    font-size: var(--mm-text-3xl);
+  }
+
+  .rank-hero-inner {
+    grid-template-columns: 120px 1fr;
+    gap: var(--mm-space-4);
+    padding: var(--mm-space-6) var(--mm-space-6);
   }
 
   .rank-hero .rank-cover {
-    display: none;
+    width: 120px;
+    height: 120px;
   }
 
   .rank-hero .rank-song {
     font-size: var(--mm-text-2xl);
   }
 
+  .rank-hero .rank-position {
+    font-size: 5rem;
+  }
+
+  .rank-hero .territori-watermark {
+    width: 160px;
+    height: 160px;
+  }
+
   .rank-podium {
-    grid-template-columns: var(--mm-space-8) var(--tq-cover-md) 1fr;
+    grid-template-columns: 2.5rem var(--tq-cover-md) 1fr;
     gap: var(--mm-space-3);
     padding: var(--mm-space-4) 0;
   }
@@ -1040,23 +1892,27 @@ img {
     font-size: var(--mm-text-lg);
   }
 
-  .territori-nav {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .territori-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .territori-link--util {
-    margin-left: 0;
-  }
-
   .artistes-grid {
     grid-template-columns: 1fr;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: var(--mm-space-6);
+  }
+
+  .artista-nom {
+    font-size: var(--mm-text-5xl);
+  }
+
+  .territori-identity .territori-badge-large {
+    width: 56px;
+    height: 56px;
+  }
+
+  .ranking-header .territori-watermark {
+    width: 80px;
+    height: 80px;
   }
 }
 
@@ -1065,25 +1921,48 @@ img {
     padding-inline: var(--mm-space-4);
   }
 
-  .site-title {
-    font-size: var(--mm-text-3xl);
-  }
-
   .ranking-title {
     font-size: var(--mm-text-2xl);
   }
 
-  .header-top {
-    flex-direction: column;
-    gap: var(--mm-space-1);
+  .welcome-headline {
+    font-size: var(--mm-text-2xl);
   }
 
-  .rank-hero .rank-position {
-    font-size: var(--mm-text-3xl);
+  .rank-hero {
+    margin: 0 calc(-1 * var(--mm-space-4));
+  }
+
+  .rank-hero-inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: var(--mm-space-6) var(--mm-space-4);
+  }
+
+  .rank-hero .rank-cover {
+    width: 160px;
+    height: 160px;
+    margin-inline: auto;
   }
 
   .rank-hero .rank-song {
     font-size: var(--mm-text-xl);
+  }
+
+  .rank-hero .rank-position {
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 4rem;
+  }
+
+  .rank-podium {
+    grid-template-columns: 2rem var(--tq-cover-sm) 1fr;
+    gap: var(--mm-space-2);
+  }
+
+  .rank-podium .rank-cover {
+    width: var(--tq-cover-sm);
+    height: var(--tq-cover-sm);
   }
 
   .rank-podium .rank-position {
@@ -1091,12 +1970,20 @@ img {
   }
 
   .ranking-entry {
-    grid-template-columns: var(--mm-space-6) var(--tq-cover-sm) 1fr;
+    grid-template-columns: 2rem var(--tq-cover-sm) 1fr;
     gap: var(--mm-space-2);
   }
 
   .rank-cover {
     width: 40px;
     height: 40px;
+  }
+
+  .artista-nom {
+    font-size: var(--mm-text-3xl);
+  }
+
+  .header-cta span {
+    display: none; /* hide text, keep icon on very small screens */
   }
 }

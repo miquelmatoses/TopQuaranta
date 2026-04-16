@@ -2,19 +2,38 @@ import datetime
 
 from django.core.paginator import Paginator
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
-from music.models import Artista, Canco
+from music.constants import TERRITORI_NOMS, TERRITORIS_VALIDS  # noqa: F401 (re-exported)
+from music.models import Album, Artista, Canco, Municipi
 from ranking.models import RankingProvisional, RankingSetmanal
 
-TERRITORIS_VALIDS = ("CAT", "VAL", "BAL", "PPCC")
-
-TERRITORI_NOMS = {
-    "CAT": "Catalunya",
-    "VAL": "País Valencià",
-    "BAL": "Illes Balears",
-    "PPCC": "Països Catalans",
+TERRITORI_DESCRIPCIONS = {
+    "PPCC": "El rànquing agregat de tots els territoris de parla catalana",
+    "CAT": "El rànquing de la música en català a Catalunya",
+    "VAL": "El rànquing de la música en català al País Valencià",
+    "BAL": "El rànquing de la música en català a les Illes Balears",
+    "ALT": "El rànquing d'artistes d'Andorra, la Catalunya Nord, la Franja i l'Alguer",
+    "AND": "Andorra",
+    "CNO": "Catalunya Nord",
+    "FRA": "Franja de Ponent",
+    "ALG": "l'Alguer",
 }
+
+# Territories that redirect to ALT when clicked
+TERRITORIS_REDIRECT_ALT = {"AND", "CNO", "FRA", "ALG"}
+
+# Territories shown in selector and ranking sub-nav (same order)
+# PPCC is always separate/featured; these are the rest, alphabetical.
+TERRITORIS_SELECTOR = [
+    {"codi": "ALG", "nom": "l'Alguer"},
+    {"codi": "AND", "nom": "Andorra"},
+    {"codi": "BAL", "nom": "Illes Balears"},
+    {"codi": "CAT", "nom": "Catalunya"},
+    {"codi": "CNO", "nom": "Catalunya Nord"},
+    {"codi": "FRA", "nom": "Franja de Ponent"},
+    {"codi": "VAL", "nom": "País Valencià"},
+]
 
 
 def _setmana_actual() -> datetime.date:
@@ -25,26 +44,47 @@ def _setmana_actual() -> datetime.date:
     )
 
 
+def _ranking_base_qs():
+    """Common select_related and prefetch for ranking queries."""
+    return (
+        RankingSetmanal.objects
+        .select_related("canco", "canco__artista", "canco__album")
+        .prefetch_related("canco__artistes_col")
+    )
+
+
+def _provisional_base_qs():
+    """Common select_related and prefetch for provisional ranking queries."""
+    return (
+        RankingProvisional.objects
+        .select_related("canco", "canco__artista", "canco__album")
+        .prefetch_related("canco__artistes_col")
+    )
+
+
 def _get_ranking(
     territori: str, setmana: datetime.date
 ) -> tuple[list, bool, datetime.date | None]:
     """Fetch ranking for a territory and week.
 
-    Returns (ranking_qs, es_provisional, data_calcul).
-    PPCC never falls back to RankingProvisional.
+    Returns (ranking_list, es_provisional, data_calcul).
+    PPCC is computed by the full algorithm (like any other territory)
+    via calcular_ranking_territori('PPCC') in the pipeline.
+    The web view simply reads the stored results.
     """
     ranking = list(
-        RankingSetmanal.objects.filter(territori=territori, setmana=setmana)
-        .select_related("canco", "canco__artista", "canco__album")
+        _ranking_base_qs()
+        .filter(territori=territori, setmana=setmana)
         .order_by("posicio")[:40]
     )
 
-    if ranking or territori == "PPCC":
+    if ranking:
         return ranking, False, None
 
+    # Fallback to provisional (all territories including PPCC)
     provisional = list(
-        RankingProvisional.objects.filter(territori=territori)
-        .select_related("canco", "canco__artista", "canco__album")
+        _provisional_base_qs()
+        .filter(territori=territori)
         .order_by("posicio")[:40]
     )
     data_calcul = None
@@ -54,27 +94,45 @@ def _get_ranking(
 
 
 def homepage(request: HttpRequest) -> HttpResponse:
-    """Public homepage showing the current week's Top 40 for CAT territory."""
+    """Public homepage showing the current week's Top 40 for PPCC territory."""
     setmana = _setmana_actual()
-    ranking, es_provisional, data_calcul = _get_ranking("CAT", setmana)
+    ranking, es_provisional, data_calcul = _get_ranking("PPCC", setmana)
 
     return render(request, "web/homepage.html", {
         "ranking": ranking,
         "es_provisional": es_provisional,
         "setmana": setmana,
         "data_calcul": data_calcul,
-        "territori_actiu": "CAT",
+        "territori_actiu": "PPCC",
     })
 
 
-def ranking_territori(
-    request: HttpRequest, territori: str, setmana_str: str | None = None
-) -> HttpResponse:
-    """Top 40 ranking for a specific territory, optionally for a specific week."""
-    territori = territori.upper()
+def ranking_page(request: HttpRequest) -> HttpResponse:
+    """Single ranking page with territory selector.
+
+    Without ?t= parameter: shows territory selector.
+    With ?t=cat (etc.): shows the ranking for that territory.
+    Optional ?setmana=YYYY-MM-DD for historical weeks.
+    """
+    territori = request.GET.get("t", "").upper()
+
+    if not territori:
+        # Territory selector page — PPCC featured on top, rest in flat grid
+        ppcc = {"codi": "PPCC", "nom": TERRITORI_NOMS["PPCC"], "desc": TERRITORI_DESCRIPCIONS["PPCC"]}
+
+        return render(request, "web/ranking_selector.html", {
+            "ppcc": ppcc,
+            "territoris": TERRITORIS_SELECTOR,
+        })
+
+    # AND/CNO/FRA/ALG redirect to ALT ranking
+    if territori in TERRITORIS_REDIRECT_ALT:
+        return redirect(f"/ranking/?t=alt", permanent=False)
+
     if territori not in TERRITORIS_VALIDS:
         raise Http404
 
+    setmana_str = request.GET.get("setmana")
     if setmana_str:
         try:
             setmana = datetime.date.fromisoformat(setmana_str)
@@ -96,12 +154,23 @@ def ranking_territori(
         "territori": territori,
         "territori_actiu": territori,
         "nom_territori": nom_territori,
+        "territoris_nav": TERRITORIS_SELECTOR,
     })
+
+
+def ranking_territori_redirect(
+    request: HttpRequest, territori: str, setmana_str: str | None = None
+) -> HttpResponse:
+    """Redirect old /ranking/<territori>/ URLs to /ranking/?t=<territori>."""
+    url = f"/ranking/?t={territori}"
+    if setmana_str:
+        url += f"&setmana={setmana_str}"
+    return redirect(url, permanent=True)
 
 
 def directori_artistes(request: HttpRequest) -> HttpResponse:
     """Browsable directory of approved artists with territory filter and search."""
-    qs = Artista.objects.filter(aprovat=True).prefetch_related("territoris")
+    qs = Artista.objects.filter(aprovat=True).prefetch_related("territoris", "localitats__municipi")
 
     territori = request.GET.get("territori", "").upper()
     if territori in ("CAT", "VAL", "BAL"):
@@ -123,8 +192,20 @@ def directori_artistes(request: HttpRequest) -> HttpResponse:
 
 
 def perfil_artista(request: HttpRequest, slug: str) -> HttpResponse:
-    """Artist profile with ranking history and discography."""
-    artista = get_object_or_404(Artista, slug=slug, aprovat=True)
+    """Artist profile with ranking history and discography.
+
+    Non-approved artists show a minimal page with context-appropriate
+    calls to action (register, propose info, or staff edit link).
+    """
+    artista = get_object_or_404(
+        Artista.objects.prefetch_related("localitats__municipi"), slug=slug
+    )
+
+    if not artista.aprovat:
+        return render(request, "web/artista_no_verificat.html", {
+            "artista": artista,
+        })
+
     territoris = artista.get_territoris()
 
     # Last 10 weeks in RankingSetmanal (any territory)
@@ -156,6 +237,42 @@ def perfil_artista(request: HttpRequest, slug: str) -> HttpResponse:
     })
 
 
+def perfil_album(request: HttpRequest, slug: str) -> HttpResponse:
+    """Album page with cover, metadata, and track listing with ranking info."""
+    album = get_object_or_404(
+        Album.objects.select_related("artista"),
+        slug=slug,
+    )
+
+    # Tracks on this album — verified ones first, then all
+    cancons = (
+        album.cancons
+        .select_related("artista")
+        .prefetch_related("artistes_col")
+        .order_by("id")
+    )
+
+    # Which tracks from this album have appeared in rankings?
+    canco_ids = [c.id for c in cancons]
+    ranking_cancons = set(
+        RankingSetmanal.objects.filter(canco_id__in=canco_ids)
+        .values_list("canco_id", flat=True)
+        .distinct()
+    )
+    provisional_cancons = set(
+        RankingProvisional.objects.filter(canco_id__in=canco_ids)
+        .values_list("canco_id", flat=True)
+        .distinct()
+    )
+    cancons_al_ranking = ranking_cancons | provisional_cancons
+
+    return render(request, "web/album.html", {
+        "album": album,
+        "cancons": cancons,
+        "cancons_al_ranking": cancons_al_ranking,
+    })
+
+
 def mapa(request: HttpRequest) -> HttpResponse:
     """Three-level zoomable SVG map using D3.js."""
     import json
@@ -173,10 +290,15 @@ def mapa(request: HttpRequest) -> HttpResponse:
         ):
             artist_ids[r["canco__artista_id"]] = r["aparicions"]
 
-    # Load all municipis
-    with connection.cursor() as c:
-        c.execute('SELECT "Municipi", "Comarca", "Territori" FROM municipis')
-        all_municipis = [{"nom": r[0], "comarca": r[1], "territori": r[2]} for r in c.fetchall()]
+    # Load all municipis from the new music_municipi table
+    all_municipis = list(
+        Municipi.objects.values("nom", "comarca", "territori_id").iterator()
+    )
+    # Normalize key name to match the rest of this view
+    all_municipis = [
+        {"nom": m["nom"], "comarca": m["comarca"], "territori": m["territori_id"]}
+        for m in all_municipis
+    ]
 
     # Artist data by localitat and comarca
     artista_by_localitat: dict[str, list[dict]] = {}

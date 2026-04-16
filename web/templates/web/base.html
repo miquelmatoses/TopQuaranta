@@ -5,59 +5,161 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}TopQuaranta{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'web/img/favicon.svg' %}">
   <link rel="stylesheet" href="{% static 'mm-design/tokens/colors.css' %}">
   <link rel="stylesheet" href="{% static 'mm-design/tokens/typography.css' %}">
   <link rel="stylesheet" href="{% static 'mm-design/tokens/spacing.css' %}">
+  <link rel="stylesheet" href="{% static 'mm-design/components/button/button.css' %}">
+  <link rel="stylesheet" href="{% static 'mm-design/components/section-label/section-label.css' %}">
   <link rel="stylesheet" href="{% static 'web/css/style.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if territori_actiu %}territori-{{ territori_actiu|lower }}{% endif %}">
+
+  <!-- ═══ HEADER — editorial masthead ═══ -->
   <header class="site-header">
     <div class="container">
-      <div class="header-top">
-        <a href="{% url 'web:homepage' %}" class="site-title-link">
-          <h1 class="site-title">TopQuaranta</h1>
+      <div class="header-bar">
+        <!-- Logo SVG -->
+        <a href="{% url 'web:homepage' %}" aria-label="TopQuaranta — Inici">
+          <img class="site-logo" src="{% static 'web/img/logo-topquaranta.svg' %}" alt="TopQuaranta" height="40">
         </a>
-        <p class="site-subtitle">El rànquing setmanal de música en català</p>
+
+        <!-- Desktop nav (shown inline on lg+) + Mobile hamburger -->
+        <div class="header-actions">
+          <!-- Account CTA — label changes by role -->
+          <a href="{% url header_url_name %}" class="header-cta">
+            {% if user.is_authenticated %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8.5" r="3.2" stroke-width="1.7"/>
+              <path stroke-width="1.7" d="M4.5 20.5 C5 16 8.2 13.5 12 13.5 C15.8 13.5 19 16 19.5 20.5"/>
+            </svg>
+            {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke-width="1.7"/>
+              <line stroke-width="1.9" x1="12" y1="8" x2="12" y2="16"/>
+              <line stroke-width="1.9" x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            {% endif %}
+            <span>{{ header_label }}</span>
+          </a>
+
+          <!-- Hamburger toggle (mobile only) -->
+          <button class="nav-toggle" aria-expanded="false" aria-controls="nav-panel" aria-label="Obrir menú">
+            <svg class="icon-hamburger" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <svg class="icon-close" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Navigation panel -->
+        <nav id="nav-panel" class="nav-panel" aria-label="Navegació principal">
+          <ul class="nav-links">
+            <li>
+              <a href="{% url 'web:ranking' %}" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="4" y="14" width="4" height="7" rx="0.8" stroke-width="1.7"/>
+                  <rect x="10" y="9" width="4" height="12" rx="0.8" stroke-width="1.7"/>
+                  <rect x="16" y="4" width="4" height="17" rx="0.8" stroke-width="1.7"/>
+                </svg>
+                Rànquing
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'web:artistes' %}" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="7.5" r="2.8" stroke-width="1.7"/>
+                  <path stroke-width="1.7" d="M2.5 19.5 C3 15.5 5.8 13 9 13 C12.2 13 15 15.5 15.5 19.5"/>
+                  <circle cx="16.5" cy="6.5" r="2.3" stroke-width="1.5"/>
+                  <path stroke-width="1.5" d="M16.5 12 C18.8 12 20.5 14 21 17"/>
+                </svg>
+                Artistes
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'web:mapa' %}" class="nav-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path stroke-width="1.7" d="M12 2 C7.6 2 4 5.4 4 9.5 C4 15 12 22 12 22 C12 22 20 15 20 9.5 C20 5.4 16.4 2 12 2 Z"/>
+                  <circle cx="12" cy="9.5" r="2.5" stroke-width="1.5"/>
+                </svg>
+                Mapa
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
-      <nav class="territori-nav" aria-label="Territoris">
-        <a href="{% url 'web:ranking' territori='cat' %}" class="territori-link territori-link--cat{% if territori_actiu == 'CAT' %} is-active{% endif %}">
-          <img src="{% static 'mm-design/icons/territories/territory-cat.svg' %}" alt="" class="territori-badge" width="20" height="20">
-          Catalunya
-        </a>
-        <a href="{% url 'web:ranking' territori='val' %}" class="territori-link territori-link--val{% if territori_actiu == 'VAL' %} is-active{% endif %}">
-          <img src="{% static 'mm-design/icons/territories/territory-val.svg' %}" alt="" class="territori-badge" width="20" height="20">
-          País Valencià
-        </a>
-        <a href="{% url 'web:ranking' territori='bal' %}" class="territori-link territori-link--bal{% if territori_actiu == 'BAL' %} is-active{% endif %}">
-          <img src="{% static 'mm-design/icons/territories/territory-bal.svg' %}" alt="" class="territori-badge" width="20" height="20">
-          Illes Balears
-        </a>
-        <a href="{% url 'web:ranking' territori='ppcc' %}" class="territori-link territori-link--ppcc{% if territori_actiu == 'PPCC' %} is-active{% endif %}">
-          <img src="{% static 'mm-design/icons/territories/territory-ppcc.svg' %}" alt="" class="territori-badge" width="20" height="20">
-          PPCC
-        </a>
-        <a href="{% url 'web:artistes' %}" class="territori-link territori-link--util">Artistes</a>
-        <a href="{% url 'web:mapa' %}" class="territori-link territori-link--util">Mapa</a>
-      </nav>
     </div>
+    <!-- Territory accent bar -->
+    <div class="header-accent"></div>
   </header>
 
   <main class="container">
     {% block content %}{% endblock %}
   </main>
 
+  <!-- ═══ FOOTER — mission + contribute ═══ -->
   <footer class="site-footer">
     <div class="container">
-      <div class="footer-inner">
-        <p class="footer-copy">&copy; {{ current_year }} TopQuaranta</p>
-        <div class="footer-links">
-          <a href="{% url 'web:artistes' %}" class="footer-link">Artistes</a>
-          <a href="{% url 'web:mapa' %}" class="footer-link">Mapa</a>
-          <a href="{% url 'comptes:login' %}" class="footer-link">Accés</a>
+      <div class="footer-grid">
+        <!-- Mission column -->
+        <div>
+          <p class="footer-mission-title">La música en català, viva i mesurable</p>
+          <p class="footer-mission-text">TopQuaranta és el rànquing setmanal independent de música en català. Mesurem el que sona als Països Catalans — de Catalunya a les Illes Balears, del País Valencià a la Catalunya Nord — per demostrar que la nostra música no para de créixer.</p>
+          <a href="{% url 'comptes:accedir' %}" class="footer-cta">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke-width="1.7"/>
+              <line stroke-width="1.9" x1="12" y1="8" x2="12" y2="16"/>
+              <line stroke-width="1.9" x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            Contribueix al projecte
+          </a>
         </div>
+
+        <!-- Rankings column -->
+        <div>
+          <p class="footer-nav-title">Rànquings</p>
+          <ul class="footer-nav-list">
+            <li><a href="{% url 'web:ranking' %}?t=cat" class="footer-nav-link">Catalunya</a></li>
+            <li><a href="{% url 'web:ranking' %}?t=val" class="footer-nav-link">País Valencià</a></li>
+            <li><a href="{% url 'web:ranking' %}?t=bal" class="footer-nav-link">Illes Balears</a></li>
+            <li><a href="{% url 'web:ranking' %}?t=ppcc" class="footer-nav-link">Països Catalans</a></li>
+          </ul>
+        </div>
+
+        <!-- Discover column -->
+        <div>
+          <p class="footer-nav-title">Descobrir</p>
+          <ul class="footer-nav-list">
+            <li><a href="{% url 'web:artistes' %}" class="footer-nav-link">Directori d'artistes</a></li>
+            <li><a href="{% url 'web:mapa' %}" class="footer-nav-link">Mapa</a></li>
+            <li><a href="{% url 'comptes:accedir' %}" class="footer-nav-link">Uneix-t'hi</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; {{ current_year }} TopQuaranta</p>
+        <img class="footer-logo" src="{% static 'web/img/logo-topquaranta.svg' %}" alt="TopQuaranta" height="20">
       </div>
     </div>
   </footer>
+
+  <!-- ═══ Hamburger toggle script ═══ -->
+  <script>
+  (function() {
+    var toggle = document.querySelector('.nav-toggle');
+    var panel = document.getElementById('nav-panel');
+    if (!toggle || !panel) return;
+    toggle.addEventListener('click', function() {
+      var expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      panel.classList.toggle('is-open');
+      toggle.setAttribute('aria-label', expanded ? 'Obrir menú' : 'Tancar menú');
+    });
+  })();
+  </script>
 </body>
 </html>

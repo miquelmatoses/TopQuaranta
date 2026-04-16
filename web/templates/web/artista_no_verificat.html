@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+
+{% block title %}{{ artista.nom }} — TopQuaranta{% endblock %}
+
+{% block content %}
+<a href="{% url 'web:artistes' %}" class="back-link">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  Artistes
+</a>
+
+<section class="artista-header">
+  <h2 class="artista-nom">{{ artista.nom }}</h2>
+  <div class="artista-meta">
+    <span class="provisional-badge">Pendent d'aprovacio</span>
+  </div>
+</section>
+
+<section class="artista-section">
+  <div class="unverified-notice">
+    <p class="unverified-text">
+      Aquest artista encara no ha estat aprovat per l'equip de TopQuaranta.
+      L'aprovacio confirma que l'artista canta en catala i pertany a un dels
+      territoris de parla catalana.
+    </p>
+
+    {% if user.is_staff %}
+      {# Admin: direct link to staff edit #}
+      <div class="unverified-action">
+        <p class="unverified-hint">Com a administrador, pots aprovar aquest artista directament:</p>
+        <a href="{% url 'staff:artista_editar' pk=artista.pk %}" class="welcome-cta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar al panel intern
+        </a>
+      </div>
+    {% elif user.is_authenticated %}
+      {# Registered user: invite to propose info #}
+      <div class="unverified-action">
+        <p class="unverified-hint">Coneixes aquest artista? Ajuda'ns a completar la seva informacio:</p>
+        <a href="{% url 'comptes:sollicitud_artista' %}" class="welcome-cta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke-width="1.7"/>
+            <line stroke-width="1.9" x1="12" y1="8" x2="12" y2="16"/>
+            <line stroke-width="1.9" x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          Proposar informacio
+        </a>
+      </div>
+    {% else %}
+      {# Anonymous: invite to register #}
+      <div class="unverified-action">
+        <p class="unverified-hint">
+          Ets part de la comunitat de musica en catala? Uneix-t'hi i ajuda'ns a completar el cataleg d'artistes.
+        </p>
+        <a href="{% url 'comptes:accedir' %}" class="welcome-cta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke-width="1.7"/>
+            <line stroke-width="1.9" x1="12" y1="8" x2="12" y2="16"/>
+            <line stroke-width="1.9" x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          Uneix-t'hi al projecte
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

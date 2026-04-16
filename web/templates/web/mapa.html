@@ -31,7 +31,9 @@
   var strokeDark = cs.getPropertyValue('--mm-color-text-muted').trim();
   var textColor = cs.getPropertyValue('--mm-color-text-primary').trim();
   var fontSans = cs.getPropertyValue('--mm-font-sans').trim();
-  var bgColor = cs.getPropertyValue('--mm-color-background').trim() || '#fff';
+  // Fallback chain uses mm-design tokens only — never hardcode hex.
+  var bgColor = cs.getPropertyValue('--mm-color-background').trim()
+             || cs.getPropertyValue('--mm-color-white').trim();
 
   var comData = {{ comarques_json|safe }};
   var munData = {{ municipis_json|safe }};
