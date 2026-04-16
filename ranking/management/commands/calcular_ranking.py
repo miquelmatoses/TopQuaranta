@@ -1,5 +1,6 @@
 import logging
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
@@ -13,11 +14,40 @@ from ranking.algorisme import (
     calcular_ranking_territori,
     territoris_amb_ranking_propi,
 )
-from ranking.models import RankingProvisional, RankingSetmanal, SenyalDiari
+from ranking.models import (
+    ConfiguracioGlobal, RankingProvisional, RankingSetmanal, SenyalDiari,
+)
 
 logger = logging.getLogger(__name__)
 
 ALL_TERRITORIS = sorted(TERRITORIS_FIXOS | TERRITORIS_AGREGATS | TERRITORIS_OPCIONALS)
+
+# R1: semantic tag for the current ranking algorithm. Bump when the formula
+# changes in a way that affects results (new CTE, different coefficient
+# semantics, …). Historical rows keep their original tag.
+ALGORITHM_VERSION = "v1.0"
+
+# R1: coefficients we snapshot into each RankingSetmanal row. Matches the
+# fields stored in ConfiguracioGlobal.
+_CONFIG_SNAPSHOT_FIELDS = [
+    "dia_setmana_ranking", "penalitzacio_descens",
+    "exponent_penalitzacio_antiguitat",
+    "max_factor_a", "max_factor_b", "max_factor_c", "max_factor_final",
+    "penalitzacio_album_per_canco", "penalitzacio_artista_per_canco",
+    "coeficient_penalitzacio_top",
+    "penalitzacio_setmana_0", "penalitzacio_setmana_1",
+    "penalitzacio_setmana_2",
+    "suavitat", "min_cancons_ranking_propi",
+]
+
+
+def _build_config_snapshot() -> dict:
+    """R1: capture the full ConfiguracioGlobal as a JSON-safe dict."""
+    cfg = ConfiguracioGlobal.load()
+    return {
+        field: float(v) if isinstance(v := getattr(cfg, field), Decimal) else v
+        for field in _CONFIG_SNAPSHOT_FIELDS
+    }
 
 
 class Command(BaseCommand):
@@ -171,21 +201,39 @@ class Command(BaseCommand):
             )
 
     def _save_ranking(self, territori: str, setmana: date, rows: list[dict]) -> None:
-        """Replace ranking results for (territori, setmana) with the new top 40."""
+        """Replace ranking results for (territori, setmana) with the new top 40.
+
+        Each row carries (R1) the algorithm version + config snapshot and
+        (R2) denormalised name snapshots for survivability across later
+        artist / track deletions.
+        """
+        config_snapshot = _build_config_snapshot()
+
+        # Fetch canco + artist names in a single query for the snapshot.
+        canco_ids = [r["canco_id"] for r in rows]
+        names = {
+            c.pk: (c.nom, c.artista.nom)
+            for c in Canco.objects.filter(pk__in=canco_ids).select_related("artista")
+        }
+
         with transaction.atomic():
             RankingSetmanal.objects.filter(
                 territori=territori, setmana=setmana,
             ).delete()
-            objs = [
-                RankingSetmanal(
+            objs = []
+            for r in rows:
+                canco_nom, artista_nom = names.get(r["canco_id"], ("", ""))
+                objs.append(RankingSetmanal(
                     canco_id=r["canco_id"],
                     territori=territori,
                     setmana=setmana,
                     posicio=r["posicio"],
                     score_setmanal=r["score_setmanal"] or 0.0,
-                )
-                for r in rows
-            ]
+                    canco_nom_snapshot=(canco_nom or "")[:500],
+                    artista_nom_snapshot=(artista_nom or "")[:255],
+                    algorithm_version=ALGORITHM_VERSION,
+                    config_snapshot=config_snapshot,
+                ))
             RankingSetmanal.objects.bulk_create(objs)
 
     def _save_provisional(self, territori: str, rows: list[dict]) -> None:

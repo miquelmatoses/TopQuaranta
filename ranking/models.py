@@ -96,7 +96,12 @@ class SenyalDiari(models.Model):
     Stores raw cumulative values. One row per (canco, data).
     """
 
-    canco = models.ForeignKey(Canco, on_delete=models.CASCADE, related_name="senyals")
+    # R2: SET_NULL so historical signal survives artist / track deletions.
+    # A null canco row becomes an anonymous data point; it's raw Last.fm
+    # telemetry, there's no snapshot name to preserve here.
+    canco = models.ForeignKey(
+        Canco, on_delete=models.SET_NULL, null=True, related_name="senyals",
+    )
     data = models.DateField()
 
     lastfm_playcount = models.BigIntegerField(null=True)
@@ -124,13 +129,41 @@ class SenyalDiari(models.Model):
 
 
 class RankingSetmanal(models.Model):
-    """Weekly ranking result. setmana = Monday of the ranking week (ISO)."""
+    """Weekly ranking result. setmana = Monday of the ranking week (ISO).
 
-    canco = models.ForeignKey(Canco, on_delete=models.CASCADE, related_name="rankings")
+    This is the cultural archive. Once a row is written it must remain
+    reproducible and displayable forever, so we:
+
+    - R2: keep the row even if the Canco/Artista that produced it is
+      deleted (on_delete=SET_NULL + name/artist snapshots).
+    - R1: freeze the algorithm identity (algorithm_version) and the
+      coefficient set used (config_snapshot) so future code changes can
+      never silently alter what this week's ranking was.
+    """
+
+    # R2: SET_NULL so deleting an artist or track does not wipe their
+    # historical chart positions. unique_together is per (canco, ...),
+    # which tolerates null canco because Postgres treats NULLs as distinct.
+    canco = models.ForeignKey(
+        Canco, on_delete=models.SET_NULL, null=True, related_name="rankings",
+    )
     territori = models.CharField(max_length=4)
     setmana = models.DateField()
     posicio = models.PositiveSmallIntegerField()
     score_setmanal = models.FloatField()
+
+    # R2: snapshots so the row remains self-describing if canco is NULL.
+    canco_nom_snapshot = models.CharField(max_length=500, blank=True)
+    artista_nom_snapshot = models.CharField(max_length=255, blank=True)
+
+    # R1: algorithm provenance. algorithm_version is a semantic tag we
+    # bump when the ranking formula changes in a user-visible way.
+    # config_snapshot is the set of coefficients (ConfiguracioGlobal)
+    # that produced this row. Both let us recompute a historical ranking
+    # deterministically — or at least prove what computed it.
+    algorithm_version = models.CharField(max_length=20, default="v1.0")
+    config_snapshot = models.JSONField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -139,7 +172,8 @@ class RankingSetmanal(models.Model):
         indexes = [models.Index(fields=["setmana", "territori"])]
 
     def __str__(self) -> str:
-        return f"#{self.posicio} {self.canco.nom} ({self.territori}) — {self.setmana}"
+        nom = self.canco.nom if self.canco_id else (self.canco_nom_snapshot or "?")
+        return f"#{self.posicio} {nom} ({self.territori}) — {self.setmana}"
 
 
 class RankingProvisional(models.Model):
@@ -148,8 +182,13 @@ class RankingProvisional(models.Model):
     Truncated and rebuilt on each run — not a historical record.
     """
 
+    # R2: SET_NULL for consistency with the rest of the ranking stack,
+    # though provisional rows are rebuilt daily so the guarantee is
+    # weaker here. No snapshot — a null canco is effectively a tombstone
+    # that the next rebuild will replace.
     canco = models.ForeignKey(
-        Canco, on_delete=models.CASCADE, related_name="ranking_provisional"
+        Canco, on_delete=models.SET_NULL, null=True,
+        related_name="ranking_provisional",
     )
     territori = models.CharField(max_length=4)
     posicio = models.PositiveSmallIntegerField()
