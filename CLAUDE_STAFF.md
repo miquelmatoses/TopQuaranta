@@ -77,6 +77,7 @@ def llista(request):
 | `propostes/<pk>/aprovar/` | `proposta_aprovar` | | Create Artista + links in atomic tx |
 | `propostes/<pk>/rebutjar/` | `proposta_rebutjar` | | estat=rebutjat |
 | `configuracio/` | `configuracio` | `eines.configuracio` | ConfiguracioGlobal edit form |
+| `auditlog/` | `auditlog` | `eines.auditlog` | Read-only StaffAuditLog — append-only trail of destructive actions (R9) |
 
 ## 4. Views by module
 

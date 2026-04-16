@@ -33,12 +33,17 @@
 | ID | Estat | Commit |
 |---|---|---|
 | **S9** Rate limit `/api/v1/*` (60/min anon, 300/min user, DB-cache) | ✅ | `5247bad` |
-| **R1** `algorithm_version` + `config_snapshot` a `RankingSetmanal` | ✅ | (R1+R2 together) |
-| **R2** `CASCADE` → `SET_NULL` + name snapshots per preservar història | ✅ | (R1+R2 together) |
+| **R1** `algorithm_version` + `config_snapshot` a `RankingSetmanal` | ✅ | `12a8a41` |
+| **R2** `CASCADE` → `SET_NULL` + name snapshots per preservar història | ✅ | `12a8a41` |
+
+**Sessió 3 — Staff audit log (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **R9** `StaffAuditLog` model + helper + integració cross-views + `/staff/auditlog/` | ✅ | 3 commits (model, integració, UI) |
 
 Queda pendent de Tier 1 + 2:
 - **S11** 2FA + IP allowlist per a staff — sessió pròpia, canvi UX gran
-- **R9** Staff audit log — sessió pròpia (model nou + integració cross-views)
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin
 - **R10, R11** Resoldre doble font de veritat (deezer_id + legacy location)
