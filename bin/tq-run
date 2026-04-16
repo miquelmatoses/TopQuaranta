@@ -8,10 +8,18 @@
 #   - Appends the command's stdout/stderr to the caller's stdout (so existing
 #     cron lines with ">> logfile" keep working).
 #   - Writes /var/log/topquaranta/status/<tag>.status with last_run / exit_code /
-#     status=OK|FAIL / last_output (tail 20). The tag is the command name with
-#     any "--provisional" flag appended (so setmanal and provisional ranking
-#     don't share a status file).
-#   - Exits with the command's exit code.
+#     status=OK|FAIL / attempts=N / last_output (tail 20). The tag is the
+#     command name with any "--provisional" flag appended (so setmanal and
+#     provisional ranking don't share a status file).
+#   - Exits with the command's exit code (last attempt's exit code).
+#
+# Retry behaviour (R7): on non-zero exit the wrapper retries up to
+# MAX_ATTEMPTS times with a fixed backoff schedule between attempts. This
+# absorbs transient upstream failures (Last.fm 502, network blips) without
+# waiting for the next cron tick or for tq-recover to step in.
+#   - obtenir_novetats: 1 attempt (it runs hourly anyway — no point retrying
+#     within the hour and burning the rate limit).
+#   - everything else: 3 attempts, sleeping 60s then 300s between them.
 
 set -o pipefail
 
@@ -33,13 +41,37 @@ for a in "$@"; do
     if [[ "$a" == "--provisional" ]]; then tag="${cmd}_provisional"; fi
 done
 
-ts=$(date -Iseconds)
-tmpout=$(mktemp)
+# Per-command retry policy. The default applies to anything not listed.
+declare -A MAX_ATTEMPTS=(
+    [obtenir_novetats]=1
+)
+DEFAULT_MAX_ATTEMPTS=3
+# Backoff schedule (seconds) — element [i] is the sleep BEFORE attempt i+2.
+# 3 attempts → wait 60s after #1 fails, then 300s after #2 fails.
+BACKOFF=(60 300 600)
 
-cd "$APP_DIR"
-DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" \
-    "$APP_DIR/.venv/bin/python" manage.py "$cmd" "$@" 2>&1 | tee "$tmpout"
-rc=${PIPESTATUS[0]}
+max_attempts=${MAX_ATTEMPTS[$cmd]:-$DEFAULT_MAX_ATTEMPTS}
+
+tmpout=$(mktemp)
+trap 'rm -f "$tmpout"' EXIT
+
+attempt=1
+rc=0
+while true; do
+    ts=$(date -Iseconds)
+    : > "$tmpout"  # truncate before each attempt so last_output is clean
+    cd "$APP_DIR"
+    DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" \
+        "$APP_DIR/.venv/bin/python" manage.py "$cmd" "$@" 2>&1 | tee "$tmpout"
+    rc=${PIPESTATUS[0]}
+    if [[ $rc -eq 0 ]] || (( attempt >= max_attempts )); then
+        break
+    fi
+    sleep_s=${BACKOFF[$((attempt-1))]:-600}
+    echo "tq-run: attempt $attempt/$max_attempts of '$cmd' failed (exit $rc); sleeping ${sleep_s}s before retry" >&2
+    sleep "$sleep_s"
+    attempt=$((attempt+1))
+done
 
 # Write the status file atomically (mktemp + mv).
 status_file="$STATUS_DIR/$tag.status"
@@ -49,12 +81,13 @@ tmp_status=$(mktemp)
     echo "args=$*"
     echo "last_run=$ts"
     echo "exit_code=$rc"
+    echo "attempts=$attempt"
+    echo "max_attempts=$max_attempts"
     if [[ $rc -eq 0 ]]; then echo "status=OK"; else echo "status=FAIL"; fi
     echo "last_output<<EOF"
     tail -n 20 "$tmpout"
     echo "EOF"
 } > "$tmp_status"
 mv "$tmp_status" "$status_file"
-rm -f "$tmpout"
 
 exit "$rc"

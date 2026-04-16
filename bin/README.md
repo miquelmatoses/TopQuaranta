@@ -7,16 +7,34 @@ the repo so they're version-controlled, but cron runs them from
 To re-deploy after a change:
 
 ```bash
-ln -sf /home/topquaranta/app/bin/tq-run    /home/topquaranta/bin/tq-run
-ln -sf /home/topquaranta/app/bin/tq-health /home/topquaranta/bin/tq-health
-ln -sf /home/topquaranta/app/bin/tq-backup /home/topquaranta/bin/tq-backup
+ln -sf /home/topquaranta/app/bin/tq-run     /home/topquaranta/bin/tq-run
+ln -sf /home/topquaranta/app/bin/tq-recover /home/topquaranta/bin/tq-recover
+ln -sf /home/topquaranta/app/bin/tq-health  /home/topquaranta/bin/tq-health
+ln -sf /home/topquaranta/app/bin/tq-backup  /home/topquaranta/bin/tq-backup
 ```
 
 ## `tq-run <cmd> [args...]`
-Wraps a Django management command. Captures exit code + last 20 lines of
-output to `/var/log/topquaranta/status/<tag>.status`. `<tag>` is the command
-name with `_provisional` appended when `--provisional` is among the args, so
-the setmanal and provisional ranking each have their own status entry.
+Wraps a Django management command with retry. Captures exit code + last 20
+lines of output to `/var/log/topquaranta/status/<tag>.status`. `<tag>` is the
+command name with `_provisional` appended when `--provisional` is among the
+args, so the setmanal and provisional ranking each have their own status
+entry.
+
+Retry policy (R7): on a non-zero exit the wrapper retries up to MAX_ATTEMPTS
+times with sleep between attempts. Default: 3 attempts, sleeping 60s then
+300s. Exception: `obtenir_novetats` runs hourly, so its MAX_ATTEMPTS is 1
+(the next cron tick is the natural retry — no point burning the rate limit).
+The status file records `attempts=N` and `max_attempts=M` so failures are
+visible even after a successful retry.
+
+## `tq-recover`
+Second line of defence for the daily pipeline (R7). Runs every 30 min via
+cron. For each tracked daily command (and the weekly ranking on Saturdays),
+checks its `<tag>.status` file: if missing, FAIL, or `last_run` is earlier
+than today's expected cutoff, re-launches the command via `tq-run`. Capped
+at `MAX_RECOVER_PER_DAY=5` re-launches per command per day to avoid storms
+during a permanent upstream outage. Per-day counters live in
+`/var/log/topquaranta/status/<tag>.recover` and reset when the date changes.
 
 ## `tq-health`
 Reads the status files + today's entries in

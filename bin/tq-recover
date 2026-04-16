@@ -1,0 +1,121 @@
+#!/bin/bash
+# Detect missed/failed cron runs and re-launch them via tq-run.
+#
+# Reads /var/log/topquaranta/status/*.status (written by tq-run). For each
+# tracked scheduled command, decides whether it should already have run by
+# now today (or this Saturday, for the weekly ranking). If the status file
+# is missing, stale (last_run before today's cutoff), or in FAIL, re-launches
+# the command via tq-run.
+#
+# tq-run itself does in-process retry (3 attempts with backoff) for transient
+# failures. tq-recover is the second line of defence: it catches the cases
+# where the cron tick was missed entirely (server reboot, host down) or
+# where every tq-run retry exhausted itself.
+#
+# Per-day cap of MAX_RECOVER_PER_DAY relaunches per command stops storms in
+# case of a permanent upstream outage. Counters live in
+# /var/log/topquaranta/status/<tag>.recover and reset when the date rolls.
+#
+# Intended cadence: every 30 minutes via cron.
+
+set -u
+
+STATUS_DIR=/var/log/topquaranta/status
+TQ_RUN=/home/topquaranta/bin/tq-run
+NOW_TS=$(date +%s)
+TODAY=$(date +%Y-%m-%d)
+DOW=$(date +%u)   # 1=Mon ... 6=Sat 7=Sun
+MAX_RECOVER_PER_DAY=5
+
+mkdir -p "$STATUS_DIR"
+
+# Daily commands: tag → "HH:MM" cutoff (if NOW < cutoff, do nothing).
+# The cutoff is the original cron time + a small grace window so we don't
+# race the regular cron run.
+declare -A DAILY_AT=(
+    [netejar_caducades]="04:30"
+    [obtenir_senyal]="06:30"
+    [actualitzar_score_entrada]="07:00"
+    [calcular_ranking_provisional]="07:30"
+)
+# When the tag does NOT equal the manage.py command name (e.g. the
+# provisional ranking is a flag on calcular_ranking), map it explicitly.
+# Value = full argv passed to tq-run.
+declare -A RUN_ARGS=(
+    [calcular_ranking_provisional]="calcular_ranking --provisional"
+)
+
+# Weekly: only on Saturday after the cutoff.
+WEEKLY_TAG=calcular_ranking
+WEEKLY_AT="08:30"
+WEEKLY_DOW=6
+
+attempt_count_today() {
+    local tag="$1"
+    local f="$STATUS_DIR/$tag.recover"
+    if [[ ! -f "$f" ]]; then echo 0; return; fi
+    local d
+    d=$(grep '^date=' "$f" | cut -d= -f2)
+    if [[ "$d" != "$TODAY" ]]; then echo 0; return; fi
+    grep '^attempts=' "$f" | cut -d= -f2 | head -1
+}
+
+bump_attempt_count() {
+    local tag="$1"
+    local cur
+    cur=$(attempt_count_today "$tag")
+    cur=${cur:-0}
+    cur=$((cur + 1))
+    {
+        echo "date=$TODAY"
+        echo "attempts=$cur"
+        echo "last_attempt=$(date -Iseconds)"
+    } > "$STATUS_DIR/$tag.recover"
+}
+
+needs_recovery() {
+    # Returns 0 (true) if the command should be re-run now.
+    local tag="$1"
+    local cutoff_ts="$2"
+    if (( NOW_TS < cutoff_ts )); then return 1; fi
+    local f="$STATUS_DIR/$tag.status"
+    if [[ ! -f "$f" ]]; then return 0; fi
+    local status last last_ts
+    status=$(grep '^status=' "$f" | cut -d= -f2)
+    last=$(grep '^last_run=' "$f" | cut -d= -f2)
+    last_ts=$(date -d "$last" +%s 2>/dev/null || echo 0)
+    if [[ "$status" != "OK" ]]; then return 0; fi
+    if (( last_ts < cutoff_ts )); then return 0; fi
+    return 1
+}
+
+relaunch() {
+    local tag="$1"
+    local args_str="${RUN_ARGS[$tag]:-$tag}"
+    local n
+    n=$(attempt_count_today "$tag")
+    n=${n:-0}
+    if (( n >= MAX_RECOVER_PER_DAY )); then
+        echo "$(date -Iseconds) tq-recover: $tag cap reached ($n/$MAX_RECOVER_PER_DAY); skip"
+        return
+    fi
+    bump_attempt_count "$tag"
+    echo "$(date -Iseconds) tq-recover: relaunching $tag (recover attempt $((n + 1))/$MAX_RECOVER_PER_DAY): $TQ_RUN $args_str"
+    # shellcheck disable=SC2086 # intentional word-splitting on args_str
+    $TQ_RUN $args_str
+}
+
+for tag in "${!DAILY_AT[@]}"; do
+    cutoff_ts=$(date -d "$TODAY ${DAILY_AT[$tag]}" +%s)
+    if needs_recovery "$tag" "$cutoff_ts"; then
+        relaunch "$tag"
+    fi
+done
+
+# Weekly ranking: only attempt on Saturday after cutoff.
+if (( DOW == WEEKLY_DOW )); then
+    cutoff_ts=$(date -d "$TODAY $WEEKLY_AT" +%s)
+    if needs_recovery "$WEEKLY_TAG" "$cutoff_ts"; then
+        relaunch "$WEEKLY_TAG"
+    fi
+fi
