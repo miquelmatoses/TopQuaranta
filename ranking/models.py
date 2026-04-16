@@ -125,6 +125,16 @@ class SenyalDiari(models.Model):
     lastfm_playcount = models.BigIntegerField(null=True)
     lastfm_listeners = models.IntegerField(null=True)
 
+    # R5: Last.fm with autocorrect=1 can silently return a different track —
+    # we ask for "Mira / Artist X", Last.fm answers with "Mira / Artist Y"
+    # data because it "thinks" we meant them. Store what the API actually
+    # returned so we can flag silent drift. `corregit` is set at ingest
+    # time when the returned names diverge significantly from what we
+    # asked for (see obtenir_senyal._detect_drift).
+    lastfm_returned_track = models.CharField(max_length=500, blank=True)
+    lastfm_returned_artista = models.CharField(max_length=255, blank=True)
+    corregit = models.BooleanField(default=False, db_index=True)
+
     score_entrada = models.FloatField(
         null=True,
         help_text="Normalized score (0-100) for the ranking algorithm.",
@@ -140,6 +150,7 @@ class SenyalDiari(models.Model):
         indexes = [
             models.Index(fields=["canco", "data"]),
             models.Index(fields=["data", "error"]),
+            models.Index(fields=["data", "corregit"]),
         ]
 
     def __str__(self) -> str:

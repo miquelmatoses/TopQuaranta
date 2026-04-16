@@ -393,6 +393,12 @@ class Canco(models.Model):
     )
     lastfm_mbid = models.CharField(max_length=50, blank=True)
     lastfm_verificat = models.BooleanField(default=False)
+    # R5: "Last.fm's autocorrect of our query IS the correct track".
+    # When True, obtenir_senyal stops flagging SenyalDiari rows for this
+    # track as corrected even when the returned names differ from what
+    # we sent. Flipped by staff from /staff/senyal/ after reviewing a
+    # drift flag and deciding Last.fm was right.
+    lastfm_confirmed = models.BooleanField(default=False)
     durada_ms = models.IntegerField(null=True, blank=True)
     preview_url = models.URLField(max_length=500, blank=True)
     data_llancament = models.DateField(
