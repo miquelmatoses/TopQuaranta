@@ -1,0 +1,31 @@
+# TopQuaranta cron + Django logs.
+#
+# Deployed to /etc/logrotate.d/topquaranta. Each log is owned by user
+# `topquaranta`. They grow most for novetats.log (hourly cron, ~1 MB
+# per run before R7's tq-recover kicks in).
+#
+# Rotated weekly, kept 8 weeks (~2 months of detail). Compressed gzip.
+# `copytruncate` so the running cron (which keeps the FD open via `>>`)
+# doesn't lose its file descriptor. `notifempty` skips empty rotations
+# (errors.log is usually empty).
+
+/var/log/topquaranta/novetats.log
+/var/log/topquaranta/senyal.log
+/var/log/topquaranta/neteja.log
+/var/log/topquaranta/ranking.log
+/var/log/topquaranta/provisional.log
+/var/log/topquaranta/recover.log
+/var/log/topquaranta/ingestar.log
+/var/log/topquaranta/metadata.log
+/var/log/topquaranta/errors.log
+/var/log/topquaranta/backup.log
+{
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su topquaranta topquaranta
+}
