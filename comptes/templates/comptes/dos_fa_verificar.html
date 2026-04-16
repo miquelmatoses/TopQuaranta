@@ -1,0 +1,33 @@
+{% extends "web/base.html" %}
+
+{% block title %}Verificació 2FA — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="container" style="max-width:480px;padding:var(--mm-space-10) 0">
+  <p class="section-label" style="margin-bottom:var(--mm-space-2)">seguretat</p>
+  <h1 class="ranking-title" style="margin:0 0 var(--mm-space-6)">Codi de verificació</h1>
+  <p>Obre la teva app d'autenticació i introdueix el codi de 6 dígits. Si
+     has perdut el telèfon, pots usar un dels codis de recuperació que vas
+     desar durant la configuració.</p>
+
+  <form method="post" style="margin-top:var(--mm-space-6)">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if error %}
+    <div class="staff-msg staff-msg--error" style="margin-bottom:var(--mm-space-4)">{{ error }}</div>
+    {% endif %}
+    <label style="display:block;margin-bottom:var(--mm-space-4)">
+      Codi
+      <input type="text" name="token" inputmode="numeric" autocomplete="one-time-code"
+             autofocus required
+             style="display:block;width:100%;margin-top:var(--mm-space-2);padding:var(--mm-space-3);font-family:var(--mm-font-mono);font-size:var(--mm-text-xl);letter-spacing:0.15em;border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-base)">
+    </label>
+    <button type="submit" class="mm-btn mm-btn--primary" style="width:100%">Verificar</button>
+  </form>
+
+  <p style="margin-top:var(--mm-space-8);font-size:var(--mm-text-sm);color:var(--mm-color-text-muted)">
+    Has perdut accés tant al telèfon com als codis de recuperació? Contacta
+    amb un administrador perquè t'executi <code>manage.py reset_2fa {{ user.email }}</code>.
+  </p>
+</section>
+{% endblock %}

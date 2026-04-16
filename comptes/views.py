@@ -1,7 +1,11 @@
+import base64
 import json
 import logging
+from io import BytesIO
 
+import qrcode
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
@@ -12,6 +16,9 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django_otp import login as otp_login
+from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
+from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from ranking.models import RankingProvisional, RankingSetmanal
 
@@ -21,6 +28,9 @@ from .tokens import email_verification_token
 
 Usuari = get_user_model()
 logger = logging.getLogger(__name__)
+
+# S11: number of single-use backup codes issued on enrollment.
+BACKUP_CODES_COUNT = 10
 
 
 def accedir(request: HttpRequest) -> HttpResponse:
@@ -92,11 +102,209 @@ class TQLoginView(LoginView):
     redirect_authenticated_user = True
 
     def get_success_url(self) -> str:
-        return self.request.GET.get("next", "/compte/dashboard/")
+        """Route staff through 2FA after successful password auth.
+
+        S11: when a staff user logs in we distinguish three cases:
+
+        1. User has NO confirmed TOTP device yet → send to enrollment.
+        2. User has a confirmed device → send to the 2FA challenge with the
+           intended destination in ?next=, session NOT yet marked verified.
+        3. User is not staff → unchanged — password alone is sufficient.
+
+        Non-staff users never see the 2FA pages. If 2FA is ever required for
+        regular users, flip the branch here.
+        """
+        user = self.request.user
+        next_url = self.request.GET.get("next") or self.request.POST.get("next") \
+                   or "/compte/dashboard/"
+
+        if user.is_staff:
+            has_confirmed = TOTPDevice.objects.filter(
+                user=user, confirmed=True,
+            ).exists()
+            if not has_confirmed:
+                return f"/compte/2fa/configurar/?next={next_url}"
+            return f"/compte/2fa/verificar/?next={next_url}"
+        return next_url
 
 
 class TQLogoutView(LogoutView):
     next_page = "/"
+
+
+# ── S11 · 2FA (TOTP + backup codes) ──
+#
+# Flow:
+#   Enrollment: /compte/2fa/configurar/
+#     GET  → create an unconfirmed TOTPDevice, render a QR code.
+#     POST → verify the 6-digit token; on success, mark the device
+#            confirmed, create 10 single-use backup codes, and show them
+#            ONCE. Session is marked OTP-verified.
+#
+#   Challenge: /compte/2fa/verificar/
+#     GET  → render the code input.
+#     POST → accept either a TOTP token or a StaticDevice backup code.
+#            On success, mark the session verified and redirect to ?next=.
+#
+#   Management: /compte/2fa/
+#     Shows device status, offers regenerate-backup-codes and remove-device
+#     actions. Both require is_verified() in this session (i.e. the user
+#     must have done 2FA already; you can't reset 2FA just by logging in).
+
+
+def _generate_backup_codes(user) -> list[str]:
+    """Replace any existing static device with a fresh set of 10 single-use codes.
+    Returns the plain-text codes to show to the user ONCE.
+    """
+    # Remove any previous static device (we only keep one)
+    StaticDevice.objects.filter(user=user).delete()
+    device = StaticDevice.objects.create(user=user, name="backup-codes")
+    codes = []
+    for _ in range(BACKUP_CODES_COUNT):
+        token = StaticToken.random_token()
+        device.token_set.create(token=token)
+        codes.append(token)
+    return codes
+
+
+@login_required(login_url="/compte/login/")
+def dos_fa_configurar(request: HttpRequest) -> HttpResponse:
+    """S11a · TOTP enrollment.
+
+    Reuses an existing unconfirmed device if the user reloads; generates a
+    new one otherwise. On successful token verification, we create the
+    backup codes and show them exactly once.
+    """
+    user = request.user
+
+    # Already enrolled → nothing to do, send to management page.
+    if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
+        return redirect("comptes:dos_fa_gestio")
+
+    device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
+    if device is None:
+        device = TOTPDevice.objects.create(user=user, name="default", confirmed=False)
+
+    error = None
+    backup_codes = None
+    if request.method == "POST":
+        token = (request.POST.get("token") or "").strip().replace(" ", "")
+        if device.verify_token(token):
+            device.confirmed = True
+            device.save()
+            backup_codes = _generate_backup_codes(user)
+            # Mark this session verified so the user doesn't get bounced
+            # to /verificar/ straight after enrollment.
+            otp_login(request, device)
+            logger.info("2FA enrolled for %s", user.email)
+        else:
+            error = "Codi incorrecte. Torna-ho a provar."
+
+    # Build provisioning URI + QR image
+    uri = device.config_url  # otpauth://totp/...?issuer=TopQuaranta
+    qr = qrcode.QRCode(box_size=6, border=2)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+    return render(request, "comptes/dos_fa_configurar.html", {
+        "qr_b64": qr_b64,
+        "secret": device.bin_key.hex().upper(),
+        "error": error,
+        "backup_codes": backup_codes,
+    })
+
+
+@login_required(login_url="/compte/login/")
+def dos_fa_verificar(request: HttpRequest) -> HttpResponse:
+    """S11a · challenge screen — accepts TOTP or a single-use backup code."""
+    user = request.user
+    next_url = request.GET.get("next") or request.POST.get("next") \
+               or "/compte/dashboard/"
+
+    # If the session is already verified, skip straight to destination.
+    if user.is_verified():
+        return redirect(next_url)
+
+    # Should not happen, but guard: if no device exists, send to enrollment.
+    if not TOTPDevice.objects.filter(user=user, confirmed=True).exists():
+        return redirect("comptes:dos_fa_configurar")
+
+    error = None
+    if request.method == "POST":
+        token = (request.POST.get("token") or "").strip().replace(" ", "")
+        verified_device = None
+        # Try TOTP devices first
+        for d in TOTPDevice.objects.filter(user=user, confirmed=True):
+            if d.verify_token(token):
+                verified_device = d
+                break
+        # Then backup codes (StaticDevice)
+        if verified_device is None:
+            for d in StaticDevice.objects.filter(user=user, confirmed=True):
+                if d.verify_token(token):
+                    verified_device = d
+                    break
+        if verified_device is not None:
+            otp_login(request, verified_device)
+            logger.info("2FA verified for %s (%s)", user.email, verified_device.name)
+            return redirect(next_url)
+        else:
+            error = "Codi incorrecte."
+            logger.warning("2FA failed for %s", user.email)
+
+    return render(request, "comptes/dos_fa_verificar.html", {
+        "error": error,
+        "next": next_url,
+    })
+
+
+@login_required(login_url="/compte/login/")
+def dos_fa_gestio(request: HttpRequest) -> HttpResponse:
+    """S11c · status page + manage backup codes + remove device."""
+    user = request.user
+    has_totp = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+    has_backup = StaticDevice.objects.filter(
+        user=user, token_set__isnull=False,
+    ).exists()
+
+    new_codes = None
+    if request.method == "POST":
+        # Mutations require the session be 2FA-verified.
+        if not user.is_verified():
+            return redirect(
+                f"/compte/2fa/verificar/?next=/compte/2fa/"
+            )
+        action = request.POST.get("action", "")
+        if action == "regenerar_codis":
+            new_codes = _generate_backup_codes(user)
+            messages.success(
+                request,
+                "Codis de recuperació regenerats. Desa'ls ara — no podràs "
+                "tornar-los a veure.",
+            )
+        elif action == "eliminar_dispositiu":
+            # Only allow if user supplied their password again
+            password = request.POST.get("password", "")
+            if user.check_password(password):
+                TOTPDevice.objects.filter(user=user).delete()
+                StaticDevice.objects.filter(user=user).delete()
+                messages.success(
+                    request, "Dispositiu 2FA eliminat. Hauràs de tornar a configurar-lo.",
+                )
+                return redirect("comptes:dos_fa_configurar")
+            else:
+                messages.error(request, "Contrasenya incorrecta.")
+
+    return render(request, "comptes/dos_fa_gestio.html", {
+        "has_totp": has_totp,
+        "has_backup": has_backup,
+        "is_verified": user.is_verified(),
+        "new_codes": new_codes,
+    })
 
 
 @login_required(login_url="/compte/login/")

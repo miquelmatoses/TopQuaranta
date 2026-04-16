@@ -1,0 +1,61 @@
+{% extends "web/base.html" %}
+
+{% block title %}Gestió 2FA — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="container" style="max-width:640px;padding:var(--mm-space-10) 0">
+  <p class="section-label" style="margin-bottom:var(--mm-space-2)">seguretat</p>
+  <h1 class="ranking-title" style="margin:0 0 var(--mm-space-6)">Autenticació de dos factors</h1>
+
+  {% if messages %}
+  <div style="margin-bottom:var(--mm-space-6)">
+    {% for message in messages %}
+    <div class="staff-msg staff-msg--{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <dl style="display:grid;grid-template-columns:auto 1fr;gap:var(--mm-space-3) var(--mm-space-4);margin-bottom:var(--mm-space-8)">
+    <dt>Dispositiu TOTP:</dt>
+    <dd>{% if has_totp %}✅ configurat{% else %}❌ no configurat{% endif %}</dd>
+    <dt>Codis de recuperació:</dt>
+    <dd>{% if has_backup %}✅ generats{% else %}❌ sense codis{% endif %}</dd>
+    <dt>Sessió actual:</dt>
+    <dd>{% if is_verified %}✅ verificada (2FA passat){% else %}⚠️ no verificada — cal 2FA per fer canvis{% endif %}</dd>
+  </dl>
+
+  {% if new_codes %}
+  <section style="margin-bottom:var(--mm-space-8);padding:var(--mm-space-5);border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-md);background:var(--mm-color-surface-alt)">
+    <h2 style="margin-top:0">Nous codis de recuperació</h2>
+    <p><strong>Desa'ls ara</strong> — els antics han deixat de funcionar.</p>
+    <pre style="font-family:var(--mm-font-mono);font-size:var(--mm-text-base);background:var(--mm-color-background);padding:var(--mm-space-4);border-radius:var(--mm-radius-base);line-height:1.8;letter-spacing:0.05em">{% for code in new_codes %}{{ code }}
+{% endfor %}</pre>
+  </section>
+  {% endif %}
+
+  {% if has_totp %}
+  <form method="post" style="margin-bottom:var(--mm-space-6)">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="regenerar_codis">
+    <button type="submit" class="mm-btn">Regenerar codis de recuperació</button>
+  </form>
+
+  <details style="margin-top:var(--mm-space-8);padding:var(--mm-space-4);border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-md)">
+    <summary style="cursor:pointer;font-weight:600">Eliminar dispositiu 2FA</summary>
+    <p style="margin-top:var(--mm-space-3)">Això esborra el dispositiu TOTP i els codis de recuperació.
+       Hauràs de tornar a configurar 2FA immediatament per a accedir al
+       panell staff.</p>
+    <form method="post" style="margin-top:var(--mm-space-4)">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="eliminar_dispositiu">
+      <label style="display:block;margin-bottom:var(--mm-space-3)">
+        Confirma amb la teva contrasenya:
+        <input type="password" name="password" required
+               style="display:block;width:100%;max-width:320px;margin-top:var(--mm-space-2);padding:var(--mm-space-3);border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-base)">
+      </label>
+      <button type="submit" class="mm-btn" style="color:var(--mm-color-error)">Eliminar 2FA</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+{% endblock %}
