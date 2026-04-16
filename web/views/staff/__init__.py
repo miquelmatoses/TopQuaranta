@@ -10,12 +10,35 @@ from django.http import HttpRequest, HttpResponseForbidden
 
 
 def staff_required(view_func):
-    """Decorator that requires the user to be authenticated and is_staff=True."""
+    """Decorator that gates a view behind: authenticated + is_staff + 2FA verified.
+
+    S11: the session is only OTP-verified after the user completes a 2FA
+    challenge (via django-otp's otp_login). If the staff user has no device
+    configured yet, send them to enrollment; if they have a device but this
+    session hasn't passed the challenge, send them to the verify page with
+    the current URL as `next`. Non-staff (including anonymous) still get 403.
+    """
 
     @functools.wraps(view_func)
     def wrapper(request: HttpRequest, *args, **kwargs):
-        if not request.user.is_authenticated or not request.user.is_staff:
-            return HttpResponseForbidden("Accés restringit a personal autoritzat.")
+        user = request.user
+        if not user.is_authenticated or not user.is_staff:
+            from django.shortcuts import render
+            return render(request, "web/403.html", status=403)
+
+        if not user.is_verified():
+            # Lazy import to avoid a circular dep at app-load time.
+            from django.shortcuts import redirect
+            from django_otp.plugins.otp_totp.models import TOTPDevice
+
+            has_device = TOTPDevice.objects.filter(
+                user=user, confirmed=True,
+            ).exists()
+            target = "comptes:dos_fa_verificar" if has_device \
+                else "comptes:dos_fa_configurar"
+            return redirect(f"/compte/2fa/{'verificar' if has_device else 'configurar'}/"
+                            f"?next={request.get_full_path()}")
+
         return view_func(request, *args, **kwargs)
 
     return wrapper
