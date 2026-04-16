@@ -7,6 +7,7 @@ from . import cancons
 from . import eines
 from . import pendents
 from . import ranking
+from . import usuaris
 
 app_name = "staff"
 
@@ -46,4 +47,9 @@ urlpatterns = [
     path("propostes/<int:pk>/rebutjar/", eines.proposta_rebutjar, name="proposta_rebutjar"),
     path("configuracio/", eines.configuracio, name="configuracio"),
     path("auditlog/", eines.auditlog, name="auditlog"),
+    # Gestió d'usuaris (read-heavy; is_staff toggle remains SSH-only)
+    path("usuaris/", usuaris.llista, name="usuaris"),
+    path("usuaris/<int:pk>/", usuaris.detall, name="usuari_detall"),
+    path("usuaris/<int:pk>/toggle-actiu/", usuaris.toggle_actiu, name="usuari_toggle_actiu"),
+    path("usuaris/<int:pk>/reset-2fa/", usuaris.reset_2fa, name="usuari_reset_2fa"),
 ]
