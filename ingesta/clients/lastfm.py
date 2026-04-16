@@ -112,10 +112,36 @@ def _api_call(artist_name: str, track_name: str) -> tuple[dict | None, int | Non
     return None, None
 
 
+def _extract_returned_names(track: dict) -> tuple[str, str]:
+    """Pull the name/artist Last.fm ACTUALLY returned (after autocorrect=1).
+
+    Returns (returned_track, returned_artist). Empty strings if absent.
+    The artist block can be either a dict ({"name": "X"}) or a string,
+    depending on the API response shape — cover both.
+    """
+    returned_track = (track.get("name") or "").strip()
+    artist_field = track.get("artist", "")
+    if isinstance(artist_field, dict):
+        returned_artist = (artist_field.get("name") or "").strip()
+    elif isinstance(artist_field, str):
+        returned_artist = artist_field.strip()
+    else:
+        returned_artist = ""
+    return returned_track, returned_artist
+
+
 def get_track_info(artist_name: str, track_name: str) -> dict | None:
     """
     Fetch cumulative playcount and listeners for a track from Last.fm.
-    Returns {'playcount': int, 'listeners': int} or None on any failure.
+    Returns a dict with playcount/listeners AND the names Last.fm actually
+    returned (may differ from the input because autocorrect=1), or None
+    on any failure.
+
+    R5: `returned_track` and `returned_artist` are the names the API
+    responded with. The caller compares them against what we asked for
+    and flags silent drift. Without this, a track with a common name
+    can accumulate playcount from a completely different artist without
+    any signal that we're conflating them.
 
     On Last.fm "Track not found" (error 6), retries once with a normalized
     track name (parentheticals like "(feat. X)" / "(Acoustic Version)" and
@@ -124,9 +150,12 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
     """
     track, err = _api_call(artist_name, track_name)
     if track is not None:
+        rt, ra = _extract_returned_names(track)
         return {
             "playcount": int(track.get("playcount", 0)),
             "listeners": int(track.get("listeners", 0)),
+            "returned_track": rt,
+            "returned_artist": ra,
         }
 
     # Retry with normalized name only on "Track not found"
@@ -139,9 +168,12 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
                     "Last.fm recovered '%s'/'%s' via normalization to '%s'",
                     artist_name, track_name, normalized,
                 )
+                rt, ra = _extract_returned_names(track2)
                 return {
                     "playcount": int(track2.get("playcount", 0)),
                     "listeners": int(track2.get("listeners", 0)),
+                    "returned_track": rt,
+                    "returned_artist": ra,
                 }
             err = err2 if err2 is not None else err
 

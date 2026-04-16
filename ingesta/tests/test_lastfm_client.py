@@ -24,6 +24,7 @@ class TestGetTrackInfoSuccess:
         mock_get.return_value.json.return_value = {
             "track": {
                 "name": "Benvolguts",
+                "artist": {"name": "Txarango"},
                 "playcount": "12345",
                 "listeners": "678",
             }
@@ -31,7 +32,14 @@ class TestGetTrackInfoSuccess:
 
         result = get_track_info("Txarango", "Benvolguts")
 
-        assert result == {"playcount": 12345, "listeners": 678}
+        # R5: response includes the names Last.fm actually returned so the
+        # caller can detect silent autocorrect drift.
+        assert result == {
+            "playcount": 12345,
+            "listeners": 678,
+            "returned_track": "Benvolguts",
+            "returned_artist": "Txarango",
+        }
         mock_get.assert_called_once()
         params = mock_get.call_args[1]["params"]
         assert params["artist"] == "Txarango"
