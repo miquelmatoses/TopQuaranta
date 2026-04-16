@@ -1,0 +1,25 @@
+{% extends "web/base.html" %}
+{% load static %}
+
+{% block title %}Uneix-t'hi — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Uneix-t'hi a TopQuaranta</h2>
+  <p class="ranking-date">La comunitat de musica en catala</p>
+</section>
+
+<div class="accedir-grid">
+  <a href="{% url 'comptes:registre' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/icon-contribuir.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Crear compte</span>
+    <span class="staff-tool-desc">Registra't per contribuir al projecte, sol&middot;licitar la gestio del teu perfil d'artista i seguir l'evolucio del ranking</span>
+  </a>
+
+  <a href="{% url 'comptes:login' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/user.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Iniciar sessio</span>
+    <span class="staff-tool-desc">Ja tens un compte? Entra per accedir al teu dashboard</span>
+  </a>
+</div>
+{% endblock %}

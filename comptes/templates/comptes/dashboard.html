@@ -1,38 +1,137 @@
 {% extends "web/base.html" %}
+{% load static %}
 
-{% block title %}Dashboard — TopQuaranta{% endblock %}
+{% block title %}El meu compte — TopQuaranta{% endblock %}
 
 {% block content %}
 <section class="ranking-header">
   <h2 class="ranking-title">El meu compte</h2>
+  <p class="ranking-date">{{ user.username }} &middot; membre des de {{ user.date_joined|date:"j F Y" }}</p>
 </section>
 
-<div class="dashboard-info">
-  <div class="dashboard-field">
-    <span class="dashboard-label">Usuari</span>
-    <span class="dashboard-value">{{ user.username }}</span>
-  </div>
-  <div class="dashboard-field">
-    <span class="dashboard-label">Correu</span>
-    <span class="dashboard-value">{{ user.email }}</span>
-  </div>
-  <div class="dashboard-field">
-    <span class="dashboard-label">Artista</span>
-    <span class="dashboard-value">
-      {% if user_artista %}
-        {% if user_artista.verificat %}
-          {{ user_artista.artista.nom }} — <a href="{% url 'comptes:portal_artista' %}" class="rank-artist-link">Anar al portal</a>
-        {% else %}
-          {{ user_artista.artista.nom }} — <span class="provisional-badge">Pendent</span>
-        {% endif %}
-      {% else %}
-        <a href="{% url 'comptes:sollicitud_artista' %}" class="rank-artist-link">Sol·licitar verificació d'artista</a>
-      {% endif %}
-    </span>
-  </div>
-</div>
+<nav class="dashboard-cards">
+  <a href="{% url 'comptes:perfil' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/user.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Perfil</span>
+    <span class="staff-tool-desc">Dades del compte, correu i estadístiques</span>
+  </a>
 
-<form method="post" action="{% url 'comptes:logout' %}">
+  {% if artista_verificat %}
+  <a href="{% url 'comptes:portal_artista' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/icon-artistes.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Portal artista</span>
+    <span class="staff-tool-desc">{{ artista_verificat.artista.nom }} &mdash; rànquing, evolució i cançons</span>
+  </a>
+  {% endif %}
+
+  {% if user.is_staff %}
+  <a href="{% url 'staff:dashboard' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/keyboard.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Panell d'administració</span>
+    <span class="staff-tool-desc">Eines internes de gestió TopQuaranta</span>
+  </a>
+  {% endif %}
+</nav>
+
+<!-- ═══ Sol·licitar gestió d'un artista existent ═══ -->
+<section class="dashboard-section" style="margin-top:var(--mm-space-6)">
+  <h3 class="section-title">Sol·licitar gestió d'un artista</h3>
+  <p class="ranking-date" style="margin-bottom:var(--mm-space-3)">
+    L'artista ja existeix al sistema i vols gestionar-ne el perfil.
+  </p>
+
+  {% if gestio_list %}
+  <div class="staff-table-wrap" style="margin-bottom:var(--mm-space-3)">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th>Artista</th>
+          <th>Estat</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ua in gestio_list %}
+        <tr>
+          <td>{{ ua.artista.nom }}</td>
+          <td>
+            {% if ua.verificat %}
+              <span class="staff-badge-ok">Aprovat</span>
+            {% elif ua.estat == "rebutjat" %}
+              <span class="staff-badge-no">Rebutjat</span>
+            {% else %}
+              <span class="provisional-badge">Pendent</span>
+            {% endif %}
+          </td>
+          <td class="staff-cell-muted">{{ ua.created_at|date:"d/m/Y" }}</td>
+          <td>
+            {% if ua.verificat %}
+              <a href="{% url 'comptes:portal_artista' %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2);text-decoration:none">Portal</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <a href="{% url 'comptes:sollicitud_gestio' %}" class="filter-btn" style="text-decoration:none">
+    + Nova sol·licitud de gestió
+  </a>
+</section>
+
+<!-- ═══ Proposar un artista nou ═══ -->
+<section class="dashboard-section" style="margin-top:var(--mm-space-6)">
+  <h3 class="section-title">Proposar un artista nou</h3>
+  <p class="ranking-date" style="margin-bottom:var(--mm-space-3)">
+    L'artista no existeix encara al sistema i vols que s'hi afegesca.
+  </p>
+
+  {% if propostes_list %}
+  <div class="staff-table-wrap" style="margin-bottom:var(--mm-space-3)">
+    <table class="staff-table">
+      <thead>
+        <tr>
+          <th>Artista proposat</th>
+          <th>Estat</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in propostes_list %}
+        <tr>
+          <td>{{ p.nom }}</td>
+          <td>
+            {% if p.estat == "aprovat" %}
+              <span class="staff-badge-ok">Aprovat</span>
+            {% elif p.estat == "rebutjat" %}
+              <span class="staff-badge-no">Rebutjat</span>
+            {% else %}
+              <span class="provisional-badge">Pendent</span>
+            {% endif %}
+          </td>
+          <td class="staff-cell-muted">{{ p.created_at|date:"d/m/Y" }}</td>
+          <td>
+            {% if p.estat == "aprovat" and p.artista_creat %}
+              <a href="{% url 'comptes:sollicitud_gestio' %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2);text-decoration:none">Sol·licitar gestió</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <a href="{% url 'comptes:sollicitud_proposta' %}" class="filter-btn" style="text-decoration:none">
+    + Nova proposta d'artista
+  </a>
+</section>
+
+<form method="post" action="{% url 'comptes:logout' %}" class="dashboard-logout" style="margin-top:var(--mm-space-6)">
   {% csrf_token %}
   <button class="filter-btn" type="submit">Tancar sessió</button>
 </form>

@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 from music.models import Artista
 
-from .models import UserArtista
+from .models import PropostaArtista, UserArtista
 
 Usuari = get_user_model()
 
@@ -47,19 +47,22 @@ class RegistreForm(forms.ModelForm):
         return user
 
 
-class SollicitudArtistaForm(forms.ModelForm):
-    """Form for requesting artist verification."""
+class SollicitudGestioForm(forms.ModelForm):
+    """Form for requesting management of an existing artist."""
 
     artista = forms.ModelChoiceField(
         queryset=Artista.objects.filter(aprovat=True).order_by("nom"),
         label="Artista",
+        required=True,
+        empty_label="-- Selecciona un artista --",
         widget=forms.Select(attrs={"class": "filter-search"}),
     )
     sollicitud_text = forms.CharField(
         label="Justificació",
         widget=forms.Textarea(attrs={
             "rows": 4,
-            "placeholder": "Explica breument per què ets aquest artista o el representes.",
+            "placeholder": "Explica per què representes aquest artista "
+            "(ets un membre del grup, el/la mànager, etc.)",
         }),
     )
 

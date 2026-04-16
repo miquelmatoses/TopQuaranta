@@ -1,0 +1,351 @@
+{% extends "web/base.html" %}
+
+{% block title %}Proposar un artista nou — TopQuaranta{% endblock %}
+
+{% block content %}
+<a href="{% url 'comptes:dashboard' %}" class="back-link">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  El meu compte
+</a>
+
+<section class="ranking-header">
+  <h2 class="ranking-title">Proposar un artista nou</h2>
+  <p class="ranking-date">L'artista no existeix al sistema i vols que s'hi afegesca.</p>
+</section>
+
+{% if errors %}
+  {% for error in errors %}
+    <p class="form-error">{{ error }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if historial %}
+<div class="staff-table-wrap" style="margin-bottom:var(--mm-space-4)">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>Artista proposat</th>
+        <th>Estat</th>
+        <th>Data</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in historial %}
+      <tr>
+        <td>{{ p.nom }}</td>
+        <td>
+          {% if p.estat == "aprovat" %}<span class="staff-badge-ok">Aprovat</span>
+          {% elif p.estat == "rebutjat" %}<span class="staff-badge-no">Rebutjat</span>
+          {% else %}<span class="provisional-badge">Pendent</span>{% endif %}
+        </td>
+        <td class="staff-cell-muted">{{ p.created_at|date:"d/m/Y" }}</td>
+        <td>
+          {% if p.estat == "aprovat" and p.artista_creat %}
+            <a href="{% url 'comptes:sollicitud_gestio' %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2);text-decoration:none">Sol·licitar gestió</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<form class="auth-form" method="post" id="proposta-form">
+  {% csrf_token %}
+
+  <!-- ═══ Nom ═══ -->
+  <div class="form-field">
+    <label class="form-label" for="nom">Nom de l'artista *</label>
+    <input type="text" name="nom" id="nom" required placeholder="El nom tal com ha d'aparèixer">
+  </div>
+
+  <!-- ═══ Justificació ═══ -->
+  <div class="form-field">
+    <label class="form-label" for="justificacio">Justificació *</label>
+    <textarea name="justificacio" id="justificacio" rows="4" required
+      placeholder="Per què vols donar d'alta aquest artista? Quina relació hi tens? (mínim 20 caràcters)"></textarea>
+    <p class="form-hint">Mínim 20 caràcters. Explica qui ets i per què vols afegir aquest artista.</p>
+  </div>
+
+  <!-- ═══ Deezer IDs ═══ -->
+  <div class="form-field">
+    <label class="form-label">Deezer IDs</label>
+    <div id="deezer-list">
+      <div class="deezer-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)">
+        <input type="text" name="deezer_ids" placeholder="ID numèric de Deezer" style="max-width:200px">
+        <button type="button" class="deezer-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+    </div>
+    <button type="button" id="add-deezer" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Afegir Deezer ID</button>
+    <p class="form-hint" style="margin-top:var(--mm-space-1);color:var(--mm-color-warning, var(--mm-color-primary))">
+      Sense Deezer ID, el sistema no detectarà les cançons ni les novetats de l'artista de manera automàtica.
+      Pots trobar l'ID a l'URL de l'artista a deezer.com (ex: deezer.com/artist/<strong>12345</strong>).
+    </p>
+  </div>
+
+  <!-- ═══ Localitzacions ═══ -->
+  <div class="form-field">
+    <label class="form-label">Localitzacions</label>
+    <div id="loc-list">
+      <div class="loc-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-2);flex-wrap:wrap">
+        <select class="loc-territori" style="min-width:140px">
+          <option value="">-- Territori --</option>
+          <option value="ALT">Altres (fora PPCC)</option>
+        </select>
+        <select class="loc-comarca" style="min-width:150px" disabled>
+          <option value="">-- Comarca --</option>
+        </select>
+        <select class="loc-municipi" style="min-width:150px" disabled>
+          <option value="">-- Localitat --</option>
+        </select>
+        <input type="hidden" class="loc-municipi-id" name="loc_municipi_id" value="">
+        <input type="hidden" class="loc-manual" name="loc_manual" value="">
+        <span class="loc-display" style="font-size:var(--mm-text-sm);color:var(--mm-color-text-secondary)"></span>
+        <button type="button" class="loc-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+    </div>
+    <button type="button" id="add-loc" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Afegir localització</button>
+  </div>
+
+  <!-- ═══ Xarxes socials ═══ -->
+  <div class="form-field">
+    <label class="form-label">Xarxes socials</label>
+    <div id="social-links">
+      <!-- Initially hidden, shown by + button -->
+    </div>
+    <button type="button" id="add-social" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Afegir xarxa social</button>
+    <p class="form-hint">Opcional. Afegeix els perfils de l'artista a les xarxes socials.</p>
+  </div>
+
+  <button class="filter-btn" type="submit" style="margin-top:var(--mm-space-4)">Enviar proposta</button>
+</form>
+
+<p class="form-hint" style="margin-top:var(--mm-space-4)">
+  Si l'artista ja existeix al sistema, <a href="{% url 'comptes:sollicitud_gestio' %}">sol·licita'n la gestió</a>.
+</p>
+
+<script>
+// ── API URLs (public endpoints for cascading selects) ──
+const API_TERRITORIS = '/api/v1/localitzacio/territoris/';
+const API_COMARQUES = '/api/v1/localitzacio/comarques/';
+const API_MUNICIPIS = '/api/v1/localitzacio/municipis/';
+const API_MUNICIPI_LOOKUP = '/api/v1/localitzacio/municipi-lookup/';
+
+const cache = { territoris: null, comarques: {}, municipis: {} };
+
+// ── Social link definitions ──
+const SOCIAL_OPTIONS = [
+  { name: 'spotify_url', label: 'Spotify' },
+  { name: 'viasona_url', label: 'Viasona' },
+  { name: 'web_url', label: 'Web' },
+  { name: 'bandcamp_url', label: 'Bandcamp' },
+  { name: 'youtube_url', label: 'YouTube' },
+  { name: 'viquipedia_url', label: 'Viquipèdia' },
+  { name: 'soundcloud_url', label: 'SoundCloud' },
+  { name: 'tiktok_url', label: 'TikTok' },
+  { name: 'facebook_url', label: 'Facebook' },
+];
+let socialAdded = new Set();
+
+// ── Deezer ID add/remove ──
+document.getElementById('add-deezer').addEventListener('click', function() {
+  const row = document.createElement('div');
+  row.className = 'deezer-row';
+  row.style.cssText = 'display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)';
+  row.innerHTML = '<input type="text" name="deezer_ids" placeholder="ID numèric de Deezer" style="max-width:200px">'
+    + '<button type="button" class="deezer-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>';
+  document.getElementById('deezer-list').appendChild(row);
+});
+document.getElementById('deezer-list').addEventListener('click', function(e) {
+  if (e.target.classList.contains('deezer-remove')) {
+    const rows = this.querySelectorAll('.deezer-row');
+    if (rows.length > 1) e.target.closest('.deezer-row').remove();
+    else e.target.closest('.deezer-row').querySelector('input').value = '';
+  }
+});
+
+// ── Social links add ──
+document.getElementById('add-social').addEventListener('click', function() {
+  const available = SOCIAL_OPTIONS.filter(s => !socialAdded.has(s.name));
+  if (!available.length) return;
+
+  // Show a picker if multiple available
+  const chosen = available[0];
+  addSocialRow(chosen);
+});
+
+function addSocialRow(social) {
+  socialAdded.add(social.name);
+  const container = document.getElementById('social-links');
+  const row = document.createElement('div');
+  row.className = 'social-row';
+  row.style.cssText = 'display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)';
+  row.dataset.field = social.name;
+
+  // Dropdown to change which social this is
+  let selectHtml = '<select class="social-select" style="min-width:110px;font-size:var(--mm-text-sm)">';
+  SOCIAL_OPTIONS.forEach(s => {
+    const disabled = socialAdded.has(s.name) && s.name !== social.name ? ' disabled' : '';
+    const selected = s.name === social.name ? ' selected' : '';
+    selectHtml += `<option value="${s.name}"${selected}${disabled}>${s.label}</option>`;
+  });
+  selectHtml += '</select>';
+
+  row.innerHTML = selectHtml
+    + `<input type="url" name="${social.name}" placeholder="https://..." style="flex:1">`
+    + '<button type="button" class="social-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>';
+
+  // Handle changing the select
+  row.querySelector('.social-select').addEventListener('change', function() {
+    const oldName = row.dataset.field;
+    const newName = this.value;
+    socialAdded.delete(oldName);
+    socialAdded.add(newName);
+    row.dataset.field = newName;
+    row.querySelector('input[type="url"]').name = newName;
+  });
+
+  container.appendChild(row);
+
+  // Update add button visibility
+  if (socialAdded.size >= SOCIAL_OPTIONS.length) {
+    document.getElementById('add-social').style.display = 'none';
+  }
+}
+
+document.getElementById('social-links').addEventListener('click', function(e) {
+  if (e.target.classList.contains('social-remove')) {
+    const row = e.target.closest('.social-row');
+    socialAdded.delete(row.dataset.field);
+    row.remove();
+    document.getElementById('add-social').style.display = '';
+  }
+});
+
+// ── Location cascading selects ──
+async function loadTerritoris() {
+  if (cache.territoris) return cache.territoris;
+  const resp = await fetch(API_TERRITORIS);
+  cache.territoris = await resp.json();
+  return cache.territoris;
+}
+
+async function loadComarques(territori) {
+  if (cache.comarques[territori]) return cache.comarques[territori];
+  const resp = await fetch(`${API_COMARQUES}?territori=${territori}`);
+  cache.comarques[territori] = await resp.json();
+  return cache.comarques[territori];
+}
+
+async function loadMunicipis(comarca) {
+  if (cache.municipis[comarca]) return cache.municipis[comarca];
+  const resp = await fetch(`${API_MUNICIPIS}?comarca=${encodeURIComponent(comarca)}`);
+  cache.municipis[comarca] = await resp.json();
+  return cache.municipis[comarca];
+}
+
+function populateTerritoris(sel) {
+  while (sel.options.length > 2) sel.remove(2);
+  const altOpt = sel.querySelector('option[value="ALT"]');
+  if (cache.territoris) {
+    cache.territoris.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.codi;
+      opt.textContent = t.nom;
+      sel.insertBefore(opt, altOpt);
+    });
+  }
+}
+
+async function initLocRow(row) {
+  const tSel = row.querySelector('.loc-territori');
+  const cSel = row.querySelector('.loc-comarca');
+  const mSel = row.querySelector('.loc-municipi');
+  const hiddenId = row.querySelector('.loc-municipi-id');
+  const hiddenManual = row.querySelector('.loc-manual');
+  const display = row.querySelector('.loc-display');
+
+  await loadTerritoris();
+  populateTerritoris(tSel);
+
+  tSel.addEventListener('change', async function() {
+    cSel.innerHTML = '<option value="">-- Comarca --</option>';
+    mSel.innerHTML = '<option value="">-- Localitat --</option>';
+    hiddenId.value = '';
+    if (this.value === 'ALT') {
+      cSel.disabled = true; mSel.disabled = true;
+      hiddenManual.value = 'Fora PPCC';
+      display.textContent = 'Fora PPCC (manual)';
+      return;
+    }
+    hiddenManual.value = '';
+    cSel.disabled = !this.value; mSel.disabled = true;
+    display.textContent = '';
+    if (this.value) {
+      const comarques = await loadComarques(this.value);
+      comarques.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; cSel.appendChild(o); });
+    }
+  });
+
+  cSel.addEventListener('change', async function() {
+    mSel.innerHTML = '<option value="">-- Localitat --</option>';
+    mSel.disabled = !this.value;
+    hiddenId.value = ''; display.textContent = '';
+    if (this.value) {
+      const municipis = await loadMunicipis(this.value);
+      municipis.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; mSel.appendChild(o); });
+    }
+  });
+
+  mSel.addEventListener('change', async function() {
+    if (!this.value) { hiddenId.value = ''; display.textContent = ''; return; }
+    try {
+      const resp = await fetch(`${API_MUNICIPI_LOOKUP}?nom=${encodeURIComponent(this.value)}&comarca=${encodeURIComponent(cSel.value)}`);
+      const result = await resp.json();
+      if (result.pk) { hiddenId.value = result.pk; hiddenManual.value = ''; display.textContent = `${result.nom}, ${result.comarca} (${result.territori})`; }
+    } catch(e) { console.error('Lookup failed', e); }
+  });
+}
+
+// Init first location row
+initLocRow(document.querySelector('#loc-list .loc-row'));
+
+// Add location row
+document.getElementById('add-loc').addEventListener('click', async function() {
+  const row = document.createElement('div');
+  row.className = 'loc-row';
+  row.style.cssText = 'display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-2);flex-wrap:wrap';
+  row.innerHTML = `
+    <select class="loc-territori" style="min-width:140px"><option value="">-- Territori --</option><option value="ALT">Altres (fora PPCC)</option></select>
+    <select class="loc-comarca" style="min-width:150px" disabled><option value="">-- Comarca --</option></select>
+    <select class="loc-municipi" style="min-width:150px" disabled><option value="">-- Localitat --</option></select>
+    <input type="hidden" class="loc-municipi-id" name="loc_municipi_id" value="">
+    <input type="hidden" class="loc-manual" name="loc_manual" value="">
+    <span class="loc-display" style="font-size:var(--mm-text-sm);color:var(--mm-color-text-secondary)"></span>
+    <button type="button" class="loc-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>`;
+  document.getElementById('loc-list').appendChild(row);
+  await initLocRow(row);
+});
+
+// Remove location row
+document.getElementById('loc-list').addEventListener('click', function(e) {
+  if (e.target.classList.contains('loc-remove')) {
+    const rows = this.querySelectorAll('.loc-row');
+    if (rows.length > 1) e.target.closest('.loc-row').remove();
+    else {
+      const row = e.target.closest('.loc-row');
+      row.querySelector('.loc-territori').value = '';
+      row.querySelector('.loc-comarca').innerHTML = '<option value="">-- Comarca --</option>';
+      row.querySelector('.loc-comarca').disabled = true;
+      row.querySelector('.loc-municipi').innerHTML = '<option value="">-- Localitat --</option>';
+      row.querySelector('.loc-municipi').disabled = true;
+      row.querySelector('.loc-municipi-id').value = '';
+      row.querySelector('.loc-manual').value = '';
+      row.querySelector('.loc-display').textContent = '';
+    }
+  }
+});
+</script>
+{% endblock %}

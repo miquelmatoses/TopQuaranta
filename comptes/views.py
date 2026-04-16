@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.conf import settings
@@ -13,12 +14,19 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from ranking.models import RankingProvisional, RankingSetmanal
 
-from .forms import RegistreForm, SollicitudArtistaForm
-from .models import UserArtista
+from .forms import RegistreForm, SollicitudGestioForm
+from .models import PropostaArtista, UserArtista
 from .tokens import email_verification_token
 
 Usuari = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def accedir(request: HttpRequest) -> HttpResponse:
+    """Combined register/login entry page for anonymous users."""
+    if request.user.is_authenticated:
+        return redirect("comptes:dashboard")
+    return render(request, "comptes/accedir.html")
 
 
 def registre(request: HttpRequest) -> HttpResponse:
@@ -82,62 +90,200 @@ class TQLogoutView(LogoutView):
 
 @login_required(login_url="/compte/login/")
 def dashboard(request: HttpRequest) -> HttpResponse:
-    """User dashboard showing account info and artist verification status."""
-    user_artista = UserArtista.objects.filter(usuari=request.user).select_related("artista").first()
+    """User dashboard — card-based landing page with two solicitud flows."""
+    gestio_list = list(
+        UserArtista.objects.filter(usuari=request.user)
+        .select_related("artista")
+        .order_by("-created_at")
+    )
+    propostes_list = list(
+        PropostaArtista.objects.filter(usuari=request.user)
+        .select_related("artista_creat")
+        .order_by("-created_at")
+    )
+    # For the artist portal card, find first verified link
+    artista_verificat = next(
+        (ua for ua in gestio_list if ua.verificat), None
+    )
+
     return render(request, "comptes/dashboard.html", {
-        "user_artista": user_artista,
+        "gestio_list": gestio_list,
+        "propostes_list": propostes_list,
+        "artista_verificat": artista_verificat,
     })
 
 
 @login_required(login_url="/compte/login/")
-def sollicitud_artista(request: HttpRequest) -> HttpResponse:
-    """Request artist verification: select artist and provide justification."""
-    existing = UserArtista.objects.filter(usuari=request.user).select_related("artista").first()
-    if existing:
-        return render(request, "comptes/sollicitud_status.html", {
-            "user_artista": existing,
-        })
+def perfil(request: HttpRequest) -> HttpResponse:
+    """User profile page with account details and artist stats."""
+    user_artista = (
+        UserArtista.objects.filter(usuari=request.user, verificat=True)
+        .select_related("artista")
+        .first()
+    )
 
+    stats = None
+    if user_artista:
+        artista = user_artista.artista
+        ranking_qs = RankingSetmanal.objects.filter(canco__artista=artista)
+        setmanes = ranking_qs.values("setmana").distinct().count()
+        millor = ranking_qs.order_by("posicio").values_list("posicio", flat=True).first()
+        cancons = ranking_qs.values("canco_id").distinct().count()
+        territoris = ranking_qs.values("territori").distinct().count()
+        stats = {
+            "setmanes_al_ranking": setmanes,
+            "millor_posicio": millor,
+            "cancons_al_ranking": cancons,
+            "territoris_presents": territoris,
+        }
+
+    return render(request, "comptes/perfil.html", {
+        "user_artista": user_artista,
+        "stats": stats,
+    })
+
+
+@login_required(login_url="/compte/login/")
+def sollicitud_gestio(request: HttpRequest) -> HttpResponse:
+    """Request management of an existing artist."""
     if request.method == "POST":
-        form = SollicitudArtistaForm(request.POST)
+        form = SollicitudGestioForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
                 ua = form.save(commit=False)
                 ua.usuari = request.user
                 ua.save()
-            _notify_admins_new_sollicitud(ua)
-            return render(request, "comptes/sollicitud_status.html", {
-                "user_artista": ua,
-            })
+            try:
+                _notify_admins("gestió", ua.artista.nom, request.user.email, ua.sollicitud_text)
+            except Exception as exc:
+                logger.warning("Admin notification skipped (gestió): %s", exc)
+            return redirect("comptes:dashboard")
     else:
-        form = SollicitudArtistaForm()
+        form = SollicitudGestioForm()
 
-    return render(request, "comptes/sollicitud.html", {"form": form})
+    # Previous requests
+    historial = list(
+        UserArtista.objects.filter(usuari=request.user)
+        .select_related("artista")
+        .order_by("-created_at")
+    )
+
+    return render(request, "comptes/sollicitud_gestio.html", {
+        "form": form,
+        "historial": historial,
+    })
 
 
-def _notify_admins_new_sollicitud(ua: UserArtista) -> None:
-    """Send email to ADMINS when a new artist verification request is created."""
-    subject = f"Nova sol·licitud artista: {ua.artista.nom}"
+@login_required(login_url="/compte/login/")
+def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
+    """Propose a new artist not yet in the system."""
+    if request.method == "POST":
+        nom = request.POST.get("nom", "").strip()
+        justificacio = request.POST.get("justificacio", "").strip()
+
+        errors = []
+        if not nom:
+            errors.append("El nom de l'artista és obligatori.")
+        if len(justificacio) < 20:
+            errors.append("La justificació ha de tenir almenys 20 caràcters.")
+
+        if not errors:
+            # Collect social links
+            social_fields = [
+                "spotify_url", "viasona_url", "web_url", "bandcamp_url",
+                "youtube_url", "viquipedia_url", "soundcloud_url",
+                "tiktok_url", "facebook_url",
+            ]
+            social_data = {}
+            for field in social_fields:
+                val = request.POST.get(field, "").strip()
+                if val:
+                    social_data[field] = val
+
+            # Collect Deezer IDs
+            deezer_raw = request.POST.getlist("deezer_ids")
+            deezer_ids = ",".join(d.strip() for d in deezer_raw if d.strip())
+
+            # Collect locations
+            loc_municipi_ids = request.POST.getlist("loc_municipi_id")
+            loc_manuals = request.POST.getlist("loc_manual")
+            locs = []
+            for i, mid in enumerate(loc_municipi_ids):
+                mid = mid.strip()
+                manual = loc_manuals[i].strip() if i < len(loc_manuals) else ""
+                if mid:
+                    locs.append({"municipi_id": int(mid)})
+                elif manual:
+                    locs.append({"manual": manual})
+
+            with transaction.atomic():
+                proposta = PropostaArtista.objects.create(
+                    usuari=request.user,
+                    nom=nom,
+                    justificacio=justificacio,
+                    deezer_ids=deezer_ids,
+                    localitzacions_json=json.dumps(locs) if locs else "",
+                    **social_data,
+                )
+
+            try:
+                _notify_admins("proposta", nom, request.user.email, justificacio)
+            except Exception as exc:
+                logger.warning("Admin notification skipped (proposta): %s", exc)
+            return redirect("comptes:dashboard")
+
+        # Re-render with errors
+        return render(request, "comptes/sollicitud_proposta.html", {
+            "errors": errors,
+            "historial": list(
+                PropostaArtista.objects.filter(usuari=request.user)
+                .order_by("-created_at")
+            ),
+        })
+
+    # GET
+    historial = list(
+        PropostaArtista.objects.filter(usuari=request.user)
+        .select_related("artista_creat")
+        .order_by("-created_at")
+    )
+
+    return render(request, "comptes/sollicitud_proposta.html", {
+        "errors": [],
+        "historial": historial,
+    })
+
+
+def _notify_admins(tipus: str, artista_nom: str, email: str, text: str) -> None:
+    """Send email to ADMINS when a new request is created."""
+    subject = f"Nova sol\u00b7licitud ({tipus}): {artista_nom}"
     body = (
-        f"Usuari: {ua.usuari.email}\n"
-        f"Artista: {ua.artista.nom}\n"
-        f"Justificació: {ua.sollicitud_text}\n\n"
-        f"Verifica a: https://www.topquaranta.cat/nou-admin/"
+        f"Tipus: {tipus}\n"
+        f"Usuari: {email}\n"
+        f"Artista: {artista_nom}\n"
+        f"Justificació: {text}\n\n"
+        f"Gestiona a: https://www.topquaranta.cat/staff/verificacio/"
     )
     try:
         mail_admins(subject, body)
-    except Exception:
-        logger.exception("Failed to send admin notification for UserArtista %s", ua.pk)
+    except Exception as exc:
+        # SMTP not configured in this environment — log and continue.
+        logger.warning(
+            "Admin email skipped for %s '%s': %s", tipus, artista_nom, exc,
+        )
 
 
 @login_required(login_url="/compte/login/")
 def portal_artista(request: HttpRequest) -> HttpResponse:
     """Verified artist dashboard with ranking data."""
-    ua = UserArtista.objects.filter(usuari=request.user).select_related("artista").first()
+    # Find the first verified artist link
+    ua = (
+        UserArtista.objects.filter(usuari=request.user, verificat=True)
+        .select_related("artista")
+        .first()
+    )
     if not ua:
-        return redirect("comptes:sollicitud_artista")
-    if not ua.verificat:
-        return render(request, "comptes/artista_pendent.html", status=403)
+        return redirect("comptes:sollicitud_gestio")
 
     artista = ua.artista
     territoris = artista.get_territoris()
@@ -145,7 +291,7 @@ def portal_artista(request: HttpRequest) -> HttpResponse:
     # Last 10 weeks in RankingSetmanal
     historial = (
         RankingSetmanal.objects.filter(canco__artista=artista)
-        .select_related("canco")
+        .select_related("canco", "canco__album")
         .order_by("-setmana", "territori", "posicio")[:50]
     )
     setmanes: dict = {}
@@ -165,7 +311,7 @@ def portal_artista(request: HttpRequest) -> HttpResponse:
     # Current provisional ranking
     provisional = list(
         RankingProvisional.objects.filter(canco__artista=artista)
-        .select_related("canco")
+        .select_related("canco", "canco__album")
         .order_by("posicio")
     )
 
