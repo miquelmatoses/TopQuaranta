@@ -1,0 +1,80 @@
+#!/bin/bash
+# Health summary of the TopQuaranta pipeline.
+#
+# Reads /var/log/topquaranta/status/*.status (written by tq-run) and prints
+# the status of each expected command. Also peeks at the errors.log for
+# recent ERROR-level log records.
+#
+# Exit code:
+#   0  all OK
+#   1  at least one command is stale or failed, or there are recent errors
+
+set -u
+
+STATUS_DIR=/var/log/topquaranta/status
+ERRORS_LOG=/var/log/topquaranta/errors.log
+NOW=$(date +%s)
+
+# Per-command max age in hours before we flag STALE.
+# Tune carefully: the cron is hourly for novetats, daily for the rest,
+# weekly for official ranking. We add a buffer for human-timed drift.
+declare -A MAX_AGE_HOURS=(
+    [obtenir_novetats]=2
+    [obtenir_senyal]=26
+    [actualitzar_score_entrada]=26
+    [netejar_caducades]=26
+    [calcular_ranking_provisional]=26
+    [calcular_ranking]=170     # 7 days + 2h buffer
+)
+
+overall=0
+printf "%-32s  %-12s  %s\n" "COMMAND" "STATUS" "LAST RUN"
+printf "%-32s  %-12s  %s\n" "-------" "------" "--------"
+
+for cmd in "${!MAX_AGE_HOURS[@]}"; do
+    f="$STATUS_DIR/$cmd.status"
+    if [[ ! -f "$f" ]]; then
+        printf "%-32s  %-12s  %s\n" "$cmd" "NO_STATUS" "(never run via tq-run)"
+        overall=1
+        continue
+    fi
+    status=$(grep '^status=' "$f" | cut -d= -f2)
+    last=$(grep '^last_run=' "$f" | cut -d= -f2)
+    last_ts=$(date -d "$last" +%s 2>/dev/null || echo 0)
+    age_h=$(( (NOW - last_ts) / 3600 ))
+    max_h=${MAX_AGE_HOURS[$cmd]}
+
+    if [[ $age_h -gt $max_h ]]; then
+        display="STALE(${age_h}h)"
+        overall=1
+    elif [[ "$status" != "OK" ]]; then
+        display="FAIL"
+        overall=1
+    else
+        display="OK(${age_h}h)"
+    fi
+    printf "%-32s  %-12s  %s\n" "$cmd" "$display" "$last"
+done
+
+# Recent errors from Django LOGGING (errors_file handler in base.py).
+echo
+if [[ -f "$ERRORS_LOG" ]]; then
+    today=$(date +%Y-%m-%d)
+    # grep -c prints "0" and exits 1 when there are no matches; using
+    # `|| echo 0` here would *append* another "0" and break `[[ -gt ]]`.
+    # Use `|| true` to keep grep's "0" output and neutralise the exit code.
+    n=$(grep -c "^\[$today" "$ERRORS_LOG" 2>/dev/null || true)
+    n=${n:-0}
+    if (( n > 0 )); then
+        echo "Django errors today ($today): $n"
+        echo "  Last 3:"
+        grep "^\[$today" "$ERRORS_LOG" | tail -3 | sed 's/^/    /'
+        overall=1
+    else
+        echo "Django errors today: 0"
+    fi
+else
+    echo "(errors log not present yet: $ERRORS_LOG)"
+fi
+
+exit $overall

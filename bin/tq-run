@@ -1,0 +1,60 @@
+#!/bin/bash
+# Run a Django management command and record its status.
+#
+# Usage:
+#   tq-run <manage_command> [args...]
+#
+# Side effects:
+#   - Appends the command's stdout/stderr to the caller's stdout (so existing
+#     cron lines with ">> logfile" keep working).
+#   - Writes /var/log/topquaranta/status/<tag>.status with last_run / exit_code /
+#     status=OK|FAIL / last_output (tail 20). The tag is the command name with
+#     any "--provisional" flag appended (so setmanal and provisional ranking
+#     don't share a status file).
+#   - Exits with the command's exit code.
+
+set -o pipefail
+
+STATUS_DIR=/var/log/topquaranta/status
+APP_DIR=/home/topquaranta/app
+DJANGO_SETTINGS_MODULE=topquaranta.settings.production
+
+cmd="${1:-}"
+if [[ -z "$cmd" ]]; then
+    echo "Usage: tq-run <manage_command> [args...]" >&2
+    exit 64
+fi
+shift
+
+# Derive a status tag. calcular_ranking runs twice (provisional vs official)
+# with different cadences, so we want separate status entries.
+tag="$cmd"
+for a in "$@"; do
+    if [[ "$a" == "--provisional" ]]; then tag="${cmd}_provisional"; fi
+done
+
+ts=$(date -Iseconds)
+tmpout=$(mktemp)
+
+cd "$APP_DIR"
+DJANGO_SETTINGS_MODULE="$DJANGO_SETTINGS_MODULE" \
+    "$APP_DIR/.venv/bin/python" manage.py "$cmd" "$@" 2>&1 | tee "$tmpout"
+rc=${PIPESTATUS[0]}
+
+# Write the status file atomically (mktemp + mv).
+status_file="$STATUS_DIR/$tag.status"
+tmp_status=$(mktemp)
+{
+    echo "command=$cmd"
+    echo "args=$*"
+    echo "last_run=$ts"
+    echo "exit_code=$rc"
+    if [[ $rc -eq 0 ]]; then echo "status=OK"; else echo "status=FAIL"; fi
+    echo "last_output<<EOF"
+    tail -n 20 "$tmpout"
+    echo "EOF"
+} > "$tmp_status"
+mv "$tmp_status" "$status_file"
+rm -f "$tmpout"
+
+exit "$rc"

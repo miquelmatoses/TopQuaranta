@@ -1,0 +1,38 @@
+#!/bin/bash
+# Daily PostgreSQL backup with tiered retention.
+#
+# Must run as user `postgres` (pg_dump uses peer auth).
+#
+# Retention (on ~45 MB DB, gzipped ~5-10 MB each, total ~250 MB worst case):
+#   - daily/   last 7 days
+#   - weekly/  last 4 weeks (Sundays)
+#   - monthly/ last 12 months (1st of month)
+
+set -euo pipefail
+
+BACKUP_DIR=/home/topquaranta/backups
+DB=topquaranta
+DATE=$(date +%Y%m%d-%H%M%S)
+DOW=$(date +%u)   # 1..7, 7=Sunday
+DOM=$(date +%d)   # 01..31
+
+mkdir -p "$BACKUP_DIR/daily" "$BACKUP_DIR/weekly" "$BACKUP_DIR/monthly"
+
+out="$BACKUP_DIR/daily/tq-$DATE.sql.gz"
+pg_dump "$DB" | gzip -9 > "$out"
+size=$(stat -c %s "$out")
+
+# Copy to weekly on Sundays, to monthly on the 1st
+if [[ "$DOW" == "7" ]]; then
+    cp "$out" "$BACKUP_DIR/weekly/tq-week-$DATE.sql.gz"
+fi
+if [[ "$DOM" == "01" ]]; then
+    cp "$out" "$BACKUP_DIR/monthly/tq-month-$DATE.sql.gz"
+fi
+
+# Retention — delete old files
+find "$BACKUP_DIR/daily"   -name "tq-*.sql.gz"       -mtime +7   -delete
+find "$BACKUP_DIR/weekly"  -name "tq-week-*.sql.gz"  -mtime +30  -delete
+find "$BACKUP_DIR/monthly" -name "tq-month-*.sql.gz" -mtime +365 -delete
+
+echo "backup_ok=1 file=$out size_bytes=$size date=$DATE"
