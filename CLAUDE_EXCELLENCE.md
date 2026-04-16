@@ -61,6 +61,12 @@ intencionadament fora del panell — requereix SSH. Totes les mutacions
 van a `StaffAuditLog` via `log_staff_action`. Afegides 3 noves choices
 (`usuari_desactivar`, `usuari_reactivar`, `usuari_reset_2fa`).
 
+**Sessió 6 — Last.fm autocorrect drift (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **R5** Drift detection: client retorna noms Last.fm, SenyalDiari captura i compara fuzzy (artist 0.90, track 0.80 amb normalització de variants), filtre + "acceptar correcció" a `/staff/senyal/` | ✅ | 4 commits |
+
 Queda pendent de Tier 1 + 2:
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin

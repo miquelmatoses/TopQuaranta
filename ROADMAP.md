@@ -1,9 +1,9 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-16 — Phase 9: 16 findings + staff user mgmt across
-> 5 sessions. Tier 1 security complete except IP allowlist; Tier 2 reliability
-> partial. See CLAUDE_EXCELLENCE.md for progress.
+> Last updated: 2026-04-16 — Phase 9: 17 findings + staff user mgmt across
+> 6 sessions. Tier 1 security complete except IP allowlist; Tier 2 reliability
+> mostly done (remaining: R7 retry, R10-R11 dobles fonts). See CLAUDE_EXCELLENCE.md.
 
 ---
 
@@ -50,7 +50,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (16 findings landed: Tier 1 security + staff 2FA + key Tier 2 reliability) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (17 findings landed: Tier 1 security + Tier 2 reliability mostly done) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
