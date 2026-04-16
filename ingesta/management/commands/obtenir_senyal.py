@@ -1,16 +1,66 @@
 import logging
+import unicodedata
 from datetime import date, timedelta
+from difflib import SequenceMatcher
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from ingesta.clients.lastfm import get_track_info
+from ingesta.clients.lastfm import _normalize_track, get_track_info
 from music.constants import DIES_CADUCITAT
 from music.models import Canco
 from ranking.models import SenyalDiari
 from ranking.senyal import normalize_score_entrada
 
 logger = logging.getLogger(__name__)
+
+# R5: fuzzy-match thresholds for detecting silent Last.fm autocorrect drift.
+# Artist must match tightly — mistaking artist X for artist Y is the
+# dangerous case. Track can vary more (remasters, remixes, punctuation).
+_ARTIST_DRIFT_THRESHOLD = 0.90
+_TRACK_DRIFT_THRESHOLD = 0.80
+
+
+def _normalize_for_match(s: str) -> str:
+    """Lowercase, strip accents + punctuation for fuzzy comparison."""
+    if not s:
+        return ""
+    # NFD decomposes accents into base + combining char; drop combiners.
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = s.lower()
+    # Keep alphanumerics and whitespace only; collapse spaces.
+    s = "".join(c if c.isalnum() or c.isspace() else " " for c in s)
+    return " ".join(s.split())
+
+
+def _fuzzy_ratio(a: str, b: str) -> float:
+    return SequenceMatcher(None, _normalize_for_match(a), _normalize_for_match(b)).ratio()
+
+
+def _detect_drift(asked_artist: str, asked_track: str,
+                  returned_artist: str, returned_track: str) -> bool:
+    """True if the returned names diverge significantly from what we asked.
+
+    Normalises both sides through the same `(feat. X)` / `(Remaster)` /
+    `- Live` stripping we apply before retry calls, so a legitimate
+    Last.fm variant of the same recording (`"L'Empordà"` vs
+    `"L'Empordà (Remaster 2015)"`) is NOT flagged as drift — it's the
+    same track with a decoration. The dangerous case is a different
+    artist's track being served.
+
+    Empty returned names → treat as OK (shouldn't happen on success but
+    be robust). Callers should skip this check entirely when the Canco
+    has lastfm_confirmed=True.
+    """
+    if not returned_artist or not returned_track:
+        return False
+    asked_track_n = _normalize_track(asked_track)
+    returned_track_n = _normalize_track(returned_track)
+    artist_ratio = _fuzzy_ratio(asked_artist, returned_artist)
+    track_ratio = _fuzzy_ratio(asked_track_n, returned_track_n)
+    return (artist_ratio < _ARTIST_DRIFT_THRESHOLD
+            or track_ratio < _TRACK_DRIFT_THRESHOLD)
 
 
 class Command(BaseCommand):
@@ -98,6 +148,7 @@ class Command(BaseCommand):
         success = 0
         errors = 0
         skipped = 0
+        drifts = 0  # R5: count of rows flagged with corregit=True this run
 
         for i, canco in enumerate(cancons.iterator(), 1):
             if canco.pk in already_ingested:
@@ -110,6 +161,19 @@ class Command(BaseCommand):
             result = get_track_info(artist_name, track_name)
 
             if result is not None:
+                # R5: compare what Last.fm ACTUALLY returned vs what we asked
+                # for. lastfm_confirmed=True on the Canco is a staff-set
+                # opt-out for tracks where the autocorrect is known-good.
+                returned_artist = result.get("returned_artist", "")
+                returned_track = result.get("returned_track", "")
+                is_drift = (
+                    not canco.lastfm_confirmed
+                    and _detect_drift(artist_name, track_name,
+                                      returned_artist, returned_track)
+                )
+                if is_drift:
+                    drifts += 1
+
                 with transaction.atomic():
                     SenyalDiari.objects.update_or_create(
                         canco=canco,
@@ -117,6 +181,9 @@ class Command(BaseCommand):
                         defaults={
                             "lastfm_playcount": result["playcount"],
                             "lastfm_listeners": result["listeners"],
+                            "lastfm_returned_track": returned_track[:500],
+                            "lastfm_returned_artista": returned_artist[:255],
+                            "corregit": is_drift,
                             "error": False,
                             "error_msg": "",
                         },
@@ -130,6 +197,9 @@ class Command(BaseCommand):
                         defaults={
                             "lastfm_playcount": None,
                             "lastfm_listeners": None,
+                            "lastfm_returned_track": "",
+                            "lastfm_returned_artista": "",
+                            "corregit": False,
                             "error": True,
                             "error_msg": f"Last.fm lookup failed for '{artist_name}' / '{track_name}'",
                         },
@@ -137,7 +207,10 @@ class Command(BaseCommand):
                 errors += 1
 
             if i % 100 == 0:
-                self.stdout.write(f"  Processed {i}... (ok={success}, err={errors}, skip={skipped})")
+                self.stdout.write(
+                    f"  Processed {i}... (ok={success}, err={errors}, "
+                    f"skip={skipped}, drift={drifts})"
+                )
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -145,6 +218,7 @@ class Command(BaseCommand):
                 f"    Success: {success}\n"
                 f"    Errors:  {errors}\n"
                 f"    Skipped (already ingested): {skipped}\n"
+                f"    Drift-flagged (corregit=True): {drifts}\n"
                 f"    Total processed: {success + errors + skipped}"
             )
         )
