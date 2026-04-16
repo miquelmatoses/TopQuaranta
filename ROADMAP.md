@@ -1,9 +1,10 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-16 — Phase 9: 17 findings + staff user mgmt across
-> 6 sessions. Tier 1 security complete except IP allowlist; Tier 2 reliability
-> mostly done (remaining: R7 retry, R10-R11 dobles fonts). See CLAUDE_EXCELLENCE.md.
+> Last updated: 2026-04-16 — Phase 9: 18 findings + staff user mgmt + public
+> transparency across 7 sessions. Tier 1 security complete except IP allowlist;
+> Tier 2 reliability mostly done (remaining: R7 retry, R10-R11 dobles fonts);
+> Φ4 cultural transparency landed. See CLAUDE_EXCELLENCE.md.
 
 ---
 
@@ -50,7 +51,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (17 findings landed: Tier 1 security + Tier 2 reliability mostly done) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (18 findings landed: Tier 1 security + Tier 2 reliability + Tier 4 cultural transparency core) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
@@ -144,6 +145,16 @@ Tactical items not tied to specific CLAUDE_EXCELLENCE findings:
       `music/constants.py`.
 - [ ] Consolidate reject-action handling; some inline styles in staff
       templates could become CSS classes.
+
+### Post-Excellence (apuntat durant la fase 9)
+- [ ] **Naming consolidation**: unificar "ranking / rànquing / ranquing /
+      top40" a **"top"** al llarg del codi, templates i URLs. El projecte
+      es diu TopQuaranta; l'UX actual barreja cinc variants del mateix
+      concepte. Caldrà una pantalla de naming + migració d'URLs amb 301.
+- [ ] **Correu @topquaranta.cat**: configurar hosting de correu propi
+      (Hetzner Hosted Mail, Fastmail o servidor propi). Aboliria el
+      pseudofailback FileEmailBackend actual i permetria enviar correus
+      de verificació, recuperacions, notificacions admin reals.
 
 ---
 

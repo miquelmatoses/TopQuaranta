@@ -67,6 +67,19 @@ van a `StaffAuditLog` via `log_staff_action`. Afegides 3 noves choices
 |---|---|---|
 | **R5** Drift detection: client retorna noms Last.fm, SenyalDiari captura i compara fuzzy (artist 0.90, track 0.80 amb normalització de variants), filtre + "acceptar correcció" a `/staff/senyal/` | ✅ | 4 commits |
 
+**Sessió 7 — Transparència algorítmica pública (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **Φ4** `/com-funciona/` editorial + live coefficients + reproducibility note | ✅ | `26e55e2` |
+| **Φ4** `/com-funciona/historial/` anonimitzat (de StaffAuditLog) | ✅ | `21076ad` |
+| **Φ4** Footer + ranking CTA links | ✅ | `fa2474d` |
+| **Φ4b** Portal artista exposa `score_setmanal` + `dies_en_top` + link a com-funciona; fix latent `canco.titol` → `canco.nom` | ✅ | `0c8501e` |
+
+Les línies R1 (reproduïbilitat) i R9 (audit log) finalment es fan visibles
+al públic: qualsevol usuari ara pot veure com es calcula el top i cada canvi
+dels coeficients queda exposat (anonimitzat) en ordre cronològic invers.
+
 Queda pendent de Tier 1 + 2:
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin
