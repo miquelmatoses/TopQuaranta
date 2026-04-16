@@ -17,3 +17,12 @@ SPOTIFY_CLIENT_ID = "test-spotify-id"
 SPOTIFY_CLIENT_SECRET = "test-spotify-secret"
 LASTFM_API_KEY = "test-lastfm-key"
 LASTFM_API_SECRET = "test-lastfm-secret"
+
+# Keep ERROR records out of /var/log/topquaranta/errors.log during tests —
+# that file is consumed by the ops health check (tq-health).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"null": {"class": "logging.NullHandler"}},
+    "root": {"handlers": ["null"], "level": "CRITICAL"},
+}

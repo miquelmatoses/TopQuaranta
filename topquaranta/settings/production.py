@@ -22,10 +22,12 @@ CSRF_COOKIE_SECURE = True
 LASTFM_API_KEY = config("LASTFM_API_KEY")
 LASTFM_API_SECRET = config("LASTFM_API_SECRET", default="")
 
-# Spotify
+# Spotify (fallback — blocked since 2024, client retained for reference)
 SPOTIFY_CLIENT_ID = config("SPOTIFY_CLIENT_ID", default="")
 SPOTIFY_CLIENT_SECRET = config("SPOTIFY_CLIENT_SECRET", default="")
 
-# Telegram
-TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN", default="")
-TELEGRAM_CHANNEL_ID = config("TELEGRAM_CHANNEL_ID", default="")
+# No SMTP is configured on this server. mail_admins() calls would try
+# localhost:25 and raise ConnectionRefusedError. Route admin notifications
+# to a file instead; call sites already catch errors defensively.
+EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+EMAIL_FILE_PATH = "/var/log/topquaranta/admin_mail"

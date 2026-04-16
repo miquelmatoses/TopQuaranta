@@ -78,6 +78,8 @@ ADMINS = [("TopQuaranta", "admin@topquaranta.cat")]
 DEFAULT_FROM_EMAIL = "noreply@topquaranta.cat"
 SERVER_EMAIL = "noreply@topquaranta.cat"
 
+_LOG_DIR = Path("/var/log/topquaranta")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -92,9 +94,22 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
+        # All ERROR / CRITICAL log records across the project are appended to
+        # a single file. Consumed by bin/tq-health.sh and the ops dashboard;
+        # see CLAUDE_PIPELINE.md (monitoring section).
+        "errors_file": {
+            "class": "logging.FileHandler",
+            "filename": str(_LOG_DIR / "errors.log"),
+            "formatter": "verbose",
+            "level": "ERROR",
+            # delay=True means the file is not opened until first use; avoids
+            # startup failures in environments where /var/log/topquaranta is
+            # not writable (e.g. tests, CI).
+            "delay": True,
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "errors_file"],
         "level": "INFO",
     },
     "loggers": {
