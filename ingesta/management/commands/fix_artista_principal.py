@@ -10,23 +10,32 @@ logger = logging.getLogger(__name__)
 
 
 def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
-    """Get or create an Artista by deezer_id. Returns None on IntegrityError."""
+    """Get or create an Artista by Deezer ID (via ArtistaDeezer M2M).
+
+    R10: Artista.deezer_id was dropped — ArtistaDeezer is the single source.
+    """
+    from music.models import ArtistaDeezer
+
+    ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+    if ad:
+        return ad.artista
     try:
-        return Artista.objects.get(deezer_id=deezer_id)
-    except Artista.DoesNotExist:
-        pass
-    try:
-        return Artista.objects.create(
+        artista = Artista.objects.create(
             nom=name,
             lastfm_nom=name,
-            deezer_id=deezer_id,
             aprovat=False,
             auto_descobert=True,
             font_descoberta="deezer_contributor",
         )
+        ArtistaDeezer.objects.get_or_create(
+            deezer_id=deezer_id,
+            defaults={"artista": artista, "principal": True},
+        )
+        return artista
     except IntegrityError:
-        # Race condition or duplicate — refetch
-        return Artista.objects.filter(deezer_id=deezer_id).first()
+        # Race condition or duplicate — refetch via the M2M
+        ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+        return ad.artista if ad else None
 
 
 class Command(BaseCommand):
@@ -79,7 +88,7 @@ class Command(BaseCommand):
             main_name = main.get("name", "")
 
             # Fix main artist if different
-            if main_id and main_id != canco.artista.deezer_id:
+            if main_id and main_id != canco.artista.deezer_id_principal:
                 if dry_run:
                     self.stdout.write(
                         f"  FIX MAIN: {canco.nom} — {canco.artista.nom} → {main_name} (dz={main_id})"
@@ -91,9 +100,15 @@ class Command(BaseCommand):
                         canco.save(update_fields=["artista_id"])
                 main_fixed += 1
 
-            # Process secondary contributors
-            current_col_ids = set(canco.artistes_col.values_list("deezer_id", flat=True))
-            main_artista_dz = main_id or canco.artista.deezer_id
+            # Process secondary contributors. Read existing collaborator
+            # Deezer IDs via the ArtistaDeezer M2M (R10: legacy direct
+            # column on Artista is gone).
+            from music.models import ArtistaDeezer
+            current_col_ids = set(
+                ArtistaDeezer.objects.filter(artista__in=canco.artistes_col.all())
+                .values_list("deezer_id", flat=True)
+            )
+            main_artista_dz = main_id or canco.artista.deezer_id_principal
 
             for contributor in contributors[1:]:
                 c_id = contributor.get("id")

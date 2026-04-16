@@ -334,7 +334,6 @@ class Command(BaseCommand):
         new_artista = Artista.objects.create(
             nom=main_name,
             lastfm_nom=main_name,
-            deezer_id=main_id,
             aprovat=False,
             auto_descobert=True,
             font_descoberta="deezer_contributor",
@@ -406,7 +405,6 @@ class Command(BaseCommand):
                     collab = Artista.objects.create(
                         nom=c_name,
                         lastfm_nom=c_name,
-                        deezer_id=c_id,
                         aprovat=False,
                         auto_descobert=True,
                         font_descoberta="collaborador",

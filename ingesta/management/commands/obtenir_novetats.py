@@ -34,7 +34,6 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
         artista = Artista.objects.create(
             nom=name,
             lastfm_nom=name,
-            deezer_id=deezer_id,
             aprovat=False,
             auto_descobert=True,
             font_descoberta="deezer_contributor",
@@ -46,7 +45,7 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
         return artista
     except IntegrityError:
         ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
-        return ad.artista if ad else Artista.objects.filter(deezer_id=deezer_id).first()
+        return ad.artista if ad else None
 
 
 class Command(BaseCommand):
