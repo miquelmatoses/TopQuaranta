@@ -384,7 +384,17 @@ def configuracio(request: HttpRequest) -> HttpResponse:
                     setattr(config, field.attname, type(getattr(config, field.attname))(val))
                 except (ValueError, TypeError):
                     pass
-        config.save()
+        # R8: full_clean() in ConfiguracioGlobal.save() will raise
+        # ValidationError if any coefficient is out of range. Surface the
+        # error to the staff user instead of 500-ing.
+        from django.core.exceptions import ValidationError
+        try:
+            config.save()
+        except ValidationError as exc:
+            for field_name, msgs in exc.message_dict.items():
+                for msg in msgs:
+                    messages.error(request, f"{field_name}: {msg}")
+            return redirect("staff:configuracio")
         messages.success(request, "Configuració actualitzada.")
         return redirect("staff:configuracio")
 
