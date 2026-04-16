@@ -81,6 +81,7 @@ class TestIngestarMetadataDeezer:
         )
 
         mock_deezer.search_artist.return_value = {"id": 98469, "name": "ZOO"}
+        mock_deezer.get_artist_info.return_value = {"nb_fan": 1000, "nb_album": 5}
         # First get_artist_albums call: for ISRC validation (up to 3 albums)
         # Second call: for actual album fetching
         mock_deezer.get_artist_albums.side_effect = [
@@ -216,6 +217,7 @@ class TestIngestarMetadataDeezer:
         # No tracks with ISRC exist
 
         mock_deezer.search_artist.return_value = {"id": 98469, "name": "ZOO"}
+        mock_deezer.get_artist_info.return_value = {"nb_fan": 500, "nb_album": 3}
         mock_deezer.get_artist_albums.return_value = [MOCK_ALBUM]
         mock_deezer.get_album_tracks.return_value = [MOCK_TRACK]
 
