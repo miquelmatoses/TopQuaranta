@@ -537,6 +537,10 @@ class StaffAuditLog(models.Model):
         ("sollicitud_rebutjar", "Sol·licitud: rebutjar"),
         # Configuració global
         ("config_update", "Configuració global: actualitzada"),
+        # Usuaris
+        ("usuari_desactivar", "Usuari: desactivar"),
+        ("usuari_reactivar", "Usuari: reactivar"),
+        ("usuari_reset_2fa", "Usuari: reset 2FA"),
     ]
 
     actor = models.ForeignKey(
