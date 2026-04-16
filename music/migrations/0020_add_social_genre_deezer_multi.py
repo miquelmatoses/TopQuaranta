@@ -7,87 +7,116 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0019_add_album_slug'),
+        ("music", "0019_add_album_slug"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='artista',
-            name='bandcamp_url',
+            model_name="artista",
+            name="bandcamp_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='facebook_url',
+            model_name="artista",
+            name="facebook_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='genere',
-            field=models.CharField(blank=True, help_text='Musical genre (free text).', max_length=255),
+            model_name="artista",
+            name="genere",
+            field=models.CharField(
+                blank=True, help_text="Musical genre (free text).", max_length=255
+            ),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='myspace_url',
+            model_name="artista",
+            name="myspace_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='percentatge_femeni',
-            field=models.CharField(blank=True, choices=[('100', '100%'), ('50+', '50% o més'), ('<50', 'Menys del 50%'), ('0', '0%')], help_text='Female representation percentage.', max_length=10),
+            model_name="artista",
+            name="percentatge_femeni",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("100", "100%"),
+                    ("50+", "50% o més"),
+                    ("<50", "Menys del 50%"),
+                    ("0", "0%"),
+                ],
+                help_text="Female representation percentage.",
+                max_length=10,
+            ),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='soundcloud_url',
+            model_name="artista",
+            name="soundcloud_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='spotify_url',
+            model_name="artista",
+            name="spotify_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='tiktok_url',
+            model_name="artista",
+            name="tiktok_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='viasona_url',
+            model_name="artista",
+            name="viasona_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='viquipedia_url',
+            model_name="artista",
+            name="viquipedia_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='web_url',
+            model_name="artista",
+            name="web_url",
             field=models.URLField(blank=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='youtube_url',
+            model_name="artista",
+            name="youtube_url",
             field=models.URLField(blank=True),
         ),
         migrations.AlterField(
-            model_name='artista',
-            name='aprovat',
-            field=models.BooleanField(default=True, help_text='False = pending human review in staff panel.'),
+            model_name="artista",
+            name="aprovat",
+            field=models.BooleanField(
+                default=True, help_text="False = pending human review in staff panel."
+            ),
         ),
         migrations.CreateModel(
-            name='ArtistaDeezer',
+            name="ArtistaDeezer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('deezer_id', models.BigIntegerField(unique=True)),
-                ('principal', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('artista', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='deezer_ids', to='music.artista')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("deezer_id", models.BigIntegerField(unique=True)),
+                ("principal", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "artista",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="deezer_ids",
+                        to="music.artista",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Artista Deezer ID',
-                'verbose_name_plural': 'Artista Deezer IDs',
+                "verbose_name": "Artista Deezer ID",
+                "verbose_name_plural": "Artista Deezer IDs",
             },
         ),
     ]

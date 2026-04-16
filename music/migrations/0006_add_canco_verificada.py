@@ -6,13 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0005_deezer_id_bigint'),
+        ("music", "0005_deezer_id_bigint"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='canco',
-            name='verificada',
-            field=models.BooleanField(default=False, help_text='False = pending admin review. Only verified tracks enter the ranking.'),
+            model_name="canco",
+            name="verificada",
+            field=models.BooleanField(
+                default=False,
+                help_text="False = pending admin review. Only verified tracks enter the ranking.",
+            ),
         ),
     ]

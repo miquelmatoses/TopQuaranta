@@ -6,18 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0016_rename_cancons_ingerades_album_cancons_obtingudes_and_more'),
+        ("music", "0016_rename_cancons_ingerades_album_cancons_obtingudes_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='historialrevisio',
-            name='ml_classe_decisio',
-            field=models.CharField(blank=True, help_text='ML class at the time of decision.', max_length=1),
+            model_name="historialrevisio",
+            name="ml_classe_decisio",
+            field=models.CharField(
+                blank=True, help_text="ML class at the time of decision.", max_length=1
+            ),
         ),
         migrations.AddField(
-            model_name='historialrevisio',
-            name='ml_confianca_decisio',
-            field=models.FloatField(blank=True, help_text='ML confidence at the time of decision.', null=True),
+            model_name="historialrevisio",
+            name="ml_confianca_decisio",
+            field=models.FloatField(
+                blank=True,
+                help_text="ML confidence at the time of decision.",
+                null=True,
+            ),
         ),
     ]

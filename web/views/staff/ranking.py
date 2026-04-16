@@ -36,24 +36,27 @@ def llista(request: HttpRequest) -> HttpResponse:
     if territori not in {t[0] for t in TERRITORIS}:
         territori = "CAT"
 
-    qs = (
-        RankingProvisional.objects.filter(territori=territori)
-        .select_related("canco", "canco__artista")
+    qs = RankingProvisional.objects.filter(territori=territori).select_related(
+        "canco", "canco__artista"
     )
 
     qs, current_order, current_dir = apply_ordering(
         request, qs, RANKING_ORDER_FIELDS, default="posicio"
     )
 
-    return render(request, "web/staff/ranking.html", {
-        "staff_section": "ranking",
-        "ranking": qs,
-        "territori": territori,
-        "territoris": TERRITORIS,
-        "motius": MOTIUS_REBUIG,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/ranking.html",
+        {
+            "staff_section": "ranking",
+            "ranking": qs,
+            "territori": territori,
+            "territoris": TERRITORIS,
+            "motius": MOTIUS_REBUIG,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -84,8 +87,11 @@ def accio(request: HttpRequest) -> HttpResponse:
             for rp in entries:
                 rebutjar_canco(rp.canco, motiu)
                 log_staff_action(
-                    request, "canco_rebutjar", target=rp.canco,
-                    motiu=motiu, source="provisional_ranking",
+                    request,
+                    "canco_rebutjar",
+                    target=rp.canco,
+                    motiu=motiu,
+                    source="provisional_ranking",
                 )
                 rp.delete()
                 total += 1
@@ -100,8 +106,11 @@ def accio(request: HttpRequest) -> HttpResponse:
                 count = rebutjar_artista(artista, motiu)
                 total_cancons += count
                 log_staff_action(
-                    request, "artista_rebutjar", target=artista,
-                    motiu=motiu, cancons_afectades=count,
+                    request,
+                    "artista_rebutjar",
+                    target=artista,
+                    motiu=motiu,
+                    cancons_afectades=count,
                     source="provisional_ranking",
                 )
             RankingProvisional.objects.filter(

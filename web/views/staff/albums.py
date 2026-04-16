@@ -37,8 +37,12 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
         messages.success(request, f"Àlbum «{album.nom}» actualitzat.")
         return redirect("staff:album_editar", pk=album.pk)
 
-    return render(request, "web/staff/album_edit.html", {
-        "staff_section": "cancons",
-        "album": album,
-        "cancons": cancons,
-    })
+    return render(
+        request,
+        "web/staff/album_edit.html",
+        {
+            "staff_section": "cancons",
+            "album": album,
+            "cancons": cancons,
+        },
+    )

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ranking', '0001_initial'),
+        ("ranking", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='configuracioglobal',
-            name='min_cancons_ranking_propi',
+            model_name="configuracioglobal",
+            name="min_cancons_ranking_propi",
             field=models.IntegerField(default=20),
         ),
         migrations.AlterField(
-            model_name='rankingsetmanal',
-            name='territori',
+            model_name="rankingsetmanal",
+            name="territori",
             field=models.CharField(max_length=4),
         ),
     ]

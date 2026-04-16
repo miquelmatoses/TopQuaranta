@@ -6,31 +6,37 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0014_add_new_territoris'),
+        ("music", "0014_add_new_territoris"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ArtistaPendent',
-            fields=[
-            ],
+            name="ArtistaPendent",
+            fields=[],
             options={
-                'verbose_name': 'Artista pendent',
-                'verbose_name_plural': 'Artistes pendents',
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
+                "verbose_name": "Artista pendent",
+                "verbose_name_plural": "Artistes pendents",
+                "proxy": True,
+                "indexes": [],
+                "constraints": [],
             },
-            bases=('music.artista',),
+            bases=("music.artista",),
         ),
         migrations.AddField(
-            model_name='album',
-            name='cancons_ingerades',
-            field=models.BooleanField(default=False, help_text='True when tracks have been fetched from Deezer.'),
+            model_name="album",
+            name="cancons_ingerades",
+            field=models.BooleanField(
+                default=False,
+                help_text="True when tracks have been fetched from Deezer.",
+            ),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='last_checked_deezer',
-            field=models.DateTimeField(blank=True, help_text='Last time Deezer was queried for new albums.', null=True),
+            model_name="artista",
+            name="last_checked_deezer",
+            field=models.DateTimeField(
+                blank=True,
+                help_text="Last time Deezer was queried for new albums.",
+                null=True,
+            ),
         ),
     ]

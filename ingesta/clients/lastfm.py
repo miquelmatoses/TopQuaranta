@@ -17,7 +17,9 @@ MAX_RETRIES = MAX_API_RETRIES
 # Each pattern removes the matched suffix (anchored to end of string).
 _TRACK_SUFFIX_STRIP = [
     # Parenthetical features / collaborations
-    re.compile(r"\s*[\(\[]\s*(feat\.?|ft\.?|with|amb|featuring)\s+[^)\]]*[\)\]]\s*$", re.I),
+    re.compile(
+        r"\s*[\(\[]\s*(feat\.?|ft\.?|with|amb|featuring)\s+[^)\]]*[\)\]]\s*$", re.I
+    ),
     # Parenthetical version/live/remix/etc tags (single trailing parenthetical)
     re.compile(
         r"\s*[\(\[]\s*("
@@ -104,7 +106,12 @@ def _api_call(artist_name: str, track_name: str) -> tuple[dict | None, int | Non
             wait = 2**attempt
             logger.warning(
                 "Last.fm attempt %d/%d failed for '%s'/'%s': %s — retry in %ds",
-                attempt + 1, MAX_RETRIES, artist_name, track_name, exc, wait,
+                attempt + 1,
+                MAX_RETRIES,
+                artist_name,
+                track_name,
+                exc,
+                wait,
             )
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
@@ -166,7 +173,9 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
             if track2 is not None:
                 logger.info(
                     "Last.fm recovered '%s'/'%s' via normalization to '%s'",
-                    artist_name, track_name, normalized,
+                    artist_name,
+                    track_name,
+                    normalized,
                 )
                 rt, ra = _extract_returned_names(track2)
                 return {
@@ -179,10 +188,15 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
 
     if err is not None:
         logger.warning(
-            "Last.fm error %s for '%s' / '%s'", err, artist_name, track_name,
+            "Last.fm error %s for '%s' / '%s'",
+            err,
+            artist_name,
+            track_name,
         )
     else:
         logger.error(
-            "Last.fm: all retries exhausted for '%s' / '%s'", artist_name, track_name,
+            "Last.fm: all retries exhausted for '%s' / '%s'",
+            artist_name,
+            track_name,
         )
     return None

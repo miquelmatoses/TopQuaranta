@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "topquaranta.settings.production")
 django.setup()
 
-from django.db.models import Avg, Count, Min, Max, Q
+from django.db.models import Avg, Count, Max, Min, Q
 from django.db.models.functions import Coalesce
 
 from ranking.models import SenyalDiari
@@ -74,29 +74,39 @@ def main():
     print(f"  error = True:    {err_count}")
 
     playcounts = sorted(
-        qs_day.exclude(lastfm_playcount__isnull=True)
-        .values_list("lastfm_playcount", flat=True)
+        qs_day.exclude(lastfm_playcount__isnull=True).values_list(
+            "lastfm_playcount", flat=True
+        )
     )
     listeners = sorted(
-        qs_day.exclude(lastfm_listeners__isnull=True)
-        .values_list("lastfm_listeners", flat=True)
+        qs_day.exclude(lastfm_listeners__isnull=True).values_list(
+            "lastfm_listeners", flat=True
+        )
     )
 
     if playcounts:
         print(f"\n  Playcount (n={len(playcounts)}):")
-        print(f"    min={playcounts[0]:,}  max={playcounts[-1]:,}  "
-              f"mitjana={sum(playcounts)/len(playcounts):,.0f}")
-        print(f"    p10={percentile(playcounts, 10):,.0f}  "
-              f"p50={percentile(playcounts, 50):,.0f}  "
-              f"p90={percentile(playcounts, 90):,.0f}")
+        print(
+            f"    min={playcounts[0]:,}  max={playcounts[-1]:,}  "
+            f"mitjana={sum(playcounts)/len(playcounts):,.0f}"
+        )
+        print(
+            f"    p10={percentile(playcounts, 10):,.0f}  "
+            f"p50={percentile(playcounts, 50):,.0f}  "
+            f"p90={percentile(playcounts, 90):,.0f}"
+        )
 
     if listeners:
         print(f"\n  Listeners (n={len(listeners)}):")
-        print(f"    min={listeners[0]:,}  max={listeners[-1]:,}  "
-              f"mitjana={sum(listeners)/len(listeners):,.0f}")
-        print(f"    p10={percentile(listeners, 10):,.0f}  "
-              f"p50={percentile(listeners, 50):,.0f}  "
-              f"p90={percentile(listeners, 90):,.0f}")
+        print(
+            f"    min={listeners[0]:,}  max={listeners[-1]:,}  "
+            f"mitjana={sum(listeners)/len(listeners):,.0f}"
+        )
+        print(
+            f"    p10={percentile(listeners, 10):,.0f}  "
+            f"p50={percentile(listeners, 50):,.0f}  "
+            f"p90={percentile(listeners, 90):,.0f}"
+        )
 
     # --- 3. Examples ---
     print(f"\n{'=' * 70}")
@@ -110,8 +120,10 @@ def main():
         .order_by("-lastfm_playcount")[:5]
     )
     for r in top:
-        print(f"    {r.lastfm_playcount:>12,} plays | {r.lastfm_listeners:>8,} listeners | "
-              f"{r.canco.artista.nom} — {r.canco.nom}")
+        print(
+            f"    {r.lastfm_playcount:>12,} plays | {r.lastfm_listeners:>8,} listeners | "
+            f"{r.canco.artista.nom} — {r.canco.nom}"
+        )
 
     print("\n  Bottom 5 playcount (> 0):")
     bottom = (
@@ -120,14 +132,15 @@ def main():
         .order_by("lastfm_playcount")[:5]
     )
     for r in bottom:
-        print(f"    {r.lastfm_playcount:>12,} plays | {r.lastfm_listeners:>8,} listeners | "
-              f"{r.canco.artista.nom} — {r.canco.nom}")
+        print(
+            f"    {r.lastfm_playcount:>12,} plays | {r.lastfm_listeners:>8,} listeners | "
+            f"{r.canco.artista.nom} — {r.canco.nom}"
+        )
 
     print("\n  5 amb error:")
-    errs = (
-        SenyalDiari.objects.filter(data=latest, error=True)
-        .select_related("canco", "canco__artista")[:5]
-    )
+    errs = SenyalDiari.objects.filter(data=latest, error=True).select_related(
+        "canco", "canco__artista"
+    )[:5]
     for r in errs:
         msg = r.error_msg[:80] if r.error_msg else "(sense missatge)"
         print(f"    {r.canco.artista.nom} — {r.canco.nom}")
@@ -144,8 +157,10 @@ def main():
 
         # Get tracks present in both days without error
         from django.db import connection
+
         with connection.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT
                     i1.lastfm_playcount AS pc1,
                     i2.lastfm_playcount AS pc2,
@@ -162,7 +177,9 @@ def main():
                     AND i1.lastfm_playcount IS NOT NULL
                     AND i2.lastfm_playcount IS NOT NULL
                 ORDER BY delta DESC
-            """, [day1, day2])
+            """,
+                [day1, day2],
+            )
             rows = cursor.fetchall()
 
         if not rows:
@@ -181,22 +198,29 @@ def main():
             if deltas:
                 deltas_sorted = sorted(deltas)
                 print(f"\n  Delta playcount:")
-                print(f"    min={deltas_sorted[0]:,}  max={deltas_sorted[-1]:,}  "
-                      f"mitjana={sum(deltas)/len(deltas):,.0f}")
-                print(f"    p10={percentile(deltas_sorted, 10):,.0f}  "
-                      f"p50={percentile(deltas_sorted, 50):,.0f}  "
-                      f"p90={percentile(deltas_sorted, 90):,.0f}")
+                print(
+                    f"    min={deltas_sorted[0]:,}  max={deltas_sorted[-1]:,}  "
+                    f"mitjana={sum(deltas)/len(deltas):,.0f}"
+                )
+                print(
+                    f"    p10={percentile(deltas_sorted, 10):,.0f}  "
+                    f"p50={percentile(deltas_sorted, 50):,.0f}  "
+                    f"p90={percentile(deltas_sorted, 90):,.0f}"
+                )
 
             print(f"\n  Top 5 creixement:")
             for r in rows[:5]:
-                print(f"    +{r[2]:>8,} plays ({r[0]:,} → {r[1]:,}) | "
-                      f"{r[4]} — {r[3]}")
+                print(
+                    f"    +{r[2]:>8,} plays ({r[0]:,} → {r[1]:,}) | " f"{r[4]} — {r[3]}"
+                )
 
             print(f"\n  Top 5 descens:")
             for r in rows[-5:]:
                 sign = "+" if r[2] >= 0 else ""
-                print(f"    {sign}{r[2]:>8,} plays ({r[0]:,} → {r[1]:,}) | "
-                      f"{r[4]} — {r[3]}")
+                print(
+                    f"    {sign}{r[2]:>8,} plays ({r[0]:,} → {r[1]:,}) | "
+                    f"{r[4]} — {r[3]}"
+                )
     else:
         print(f"\n{'=' * 70}")
         print("4. COMPARACIÓ ENTRE DIES")

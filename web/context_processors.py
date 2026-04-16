@@ -25,6 +25,7 @@ def user_header_info(request: HttpRequest) -> dict:
     # Check if user is a verified artist (cache on request to avoid repeated queries)
     if not hasattr(request, "_tq_user_artista_checked"):
         from comptes.models import UserArtista
+
         request._tq_is_verified_artist = UserArtista.objects.filter(
             usuari=request.user, verificat=True
         ).exists()

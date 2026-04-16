@@ -71,10 +71,14 @@ def api_municipi_lookup(request: Request) -> Response:
         return Response({"error": "Cal nom i comarca"}, status=400)
     try:
         m = Municipi.objects.get(nom=nom, comarca=comarca)
-        return Response({
-            "pk": m.pk, "nom": m.nom, "comarca": m.comarca,
-            "territori": m.territori_id,
-        })
+        return Response(
+            {
+                "pk": m.pk,
+                "nom": m.nom,
+                "comarca": m.comarca,
+                "territori": m.territori_id,
+            }
+        )
     except Municipi.DoesNotExist:
         return Response({"error": "Municipi no trobat"}, status=404)
 
@@ -105,8 +109,9 @@ def mapa_artistes(request: Request) -> Response:
 
     # Load all municipis from Municipi model
     all_municipis = list(
-        Municipi.objects.select_related("territori")
-        .values("nom", "comarca", "territori__nom")
+        Municipi.objects.select_related("territori").values(
+            "nom", "comarca", "territori__nom"
+        )
     )
 
     # Load artists with their locations via ArtistaLocalitat
@@ -115,14 +120,11 @@ def mapa_artistes(request: Request) -> Response:
 
     if artist_ids:
         # Get all ArtistaLocalitat for ranked artists
-        localitats = (
-            ArtistaLocalitat.objects.filter(
-                artista__aprovat=True,
-                artista_id__in=artist_ids.keys(),
-                municipi__isnull=False,
-            )
-            .select_related("artista", "municipi", "municipi__territori")
-        )
+        localitats = ArtistaLocalitat.objects.filter(
+            artista__aprovat=True,
+            artista_id__in=artist_ids.keys(),
+            municipi__isnull=False,
+        ).select_related("artista", "municipi", "municipi__territori")
         for al in localitats:
             artista = al.artista
             info = {
@@ -138,7 +140,10 @@ def mapa_artistes(request: Request) -> Response:
 
             # Group by comarca — keep top artist
             com = al.municipi.comarca.lower()
-            if com not in artista_by_comarca or info["aparicions"] > artista_by_comarca[com]["aparicions"]:
+            if (
+                com not in artista_by_comarca
+                or info["aparicions"] > artista_by_comarca[com]["aparicions"]
+            ):
                 artista_by_comarca[com] = info
 
     # Build comarques data
@@ -165,7 +170,9 @@ def mapa_artistes(request: Request) -> Response:
             "artistes": sorted(artistes, key=lambda a: -a["aparicions"])[:5],
         }
 
-    return Response({
-        "comarques": comarques,
-        "municipis": municipis_data,
-    })
+    return Response(
+        {
+            "comarques": comarques,
+            "municipis": municipis_data,
+        }
+    )

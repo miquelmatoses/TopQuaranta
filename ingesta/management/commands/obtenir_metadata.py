@@ -188,7 +188,9 @@ class Command(BaseCommand):
         """
         result = deezer.search_artist(artista.nom)
         if not result:
-            logger.info("Deezer: no match for '%s' — marking deezer_no_trobat", artista.nom)
+            logger.info(
+                "Deezer: no match for '%s' — marking deezer_no_trobat", artista.nom
+            )
             with transaction.atomic():
                 artista.deezer_no_trobat = True
                 artista.save(update_fields=["deezer_no_trobat"])
@@ -212,7 +214,10 @@ class Command(BaseCommand):
                 logger.warning(
                     "Deezer ISRC validation failed for '%s' "
                     "(candidate='%s' id=%d, expected ISRC=%s)",
-                    artista.nom, candidate_name, candidate_id, known_track.isrc,
+                    artista.nom,
+                    candidate_name,
+                    candidate_id,
+                    known_track.isrc,
                 )
                 with transaction.atomic():
                     artista.deezer_no_trobat = True
@@ -220,13 +225,17 @@ class Command(BaseCommand):
                 return None
             logger.info(
                 "Deezer ISRC validated for '%s' → '%s' (id=%d)",
-                artista.nom, candidate_name, candidate_id,
+                artista.nom,
+                candidate_name,
+                candidate_id,
             )
         else:
             # No ISRC to validate against — accept name match only
             logger.info(
                 "Deezer name-only match for '%s' → '%s' (id=%d, no ISRC to validate)",
-                artista.nom, candidate_name, candidate_id,
+                artista.nom,
+                candidate_name,
+                candidate_id,
             )
 
         # Populate Deezer metadata
@@ -235,11 +244,15 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 artista.deezer_no_trobat = False
-                artista.save(update_fields=[
-                    "deezer_no_trobat",
-                    "deezer_nb_fan", "deezer_nb_album",
-                    "deezer_nom", "deezer_nom_similitud",
-                ])
+                artista.save(
+                    update_fields=[
+                        "deezer_no_trobat",
+                        "deezer_nb_fan",
+                        "deezer_nb_album",
+                        "deezer_nom",
+                        "deezer_nom_similitud",
+                    ]
+                )
                 # R10: ArtistaDeezer is the single source of truth now.
                 ArtistaDeezer.objects.get_or_create(
                     deezer_id=candidate_id,
@@ -249,7 +262,8 @@ class Command(BaseCommand):
             logger.warning(
                 "Deezer ID %d already assigned to another artist — "
                 "skipping '%s' (not marking deezer_no_trobat)",
-                candidate_id, artista.nom,
+                candidate_id,
+                artista.nom,
             )
             artista.refresh_from_db()
             return None
@@ -327,7 +341,11 @@ class Command(BaseCommand):
         if not main_id or main_id == artista.deezer_id_principal:
             return artista
 
-        ad = ArtistaDeezer.objects.filter(deezer_id=main_id).select_related("artista").first()
+        ad = (
+            ArtistaDeezer.objects.filter(deezer_id=main_id)
+            .select_related("artista")
+            .first()
+        )
         if ad:
             return ad.artista
 
@@ -344,7 +362,8 @@ class Command(BaseCommand):
         )
         logger.info(
             "Created main artist '%s' (deezer_id=%d) from track contributor",
-            main_name, main_id,
+            main_name,
+            main_id,
         )
         return new_artista
 
@@ -356,10 +375,10 @@ class Command(BaseCommand):
         track_album_date_str = data.get("album_release_date", "")
         if track_album_date_str:
             from ingesta.clients.deezer import _parse_date
+
             track_album_date = _parse_date(track_album_date_str)
             if track_album_date and (
-                not album.data_llancament
-                or track_album_date < album.data_llancament
+                not album.data_llancament or track_album_date < album.data_llancament
             ):
                 album.data_llancament = track_album_date
                 album.save(update_fields=["data_llancament"])
@@ -372,7 +391,9 @@ class Command(BaseCommand):
             "nom": titlecase_catala(data["title"]),
             "album": album,
             "artista": real_artista,
-            "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
+            "durada_ms": (
+                data.get("duration", 0) * 1000 if data.get("duration") else None
+            ),
             "isrc": data.get("isrc", ""),
             "preview_url": data.get("preview", ""),
             "data_llancament": album.data_llancament,
@@ -398,7 +419,11 @@ class Command(BaseCommand):
                 c_name = contributor.get("name", "")
                 if not c_id or c_id == real_artista.deezer_id_principal:
                     continue
-                ad = ArtistaDeezer.objects.filter(deezer_id=c_id).select_related("artista").first()
+                ad = (
+                    ArtistaDeezer.objects.filter(deezer_id=c_id)
+                    .select_related("artista")
+                    .first()
+                )
                 if ad:
                     collab = ad.artista
                 else:
@@ -415,12 +440,14 @@ class Command(BaseCommand):
                     )
                     logger.info(
                         "Created collaborator Artista '%s' (deezer_id=%d)",
-                        c_name, c_id,
+                        c_name,
+                        c_id,
                     )
                 canco.artistes_col.add(collab)
 
         if created or force:
             from music.ml import classificar_i_guardar
+
             classificar_i_guardar(canco)
 
         return created

@@ -49,7 +49,9 @@ class Command(BaseCommand):
                 ok += 1
 
             if i % 100 == 0:
-                self.stdout.write(f"  Processed {i}/{total}... (ok={ok}, errors={errors})")
+                self.stdout.write(
+                    f"  Processed {i}/{total}... (ok={ok}, errors={errors})"
+                )
 
         self.stdout.write(
             self.style.SUCCESS(f"Backfill complete: {ok} updated, {errors} errors.")

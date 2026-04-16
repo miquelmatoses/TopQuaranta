@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0004_add_deezer_fields'),
+        ("music", "0004_add_deezer_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='album',
-            name='deezer_id',
+            model_name="album",
+            name="deezer_id",
             field=models.BigIntegerField(blank=True, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='artista',
-            name='deezer_id',
+            model_name="artista",
+            name="deezer_id",
             field=models.BigIntegerField(blank=True, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='canco',
-            name='deezer_id',
+            model_name="canco",
+            name="deezer_id",
             field=models.BigIntegerField(blank=True, null=True, unique=True),
         ),
     ]

@@ -76,6 +76,5 @@ def log_staff_action(
         )
     except Exception as exc:
         # Never propagate — the audit is secondary to the action itself.
-        logger.exception("Staff audit log write failed: action=%s err=%s",
-                         action, exc)
+        logger.exception("Staff audit log write failed: action=%s err=%s", action, exc)
         return None

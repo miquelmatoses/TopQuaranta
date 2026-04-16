@@ -1,7 +1,7 @@
 import logging
 
-from django.db import IntegrityError
 from django.core.management.base import BaseCommand
+from django.db import IntegrityError
 
 from ingesta.clients import deezer
 from music.models import Artista, Canco
@@ -16,7 +16,11 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
     """
     from music.models import ArtistaDeezer
 
-    ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+    ad = (
+        ArtistaDeezer.objects.filter(deezer_id=deezer_id)
+        .select_related("artista")
+        .first()
+    )
     if ad:
         return ad.artista
     try:
@@ -34,7 +38,11 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
         return artista
     except IntegrityError:
         # Race condition or duplicate — refetch via the M2M
-        ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+        ad = (
+            ArtistaDeezer.objects.filter(deezer_id=deezer_id)
+            .select_related("artista")
+            .first()
+        )
         return ad.artista if ad else None
 
 
@@ -66,7 +74,7 @@ class Command(BaseCommand):
         errors = 0
         checked = 0
 
-        for canco in (qs if limit else qs.iterator()):
+        for canco in qs if limit else qs.iterator():
             data = deezer._get(f"{deezer.API_BASE}/track/{canco.deezer_id}")
 
             if deezer.quota_exhausted():
@@ -104,9 +112,11 @@ class Command(BaseCommand):
             # Deezer IDs via the ArtistaDeezer M2M (R10: legacy direct
             # column on Artista is gone).
             from music.models import ArtistaDeezer
+
             current_col_ids = set(
-                ArtistaDeezer.objects.filter(artista__in=canco.artistes_col.all())
-                .values_list("deezer_id", flat=True)
+                ArtistaDeezer.objects.filter(
+                    artista__in=canco.artistes_col.all()
+                ).values_list("deezer_id", flat=True)
             )
             main_artista_dz = main_id or canco.artista.deezer_id_principal
 

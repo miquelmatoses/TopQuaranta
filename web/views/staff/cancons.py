@@ -6,11 +6,16 @@ from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from music.audit import log_staff_action
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS
 from music.ml import recalcular_ml_si_cal
 from music.models import Album, Artista, Canco
-from music.audit import log_staff_action
-from music.services import aprovar_canco, rebutjar_album, rebutjar_artista, rebutjar_canco
+from music.services import (
+    aprovar_canco,
+    rebutjar_album,
+    rebutjar_artista,
+    rebutjar_canco,
+)
 
 from . import apply_ordering, paginate, staff_required
 
@@ -62,18 +67,22 @@ def llista(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs)
 
-    return render(request, "web/staff/cancons.html", {
-        "staff_section": "cancons",
-        "page": page,
-        "verificada": verificada,
-        "ml_classe": ml_classe,
-        "data_des": data_des,
-        "data_fins": data_fins,
-        "cerca": cerca,
-        "motius": MOTIUS_REBUIG,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/cancons.html",
+        {
+            "staff_section": "cancons",
+            "page": page,
+            "verificada": verificada,
+            "ml_classe": ml_classe,
+            "data_des": data_des,
+            "data_fins": data_fins,
+            "cerca": cerca,
+            "motius": MOTIUS_REBUIG,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -113,8 +122,11 @@ def accio(request: HttpRequest) -> HttpResponse:
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
                     log_staff_action(
-                        request, "artista_rebutjar", target=artista,
-                        motiu=motiu, cancons_afectades=count,
+                        request,
+                        "artista_rebutjar",
+                        target=artista,
+                        motiu=motiu,
+                        cancons_afectades=count,
                     )
                     msgs.append(f"{count} cancons de {artista.nom}")
             elif motiu == "album_incorrecte":
@@ -122,15 +134,21 @@ def accio(request: HttpRequest) -> HttpResponse:
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
                     log_staff_action(
-                        request, "canco_rebutjar_album", target=album,
-                        motiu=motiu, cancons_afectades=count,
+                        request,
+                        "canco_rebutjar_album",
+                        target=album,
+                        motiu=motiu,
+                        cancons_afectades=count,
                     )
                     msgs.append(f"{count} cancons de l'album {album.nom}")
             else:
                 for canco in cancons_qs:
                     rebutjar_canco(canco, motiu)
                     log_staff_action(
-                        request, "canco_rebutjar", target=canco, motiu=motiu,
+                        request,
+                        "canco_rebutjar",
+                        target=canco,
+                        motiu=motiu,
                     )
                 msgs.append(f"{cancons_qs.count()} cancons rebutjades")
         recalcular_ml_si_cal()
@@ -142,22 +160,29 @@ def accio(request: HttpRequest) -> HttpResponse:
         with transaction.atomic():
             if motiu == "artista_incorrecte":
                 artista_ids = set(
-                    Canco.objects.filter(album_id__in=album_ids, verificada=False)
-                    .values_list("artista_id", flat=True)
+                    Canco.objects.filter(
+                        album_id__in=album_ids, verificada=False
+                    ).values_list("artista_id", flat=True)
                 )
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
                     log_staff_action(
-                        request, "artista_rebutjar", target=artista,
-                        motiu=motiu, cancons_afectades=count,
+                        request,
+                        "artista_rebutjar",
+                        target=artista,
+                        motiu=motiu,
+                        cancons_afectades=count,
                     )
                     msgs.append(f"{count} cancons de {artista.nom}")
             else:
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
                     log_staff_action(
-                        request, "canco_rebutjar_album", target=album,
-                        motiu=motiu, cancons_afectades=count,
+                        request,
+                        "canco_rebutjar_album",
+                        target=album,
+                        motiu=motiu,
+                        cancons_afectades=count,
                     )
                     msgs.append(f"{count} cancons de l'album {album.nom}")
         recalcular_ml_si_cal()
@@ -173,7 +198,9 @@ def accio(request: HttpRequest) -> HttpResponse:
 def editar(request: HttpRequest, pk: int) -> HttpResponse:
     """Edit a single track."""
     canco = get_object_or_404(
-        Canco.objects.select_related("artista", "album").prefetch_related("artistes_col"),
+        Canco.objects.select_related("artista", "album").prefetch_related(
+            "artistes_col"
+        ),
         pk=pk,
     )
 
@@ -207,7 +234,11 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
         messages.success(request, f"Cançó «{canco.nom}» actualitzada.")
         return redirect("staff:canco_editar", pk=canco.pk)
 
-    return render(request, "web/staff/canco_edit.html", {
-        "staff_section": "cancons",
-        "canco": canco,
-    })
+    return render(
+        request,
+        "web/staff/canco_edit.html",
+        {
+            "staff_section": "cancons",
+            "canco": canco,
+        },
+    )

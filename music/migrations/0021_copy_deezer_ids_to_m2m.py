@@ -10,11 +10,13 @@ def copy_deezer_ids(apps, schema_editor):
     rows = []
     for artista in Artista.objects.filter(deezer_id__isnull=False).iterator():
         if not ArtistaDeezer.objects.filter(deezer_id=artista.deezer_id).exists():
-            rows.append(ArtistaDeezer(
-                artista=artista,
-                deezer_id=artista.deezer_id,
-                principal=True,
-            ))
+            rows.append(
+                ArtistaDeezer(
+                    artista=artista,
+                    deezer_id=artista.deezer_id,
+                    principal=True,
+                )
+            )
     ArtistaDeezer.objects.bulk_create(rows, batch_size=500)
 
 
@@ -26,7 +28,7 @@ def reverse(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0020_add_social_genre_deezer_multi'),
+        ("music", "0020_add_social_genre_deezer_multi"),
     ]
 
     operations = [

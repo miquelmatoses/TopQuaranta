@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 TERRITORIS = [
     ("CAT", "Catalunya"),
     ("VAL", "País Valencià"),

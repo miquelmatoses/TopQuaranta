@@ -12,15 +12,22 @@ from decimal import Decimal
 
 from django.db import migrations
 
-
 CONFIG_FIELDS = [
-    "dia_setmana_ranking", "penalitzacio_descens",
+    "dia_setmana_ranking",
+    "penalitzacio_descens",
     "exponent_penalitzacio_antiguitat",
-    "max_factor_a", "max_factor_b", "max_factor_c", "max_factor_final",
-    "penalitzacio_album_per_canco", "penalitzacio_artista_per_canco",
+    "max_factor_a",
+    "max_factor_b",
+    "max_factor_c",
+    "max_factor_final",
+    "penalitzacio_album_per_canco",
+    "penalitzacio_artista_per_canco",
     "coeficient_penalitzacio_top",
-    "penalitzacio_setmana_0", "penalitzacio_setmana_1", "penalitzacio_setmana_2",
-    "suavitat", "min_cancons_ranking_propi",
+    "penalitzacio_setmana_0",
+    "penalitzacio_setmana_1",
+    "penalitzacio_setmana_2",
+    "suavitat",
+    "min_cancons_ranking_propi",
 ]
 
 
@@ -37,8 +44,7 @@ def forwards(apps, schema_editor):
         snapshot = None
     else:
         snapshot = {
-            field: _decimal_to_float(getattr(cfg, field))
-            for field in CONFIG_FIELDS
+            field: _decimal_to_float(getattr(cfg, field)) for field in CONFIG_FIELDS
         }
 
     # Fill snapshots + config. Use a single UPDATE per row with bulk_update
@@ -56,9 +62,13 @@ def forwards(apps, schema_editor):
             row.config_snapshot = snapshot
             changed = True
         if changed:
-            row.save(update_fields=[
-                "canco_nom_snapshot", "artista_nom_snapshot", "config_snapshot",
-            ])
+            row.save(
+                update_fields=[
+                    "canco_nom_snapshot",
+                    "artista_nom_snapshot",
+                    "config_snapshot",
+                ]
+            )
             updated += 1
     print(f"  RankingSetmanal: backfilled snapshots for {updated} rows")
 

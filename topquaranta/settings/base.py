@@ -12,7 +12,7 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
     "axes",  # S4: brute-force login protection
-    "django_otp",                   # S11: TOTP 2FA base
+    "django_otp",  # S11: TOTP 2FA base
     "django_otp.plugins.otp_totp",  # S11: TOTP devices (Google Auth / Authy)
     "django_otp.plugins.otp_static",  # S11: single-use backup codes
     # Project apps
@@ -117,7 +117,9 @@ TEMPLATES = [
 WSGI_APPLICATION = "topquaranta.wsgi.application"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},

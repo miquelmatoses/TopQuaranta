@@ -78,7 +78,11 @@ def create_artista_localitats(apps, schema_editor):
     manual = 0
     no_loc = 0
 
-    for artista in Artista.objects.exclude(localitat="").exclude(comarca="").iterator(chunk_size=500):
+    for artista in (
+        Artista.objects.exclude(localitat="")
+        .exclude(comarca="")
+        .iterator(chunk_size=500)
+    ):
         loc = artista.localitat.strip()
         com = artista.comarca.strip()
 
@@ -104,7 +108,9 @@ def create_artista_localitats(apps, schema_editor):
             )
             manual += 1
 
-    print(f"  ArtistaLocalitat: {matched} matched to Municipi, {manual} manual entries, {no_loc} artists without location")
+    print(
+        f"  ArtistaLocalitat: {matched} matched to Municipi, {manual} manual entries, {no_loc} artists without location"
+    )
 
 
 def verify_territory_sync(apps, schema_editor):
@@ -115,7 +121,9 @@ def verify_territory_sync(apps, schema_editor):
     mismatches = 0
     total = 0
 
-    for artista in Artista.objects.prefetch_related("territoris", "localitats", "localitats__municipi").iterator(chunk_size=500):
+    for artista in Artista.objects.prefetch_related(
+        "territoris", "localitats", "localitats__municipi"
+    ).iterator(chunk_size=500):
         localitats = list(artista.localitats.all())
         if not localitats:
             continue

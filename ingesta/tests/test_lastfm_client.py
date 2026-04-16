@@ -1,10 +1,9 @@
-from unittest.mock import patch, call
+from unittest.mock import call, patch
 
 import pytest
 import requests
 
-from ingesta.clients.lastfm import get_track_info, RATE_LIMIT_SLEEP, MAX_RETRIES
-
+from ingesta.clients.lastfm import MAX_RETRIES, RATE_LIMIT_SLEEP, get_track_info
 
 FAKE_API_KEY = "test_api_key_123"
 

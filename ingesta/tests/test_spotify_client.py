@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -85,25 +85,27 @@ class TestGetArtistAlbums:
 
         mock_get.return_value = MagicMock(
             status_code=200,
-            json=MagicMock(return_value={
-                "items": [
-                    {
-                        "id": "alb1",
-                        "name": "Recent Album",
-                        "release_date": "2026-01-15",
-                        "album_type": "album",
-                        "images": [{"url": "https://img.com/1.jpg"}],
-                    },
-                    {
-                        "id": "alb2",
-                        "name": "Old Album",
-                        "release_date": "2020-01-01",
-                        "album_type": "album",
-                        "images": [],
-                    },
-                ],
-                "next": None,
-            }),
+            json=MagicMock(
+                return_value={
+                    "items": [
+                        {
+                            "id": "alb1",
+                            "name": "Recent Album",
+                            "release_date": "2026-01-15",
+                            "album_type": "album",
+                            "images": [{"url": "https://img.com/1.jpg"}],
+                        },
+                        {
+                            "id": "alb2",
+                            "name": "Old Album",
+                            "release_date": "2020-01-01",
+                            "album_type": "album",
+                            "images": [],
+                        },
+                    ],
+                    "next": None,
+                }
+            ),
         )
         mock_get.return_value.raise_for_status = MagicMock()
 
@@ -144,13 +146,15 @@ class TestGetTrack:
 
         mock_get.return_value = MagicMock(
             status_code=200,
-            json=MagicMock(return_value={
-                "id": "track1",
-                "name": "La cançó",
-                "duration_ms": 210000,
-                "external_ids": {"isrc": "ES1234567890"},
-                "artists": [{"id": "art1", "name": "Zoo"}],
-            }),
+            json=MagicMock(
+                return_value={
+                    "id": "track1",
+                    "name": "La cançó",
+                    "duration_ms": 210000,
+                    "external_ids": {"isrc": "ES1234567890"},
+                    "artists": [{"id": "art1", "name": "Zoo"}],
+                }
+            ),
         )
         mock_get.return_value.raise_for_status = MagicMock()
 

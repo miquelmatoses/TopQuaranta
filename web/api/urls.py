@@ -10,5 +10,9 @@ urlpatterns = [
     path("localitzacio/territoris/", views.api_territoris, name="api_territoris"),
     path("localitzacio/comarques/", views.api_comarques, name="api_comarques"),
     path("localitzacio/municipis/", views.api_municipis, name="api_municipis"),
-    path("localitzacio/municipi-lookup/", views.api_municipi_lookup, name="api_municipi_lookup"),
+    path(
+        "localitzacio/municipi-lookup/",
+        views.api_municipi_lookup,
+        name="api_municipi_lookup",
+    ),
 ]

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0011_alter_canco_preview_url'),
+        ("music", "0011_alter_canco_preview_url"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='canco',
-            name='ml_classe',
+            model_name="canco",
+            name="ml_classe",
             field=models.CharField(blank=True, db_index=True, max_length=1),
         ),
         migrations.AddField(
-            model_name='canco',
-            name='ml_confianca',
+            model_name="canco",
+            name="ml_confianca",
             field=models.FloatField(blank=True, null=True),
         ),
     ]

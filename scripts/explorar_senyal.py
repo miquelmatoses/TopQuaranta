@@ -14,9 +14,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "topquaranta.settings.production
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import django
+
 django.setup()
 
 from django.db.models import Count
+
 from ranking.models import SenyalDiari
 
 
@@ -58,18 +60,21 @@ def print_stats(label, arr):
     if len(arr) == 0:
         print("    (no data)")
         return
-    print(f"    min={arr.min():,.0f}  max={arr.max():,.0f}  "
-          f"median={percentile(arr, 50):,.0f}")
-    print(f"    p10={percentile(arr, 10):,.0f}  p25={percentile(arr, 25):,.0f}  "
-          f"p75={percentile(arr, 75):,.0f}  p90={percentile(arr, 90):,.0f}")
+    print(
+        f"    min={arr.min():,.0f}  max={arr.max():,.0f}  "
+        f"median={percentile(arr, 50):,.0f}"
+    )
+    print(
+        f"    p10={percentile(arr, 10):,.0f}  p25={percentile(arr, 25):,.0f}  "
+        f"p75={percentile(arr, 75):,.0f}  p90={percentile(arr, 90):,.0f}"
+    )
     print(f"    p95={percentile(arr, 95):,.0f}  p99={percentile(arr, 99):,.0f}")
 
 
 def main():
     # ── 1. Find the latest available date ──
     latest_date = (
-        SenyalDiari.objects
-        .filter(error=False, lastfm_playcount__isnull=False)
+        SenyalDiari.objects.filter(error=False, lastfm_playcount__isnull=False)
         .order_by("-data")
         .values_list("data", flat=True)
         .first()
@@ -79,8 +84,7 @@ def main():
         return
 
     earliest_date = (
-        SenyalDiari.objects
-        .filter(error=False, lastfm_playcount__isnull=False)
+        SenyalDiari.objects.filter(error=False, lastfm_playcount__isnull=False)
         .order_by("data")
         .values_list("data", flat=True)
         .first()
@@ -89,11 +93,12 @@ def main():
     print(f"Data range: {earliest_date} → {latest_date}")
     print(f"Days span: {(latest_date - earliest_date).days}")
 
-    total_rows = SenyalDiari.objects.filter(error=False, lastfm_playcount__isnull=False).count()
+    total_rows = SenyalDiari.objects.filter(
+        error=False, lastfm_playcount__isnull=False
+    ).count()
     total_errors = SenyalDiari.objects.filter(error=True).count()
     distinct_dates = (
-        SenyalDiari.objects
-        .filter(error=False, lastfm_playcount__isnull=False)
+        SenyalDiari.objects.filter(error=False, lastfm_playcount__isnull=False)
         .values_list("data", flat=True)
         .distinct()
         .count()
@@ -107,10 +112,15 @@ def main():
         data=latest_date, error=False, lastfm_playcount__isnull=False
     ).select_related("canco__artista")
 
-    rows = list(qs.values_list(
-        "canco_id", "canco__nom", "canco__artista__nom",
-        "lastfm_playcount", "lastfm_listeners",
-    ))
+    rows = list(
+        qs.values_list(
+            "canco_id",
+            "canco__nom",
+            "canco__artista__nom",
+            "lastfm_playcount",
+            "lastfm_listeners",
+        )
+    )
 
     print(f"\nTracks on {latest_date}: {len(rows)}")
 
@@ -178,7 +188,9 @@ def main():
     print_header("5. FORMULA SIMULATIONS")
 
     # Build lookup for deltas
-    delta_map = {r[0]: (r[5], r[6]) for r in delta_rows}  # canco_id -> (delta, listeners)
+    delta_map = {
+        r[0]: (r[5], r[6]) for r in delta_rows
+    }  # canco_id -> (delta, listeners)
 
     max_pc = playcounts.max() if len(playcounts) > 0 else 1
 
@@ -190,7 +202,9 @@ def main():
         scores_a.append((score, pc, ls, artista, nom))
     scores_a.sort(reverse=True)
 
-    print(f"  {'#':>3s}  {'Score':>7s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track")
+    print(
+        f"  {'#':>3s}  {'Score':>7s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track"
+    )
     for i, (score, pc, ls, art, nom) in enumerate(scores_a[:20]):
         print(f"  {i+1:3d}  {score:7.2f}  {pc:12,d}  {ls:10,d}  {art} — {nom}")
     print("  ...")
@@ -211,7 +225,9 @@ def main():
         scores_b.append((pc_ranks[i], pc, ls, artista, nom))
     scores_b.sort(reverse=True)
 
-    print(f"  {'#':>3s}  {'Score':>7s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track")
+    print(
+        f"  {'#':>3s}  {'Score':>7s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track"
+    )
     for i, (score, pc, ls, art, nom) in enumerate(scores_b[:20]):
         print(f"  {i+1:3d}  {score:7.2f}  {pc:12,d}  {ls:10,d}  {art} — {nom}")
     print("  ...")
@@ -225,7 +241,9 @@ def main():
     print_stats("Score B distribution", arr_b)
 
     # --- Formula C: 0.6 * delta_rank + 0.4 * listener_rank ---
-    print("\n\n  ── Formula C: 0.6 * percent_rank(delta_7d) + 0.4 * percent_rank(listeners) ──")
+    print(
+        "\n\n  ── Formula C: 0.6 * percent_rank(delta_7d) + 0.4 * percent_rank(listeners) ──"
+    )
 
     # Only tracks with delta data
     c_data = []
@@ -247,13 +265,19 @@ def main():
         scores_c.sort(reverse=True)
 
         print(f"  Tracks with delta data: {len(scores_c)}")
-        print(f"  {'#':>3s}  {'Score':>7s}  {'Delta7d':>10s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track")
+        print(
+            f"  {'#':>3s}  {'Score':>7s}  {'Delta7d':>10s}  {'Playcount':>12s}  {'Listeners':>10s}  Artist — Track"
+        )
         for i, (score, pc, ls, delta, art, nom) in enumerate(scores_c[:20]):
-            print(f"  {i+1:3d}  {score:7.2f}  {delta:10,d}  {pc:12,d}  {ls:10,d}  {art} — {nom}")
+            print(
+                f"  {i+1:3d}  {score:7.2f}  {delta:10,d}  {pc:12,d}  {ls:10,d}  {art} — {nom}"
+            )
         print("  ...")
         for i, (score, pc, ls, delta, art, nom) in enumerate(scores_c[-5:]):
             idx = len(scores_c) - 5 + i + 1
-            print(f"  {idx:3d}  {score:7.2f}  {delta:10,d}  {pc:12,d}  {ls:10,d}  {art} — {nom}")
+            print(
+                f"  {idx:3d}  {score:7.2f}  {delta:10,d}  {pc:12,d}  {ls:10,d}  {art} — {nom}"
+            )
 
         arr_c = np.array([s[0] for s in scores_c])
         print(f"\n  Std dev: {arr_c.std():.2f}")
@@ -267,8 +291,10 @@ def main():
 
     # Find cancons sharing the same ISRC that both have SenyalDiari on the same day
     from django.db import connection
+
     with connection.cursor() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT mc.isrc, sd.data, COUNT(DISTINCT sd.canco_id) as cnt
             FROM ranking_senyaldiari sd
             JOIN music_canco mc ON mc.id = sd.canco_id
@@ -277,7 +303,8 @@ def main():
             HAVING COUNT(DISTINCT sd.canco_id) > 1
             ORDER BY cnt DESC
             LIMIT 20
-        """)
+        """
+        )
         dupes = cursor.fetchall()
 
     if dupes:

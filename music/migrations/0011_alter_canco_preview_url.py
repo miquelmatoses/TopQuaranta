@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0010_canco_preview_url'),
+        ("music", "0010_canco_preview_url"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='canco',
-            name='preview_url',
+            model_name="canco",
+            name="preview_url",
             field=models.URLField(blank=True, max_length=500),
         ),
     ]

@@ -33,7 +33,9 @@ def llista(request: HttpRequest) -> HttpResponse:
         .prefetch_related("territoris", "deezer_ids", "localitats__municipi")
         .annotate(
             nb_verif_main=Count("cancons", filter=Q(cancons__verificada=True)),
-            nb_verif_col=Count("participacions", filter=Q(participacions__verificada=True)),
+            nb_verif_col=Count(
+                "participacions", filter=Q(participacions__verificada=True)
+            ),
         )
         .annotate(nb_verif=F("nb_verif_main") + F("nb_verif_col"))
     )
@@ -43,13 +45,17 @@ def llista(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs, per_page=50)
 
-    return render(request, "web/staff/pendents.html", {
-        "staff_section": "pendents",
-        "page": page,
-        "total": qs.count(),
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/pendents.html",
+        {
+            "staff_section": "pendents",
+            "page": page,
+            "total": qs.count(),
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -94,7 +100,8 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
             except Municipi.DoesNotExist:
                 # Manual entry — Municipi unknown, store free text
                 ArtistaLocalitat.objects.create(
-                    artista=artista, municipi=None,
+                    artista=artista,
+                    municipi=None,
                     localitat_manual=f"{localitat}, {comarca}",
                 )
                 audit_loc = f"{localitat}, {comarca} (manual)"
@@ -105,7 +112,9 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
         # Signal auto-syncs territories
 
     log_staff_action(
-        request, "pendent_aprovar", target=artista,
+        request,
+        "pendent_aprovar",
+        target=artista,
         territori=territori,
         localitat=audit_loc,
     )
@@ -127,7 +136,9 @@ def api_descartar(request: HttpRequest, pk: int) -> JsonResponse:
         artista.auto_descobert = False
         artista.save(update_fields=["auto_descobert"])
         log_staff_action(
-            request, "pendent_descartar", target=artista,
+            request,
+            "pendent_descartar",
+            target=artista,
             action_taken="kept_auto_descobert_false",
             reason="had verified tracks",
         )
@@ -138,7 +149,9 @@ def api_descartar(request: HttpRequest, pk: int) -> JsonResponse:
         pk_val = artista.pk
         artista.delete()
         log_staff_action(
-            request, "pendent_descartar", target=None,
+            request,
+            "pendent_descartar",
+            target=None,
             action_taken="deleted",
             target_id_deleted=pk_val,
             target_label_deleted=label,

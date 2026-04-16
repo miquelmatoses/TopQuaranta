@@ -8,19 +8,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('comptes', '0002_userartista'),
-        ('music', '0020_add_social_genre_deezer_multi'),
+        ("comptes", "0002_userartista"),
+        ("music", "0020_add_social_genre_deezer_multi"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='userartista',
-            name='artista',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='music.artista'),
+            model_name="userartista",
+            name="artista",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="music.artista",
+            ),
         ),
         migrations.AlterField(
-            model_name='userartista',
-            name='usuari',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='artistes_vinculats', to=settings.AUTH_USER_MODEL),
+            model_name="userartista",
+            name="usuari",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="artistes_vinculats",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

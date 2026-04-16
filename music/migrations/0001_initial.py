@@ -8,85 +8,214 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Artista',
+            name="Artista",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('spotify_id', models.CharField(blank=True, max_length=50, null=True, unique=True)),
-                ('lastfm_nom', models.CharField(help_text='Exact name for Last.fm API calls (case-sensitive).', max_length=255)),
-                ('lastfm_mbid', models.CharField(blank=True, help_text='MusicBrainz ID — improves Last.fm lookup accuracy.', max_length=50, null=True)),
-                ('nom', models.CharField(max_length=255)),
-                ('actiu', models.BooleanField(default=True)),
-                ('auto_descobert', models.BooleanField(default=False)),
-                ('font_descoberta', models.CharField(blank=True, help_text="Source: 'viasona', 'collaborador', 'manual'.", max_length=50)),
-                ('aprovat', models.BooleanField(default=True, help_text='False = pending human review in Wagtail admin.')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "spotify_id",
+                    models.CharField(blank=True, max_length=50, null=True, unique=True),
+                ),
+                (
+                    "lastfm_nom",
+                    models.CharField(
+                        help_text="Exact name for Last.fm API calls (case-sensitive).",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "lastfm_mbid",
+                    models.CharField(
+                        blank=True,
+                        help_text="MusicBrainz ID — improves Last.fm lookup accuracy.",
+                        max_length=50,
+                        null=True,
+                    ),
+                ),
+                ("nom", models.CharField(max_length=255)),
+                ("actiu", models.BooleanField(default=True)),
+                ("auto_descobert", models.BooleanField(default=False)),
+                (
+                    "font_descoberta",
+                    models.CharField(
+                        blank=True,
+                        help_text="Source: 'viasona', 'collaborador', 'manual'.",
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "aprovat",
+                    models.BooleanField(
+                        default=True,
+                        help_text="False = pending human review in Wagtail admin.",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'verbose_name': 'Artista',
-                'verbose_name_plural': 'Artistes',
-                'ordering': ['nom'],
+                "verbose_name": "Artista",
+                "verbose_name_plural": "Artistes",
+                "ordering": ["nom"],
             },
         ),
         migrations.CreateModel(
-            name='Territori',
+            name="Territori",
             fields=[
-                ('codi', models.CharField(max_length=3, primary_key=True, serialize=False)),
-                ('nom', models.CharField(max_length=50)),
+                (
+                    "codi",
+                    models.CharField(max_length=3, primary_key=True, serialize=False),
+                ),
+                ("nom", models.CharField(max_length=50)),
             ],
             options={
-                'verbose_name': 'Territori',
-                'verbose_name_plural': 'Territoris',
-                'ordering': ['codi'],
+                "verbose_name": "Territori",
+                "verbose_name_plural": "Territoris",
+                "ordering": ["codi"],
             },
         ),
         migrations.CreateModel(
-            name='Album',
+            name="Album",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('spotify_id', models.CharField(blank=True, max_length=50, null=True, unique=True)),
-                ('nom', models.CharField(max_length=500)),
-                ('data_llancament', models.DateField(blank=True, null=True)),
-                ('tipus', models.CharField(choices=[('album', 'Àlbum'), ('single', 'Single'), ('ep', 'EP')], default='album', max_length=10)),
-                ('imatge_url', models.URLField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('artista', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='albums', to='music.artista')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "spotify_id",
+                    models.CharField(blank=True, max_length=50, null=True, unique=True),
+                ),
+                ("nom", models.CharField(max_length=500)),
+                ("data_llancament", models.DateField(blank=True, null=True)),
+                (
+                    "tipus",
+                    models.CharField(
+                        choices=[
+                            ("album", "Àlbum"),
+                            ("single", "Single"),
+                            ("ep", "EP"),
+                        ],
+                        default="album",
+                        max_length=10,
+                    ),
+                ),
+                ("imatge_url", models.URLField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "artista",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="albums",
+                        to="music.artista",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-data_llancament'],
+                "ordering": ["-data_llancament"],
             },
         ),
         migrations.CreateModel(
-            name='Canco',
+            name="Canco",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('spotify_id', models.CharField(blank=True, max_length=50, null=True, unique=True)),
-                ('isrc', models.CharField(blank=True, help_text='International Standard Recording Code.', max_length=15)),
-                ('nom', models.CharField(max_length=500)),
-                ('lastfm_nom', models.CharField(blank=True, help_text='Track name as returned by Last.fm (may differ from Spotify).', max_length=500)),
-                ('lastfm_mbid', models.CharField(blank=True, max_length=50)),
-                ('lastfm_verificat', models.BooleanField(default=False)),
-                ('durada_ms', models.IntegerField(blank=True, null=True)),
-                ('data_llancament', models.DateField(blank=True, help_text='Tracks older than 12 months are excluded from ingestion.', null=True)),
-                ('activa', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('album', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cancons', to='music.album')),
-                ('artista', models.ForeignKey(help_text='Main artist (for display). Territory also from collaborators.', on_delete=django.db.models.deletion.CASCADE, related_name='cancons', to='music.artista')),
-                ('artistes_col', models.ManyToManyField(blank=True, help_text='Collaborating artists. Track appears in their territories too.', related_name='participacions', to='music.artista')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "spotify_id",
+                    models.CharField(blank=True, max_length=50, null=True, unique=True),
+                ),
+                (
+                    "isrc",
+                    models.CharField(
+                        blank=True,
+                        help_text="International Standard Recording Code.",
+                        max_length=15,
+                    ),
+                ),
+                ("nom", models.CharField(max_length=500)),
+                (
+                    "lastfm_nom",
+                    models.CharField(
+                        blank=True,
+                        help_text="Track name as returned by Last.fm (may differ from Spotify).",
+                        max_length=500,
+                    ),
+                ),
+                ("lastfm_mbid", models.CharField(blank=True, max_length=50)),
+                ("lastfm_verificat", models.BooleanField(default=False)),
+                ("durada_ms", models.IntegerField(blank=True, null=True)),
+                (
+                    "data_llancament",
+                    models.DateField(
+                        blank=True,
+                        help_text="Tracks older than 12 months are excluded from ingestion.",
+                        null=True,
+                    ),
+                ),
+                ("activa", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "album",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cancons",
+                        to="music.album",
+                    ),
+                ),
+                (
+                    "artista",
+                    models.ForeignKey(
+                        help_text="Main artist (for display). Territory also from collaborators.",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cancons",
+                        to="music.artista",
+                    ),
+                ),
+                (
+                    "artistes_col",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="Collaborating artists. Track appears in their territories too.",
+                        related_name="participacions",
+                        to="music.artista",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Cançó',
-                'verbose_name_plural': 'Cançons',
-                'ordering': ['nom'],
+                "verbose_name": "Cançó",
+                "verbose_name_plural": "Cançons",
+                "ordering": ["nom"],
             },
         ),
         migrations.AddField(
-            model_name='artista',
-            name='territoris',
-            field=models.ManyToManyField(blank=True, help_text='Territories this artist belongs to. Tracks appear in all.', related_name='artistes', to='music.territori'),
+            model_name="artista",
+            name="territoris",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="Territories this artist belongs to. Tracks appear in all.",
+                related_name="artistes",
+                to="music.territori",
+            ),
         ),
     ]

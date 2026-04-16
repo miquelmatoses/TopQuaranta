@@ -16,12 +16,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "topquaranta.settings.production
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import django
+
 django.setup()
 
 from ranking.models import ConfiguracioGlobal, SenyalDiari
 
-
 # ── Step 1: Load data and compute score_entrada via percent_rank ──
+
 
 def load_config():
     """Load algorithm coefficients from ConfiguracioGlobal."""
@@ -50,8 +51,7 @@ def load_senyal_data():
     """
     # Find available dates
     available_dates = list(
-        SenyalDiari.objects
-        .filter(error=False, lastfm_playcount__isnull=False)
+        SenyalDiari.objects.filter(error=False, lastfm_playcount__isnull=False)
         .values_list("data", flat=True)
         .distinct()
         .order_by("-data")[:5]
@@ -68,18 +68,17 @@ def load_senyal_data():
     print(f"Days span: {(dates_sorted[-1] - dates_sorted[0]).days}")
 
     # Load all SenyalDiari for these dates with related objects
-    qs = (
-        SenyalDiari.objects
-        .filter(data__in=dates_sorted, error=False, lastfm_playcount__isnull=False)
-        .select_related(
-            "canco",
-            "canco__artista",
-            "canco__album",
-        )
+    qs = SenyalDiari.objects.filter(
+        data__in=dates_sorted, error=False, lastfm_playcount__isnull=False
+    ).select_related(
+        "canco",
+        "canco__artista",
+        "canco__album",
     )
 
     # Prefetch territories in a single query
     from music.models import Artista
+
     artista_ids = set()
     rows = list(qs)
     for row in rows:
@@ -87,12 +86,13 @@ def load_senyal_data():
 
     # Load all territory mappings at once
     from django.db import connection
+
     artista_territoris = defaultdict(set)
     if artista_ids:
         with connection.cursor() as cursor:
             cursor.execute(
                 "SELECT artista_id, territori_id FROM music_artista_territoris WHERE artista_id IN %s",
-                [tuple(artista_ids)]
+                [tuple(artista_ids)],
             )
             for art_id, terr_code in cursor.fetchall():
                 artista_territoris[art_id].add(terr_code)
@@ -157,6 +157,7 @@ def compute_score_entrada(senyal_by_canco, dates_sorted):
 
 # ── Step 3: The ranking algorithm in pure Python ──
 
+
 def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
     """Run the full 14-CTE equivalent algorithm for one territory.
     Returns list of dicts sorted by score_setmanal DESC.
@@ -189,11 +190,19 @@ def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
 
         # popularitat_inici: days -7 to -5 from latest
         inici_days = [d for d in days if (today - d).days >= 5]
-        popularitat_inici = sum(scores[cid][d] for d in inici_days) / len(inici_days) if inici_days else 0.0
+        popularitat_inici = (
+            sum(scores[cid][d] for d in inici_days) / len(inici_days)
+            if inici_days
+            else 0.0
+        )
 
         # popularitat_final: days -2 to 0 from latest
         final_days = [d for d in days if (today - d).days <= 2]
-        popularitat_final = sum(scores[cid][d] for d in final_days) / len(final_days) if final_days else 0.0
+        popularitat_final = (
+            sum(scores[cid][d] for d in final_days) / len(final_days)
+            if final_days
+            else 0.0
+        )
 
         dies_en_top = len(days)
 
@@ -207,32 +216,40 @@ def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
         # Latest day playcount for display
         latest_pc = info["daily"].get(today, {}).get("playcount", 0)
 
-        base_rows.append({
-            "cid": cid,
-            "nom": info["nom"],
-            "artista_nom": info["artista_nom"],
-            "artista_id": info["artista_id"],
-            "album_id": info["album_id"],
-            "album_nom": info["album_nom"],
-            "popularitat_mitjana": popularitat_mitjana,
-            "popularitat_inici": popularitat_inici,
-            "popularitat_final": popularitat_final,
-            "dies_en_top": dies_en_top,
-            "setmanes_top": 0,
-            "antiguitat_dies": antiguitat_dies,
-            "posicio_anterior": None,
-            "playcount": latest_pc,
-        })
+        base_rows.append(
+            {
+                "cid": cid,
+                "nom": info["nom"],
+                "artista_nom": info["artista_nom"],
+                "artista_id": info["artista_id"],
+                "album_id": info["album_id"],
+                "album_nom": info["album_nom"],
+                "popularitat_mitjana": popularitat_mitjana,
+                "popularitat_inici": popularitat_inici,
+                "popularitat_final": popularitat_final,
+                "dies_en_top": dies_en_top,
+                "setmanes_top": 0,
+                "antiguitat_dies": antiguitat_dies,
+                "posicio_anterior": None,
+                "playcount": latest_pc,
+            }
+        )
 
     # ── fase_a ──
     for row in base_rows:
         ant = row["antiguitat_dies"]
         pen_ant = min(1.0, (ant / 365.0) ** cfg["exponent_penalitzacio_antiguitat"])
-        pen_desc = cfg["penalitzacio_descens"] if row["popularitat_final"] < row["popularitat_inici"] else 0.0
+        pen_desc = (
+            cfg["penalitzacio_descens"]
+            if row["popularitat_final"] < row["popularitat_inici"]
+            else 0.0
+        )
         pes_est = min(row["dies_en_top"] / 7.0, 1.0)
         pen_top = 0.0  # no history
 
-        factor_a = min(max(1.0 - pen_ant - pen_desc - pen_top, -1.0), cfg["max_factor_a"])
+        factor_a = min(
+            max(1.0 - pen_ant - pen_desc - pen_top, -1.0), cfg["max_factor_a"]
+        )
         score_a = row["popularitat_mitjana"] * pes_est * factor_a
 
         row["pen_antiguitat"] = pen_ant
@@ -264,7 +281,10 @@ def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
         row["pen_artista_count"] = pen_artista
         row["pen_album"] = pen_album * cfg["penalitzacio_album_per_canco"]
         row["pen_artista"] = pen_artista * cfg["penalitzacio_artista_per_canco"]
-        factor_b = min(max(row["factor_a"] - row["pen_album"] - row["pen_artista"], -1.0), cfg["max_factor_b"])
+        factor_b = min(
+            max(row["factor_a"] - row["pen_album"] - row["pen_artista"], -1.0),
+            cfg["max_factor_b"],
+        )
         row["factor_b"] = factor_b
         row["score_b"] = row["popularitat_mitjana"] * row["pes_estabilitat"] * factor_b
 
@@ -299,7 +319,9 @@ def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
             max(row["factor_b"] - row["pen_entrada"] - factor_suav, 0.0),
             cfg["max_factor_final"],
         )
-        score_setmanal = row["popularitat_mitjana"] * row["pes_estabilitat"] * factor_final
+        score_setmanal = (
+            row["popularitat_mitjana"] * row["pes_estabilitat"] * factor_final
+        )
 
         row["factor_suavitat"] = factor_suav
         row["factor_final"] = factor_final
@@ -315,6 +337,7 @@ def run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg):
 
 # ── Step 4: Output ──
 
+
 def print_ranking(territori, rows, dates_sorted, latest):
     top40 = [r for r in rows if r["posicio"] <= 40]
     total = len(rows)
@@ -323,10 +346,14 @@ def print_ranking(territori, rows, dates_sorted, latest):
     print(f"  TOP 40 {territori} — simulacio {latest}")
     print(f"  ({len(dates_sorted)} dies de dades, score_entrada=percent_rank)")
     print(f"{'='*80}")
-    print(f"  {'#':>3s}  {'Score':>7s}  {'Plays':>8s}  {'Dies':>4s}  {'Antig':>6s}  "
-          f"{'fA':>5s} {'fB':>5s} {'fF':>5s}  Artista — Canco")
-    print(f"  {'---':>3s}  {'------':>7s}  {'------':>8s}  {'----':>4s}  {'-----':>6s}  "
-          f"{'---':>5s} {'---':>5s} {'---':>5s}  {'─'*40}")
+    print(
+        f"  {'#':>3s}  {'Score':>7s}  {'Plays':>8s}  {'Dies':>4s}  {'Antig':>6s}  "
+        f"{'fA':>5s} {'fB':>5s} {'fF':>5s}  Artista — Canco"
+    )
+    print(
+        f"  {'---':>3s}  {'------':>7s}  {'------':>8s}  {'----':>4s}  {'-----':>6s}  "
+        f"{'---':>5s} {'---':>5s} {'---':>5s}  {'─'*40}"
+    )
 
     for r in top40:
         ant_str = f"{r['antiguitat_dies']}d"
@@ -384,15 +411,20 @@ def main():
     latest_scores = [scores[cid][latest] for cid in scores if latest in scores[cid]]
     if latest_scores:
         import numpy as np
+
         arr = np.array(latest_scores)
-        print(f"  score_entrada on {latest}: n={len(arr)}, "
-              f"min={arr.min():.1f}, median={np.median(arr):.1f}, max={arr.max():.1f}, "
-              f"std={arr.std():.1f}")
+        print(
+            f"  score_entrada on {latest}: n={len(arr)}, "
+            f"min={arr.min():.1f}, median={np.median(arr):.1f}, max={arr.max():.1f}, "
+            f"std={arr.std():.1f}"
+        )
 
     # Run ranking per territory
     for territori in ["CAT", "VAL", "BAL"]:
         print(f"\nRunning ranking for {territori}...")
-        rows = run_ranking(territori, senyal_by_canco, scores, dates_sorted, latest, cfg)
+        rows = run_ranking(
+            territori, senyal_by_canco, scores, dates_sorted, latest, cfg
+        )
         if rows:
             print_ranking(territori, rows, dates_sorted, latest)
         else:

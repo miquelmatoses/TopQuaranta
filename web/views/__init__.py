@@ -1,14 +1,21 @@
 import datetime
 
 from django.core.paginator import Paginator
-from django.http import Http404, HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseNotFound, HttpResponseServerError
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseForbidden,
+    HttpResponseNotFound,
+    HttpResponseServerError,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader
 
-from music.constants import TERRITORI_NOMS, TERRITORIS_VALIDS  # noqa: F401 (re-exported)
+from music.constants import TERRITORI_NOMS  # noqa: F401 (re-exported)
+from music.constants import TERRITORIS_VALIDS
 from music.models import Album, Artista, Canco, Municipi, StaffAuditLog
 from ranking.models import ConfiguracioGlobal, RankingProvisional, RankingSetmanal
-
 
 # ── Φ4 · Transparència algorítmica ───────────────────────────────────────
 # Human-readable descriptions of every coefficient in ConfiguracioGlobal.
@@ -19,108 +26,93 @@ from ranking.models import ConfiguracioGlobal, RankingProvisional, RankingSetman
 COEFICIENTS_DESCRIPCIO = {
     "penalitzacio_descens": {
         "label": "Penalització per caiguda",
-        "blurb":
-            "Quan una cançó perd posicions respecte de la setmana passada, "
-            "aquest valor decideix com de dur és el cop. Més alt = més "
-            "càstig quan una cançó s'enfonsa a la llista.",
+        "blurb": "Quan una cançó perd posicions respecte de la setmana passada, "
+        "aquest valor decideix com de dur és el cop. Més alt = més "
+        "càstig quan una cançó s'enfonsa a la llista.",
     },
     "exponent_penalitzacio_antiguitat": {
         "label": "Exponent d'antiguitat",
-        "blurb":
-            "Controla com de ràpidament perden força les cançons antigues. "
-            "Els singles de fa 11 mesos desapareixen del top molt més "
-            "amunt d'aquest exponent que amb un valor baix — el top és "
-            "per a música viva, no per a canons.",
+        "blurb": "Controla com de ràpidament perden força les cançons antigues. "
+        "Els singles de fa 11 mesos desapareixen del top molt més "
+        "amunt d'aquest exponent que amb un valor baix — el top és "
+        "per a música viva, no per a canons.",
     },
     "max_factor_a": {
         "label": "Factor A màxim (fase de posicionament)",
-        "blurb":
-            "El primer multiplicador que s'aplica al signal brut. "
-            "Posa un sostre a la primera ronda del càlcul perquè les "
-            "cançons amb xifres extremes no arrosseguin tot el top.",
+        "blurb": "El primer multiplicador que s'aplica al signal brut. "
+        "Posa un sostre a la primera ronda del càlcul perquè les "
+        "cançons amb xifres extremes no arrosseguin tot el top.",
     },
     "max_factor_b": {
         "label": "Factor B màxim (fase de monopolis)",
-        "blurb":
-            "Sostre del segon multiplicador. Intervé quan s'aplica la "
-            "penalització per monopoli — si un àlbum o un artista es "
-            "cruspeixen massa cançons del top.",
+        "blurb": "Sostre del segon multiplicador. Intervé quan s'aplica la "
+        "penalització per monopoli — si un àlbum o un artista es "
+        "cruspeixen massa cançons del top.",
     },
     "max_factor_c": {
         "label": "Factor C màxim (fase de novetats)",
-        "blurb":
-            "Sostre del tercer multiplicador. Protegeix les cançons noves "
-            "que encara no han acumulat història perquè no quedin "
-            "infravalorades pel càlcul.",
+        "blurb": "Sostre del tercer multiplicador. Protegeix les cançons noves "
+        "que encara no han acumulat història perquè no quedin "
+        "infravalorades pel càlcul.",
     },
     "max_factor_final": {
         "label": "Factor final màxim",
-        "blurb":
-            "El sostre global de la fórmula. Evita que cap cançó pugui "
-            "dominar els rànquings amb un score desmesurat.",
+        "blurb": "El sostre global de la fórmula. Evita que cap cançó pugui "
+        "dominar els rànquings amb un score desmesurat.",
     },
     "penalitzacio_album_per_canco": {
         "label": "Penalització per àlbum",
-        "blurb":
-            "Si un mateix àlbum té tres, quatre o més cançons al top, "
-            "aquest valor redueix el score de cada una addicional. "
-            "La idea: un top 40 on només sonen dos àlbums no és un top.",
+        "blurb": "Si un mateix àlbum té tres, quatre o més cançons al top, "
+        "aquest valor redueix el score de cada una addicional. "
+        "La idea: un top 40 on només sonen dos àlbums no és un top.",
     },
     "penalitzacio_artista_per_canco": {
         "label": "Penalització per artista",
-        "blurb":
-            "Mateixa lògica que l'anterior, però aplicada a l'artista "
-            "en comptes de l'àlbum. Si un artista acumula massa cançons "
-            "al top, cada una de més pateix una petita rebaixa.",
+        "blurb": "Mateixa lògica que l'anterior, però aplicada a l'artista "
+        "en comptes de l'àlbum. Si un artista acumula massa cançons "
+        "al top, cada una de més pateix una petita rebaixa.",
     },
     "coeficient_penalitzacio_top": {
         "label": "Penalització per alta posició",
-        "blurb":
-            "Les cançons que portin moltes setmanes al top 3 o top 5 "
-            "reben una penalització creixent perquè no es perpetuïn "
-            "indefinidament al capdamunt. Els hits no són eterns.",
+        "blurb": "Les cançons que portin moltes setmanes al top 3 o top 5 "
+        "reben una penalització creixent perquè no es perpetuïn "
+        "indefinidament al capdamunt. Els hits no són eterns.",
     },
     "penalitzacio_setmana_0": {
         "label": "Penalització setmana 0 (acabada de sortir)",
-        "blurb":
-            "Una cançó que ha sortit aquesta mateixa setmana encara no "
-            "té un signal representatiu de Last.fm. Aquest valor corre "
-            "el benefici del dubte: alt = costa molt entrar al top la "
-            "setmana de l'estrena.",
+        "blurb": "Una cançó que ha sortit aquesta mateixa setmana encara no "
+        "té un signal representatiu de Last.fm. Aquest valor corre "
+        "el benefici del dubte: alt = costa molt entrar al top la "
+        "setmana de l'estrena.",
     },
     "penalitzacio_setmana_1": {
         "label": "Penalització setmana 1",
-        "blurb":
-            "Igual que l'anterior però per cançons de la segona setmana. "
-            "Normalment més baix que setmana 0.",
+        "blurb": "Igual que l'anterior però per cançons de la segona setmana. "
+        "Normalment més baix que setmana 0.",
     },
     "penalitzacio_setmana_2": {
         "label": "Penalització setmana 2",
-        "blurb":
-            "A partir de la tercera setmana habitualment ja no cal "
-            "ajustar res; aquest valor pot ser zero si l'entrada ja "
-            "té prou dades.",
+        "blurb": "A partir de la tercera setmana habitualment ja no cal "
+        "ajustar res; aquest valor pot ser zero si l'entrada ja "
+        "té prou dades.",
     },
     "suavitat": {
         "label": "Factor de suavitat",
-        "blurb":
-            "Quan més alt, els canvis de posició entre setmana i setmana "
-            "són més lents — un top més estable. Més baix = el top es "
-            "mou setmana a setmana amb més agressivitat.",
+        "blurb": "Quan més alt, els canvis de posició entre setmana i setmana "
+        "són més lents — un top més estable. Més baix = el top es "
+        "mou setmana a setmana amb més agressivitat.",
     },
     "min_cancons_ranking_propi": {
         "label": "Llindar per a ranquing propi",
-        "blurb":
-            "Un territori (diguem-ne l'Alguer o la Franja) només rep un "
-            "top 40 propi si hi ha almenys aquesta quantitat de cançons "
-            "elegibles. Per sota, els artistes d'aquell territori "
-            "s'integren al top 'Altres territoris'.",
+        "blurb": "Un territori (diguem-ne l'Alguer o la Franja) només rep un "
+        "top 40 propi si hi ha almenys aquesta quantitat de cançons "
+        "elegibles. Per sota, els artistes d'aquell territori "
+        "s'integren al top 'Altres territoris'.",
     },
     "dia_setmana_ranking": {
         "label": "Dia de la setmana del tancament",
-        "blurb":
-            "Quin dia de la setmana es congela el top oficial. "
-            "Codi intern: 0 = dilluns, 6 = diumenge.",
+        "blurb": "Quin dia de la setmana es congela el top oficial. "
+        "Codi intern: 0 = dilluns, 6 = diumenge.",
     },
 }
 
@@ -135,13 +127,16 @@ def _coeficients_context() -> list[dict]:
     cfg = ConfiguracioGlobal.load()
     rows = []
     for field_name, meta in COEFICIENTS_DESCRIPCIO.items():
-        rows.append({
-            "field": field_name,
-            "label": meta["label"],
-            "blurb": meta["blurb"],
-            "value": getattr(cfg, field_name),
-        })
+        rows.append(
+            {
+                "field": field_name,
+                "label": meta["label"],
+                "blurb": meta["blurb"],
+                "value": getattr(cfg, field_name),
+            }
+        )
     return rows
+
 
 TERRITORI_DESCRIPCIONS = {
     "PPCC": "El rànquing agregat de tots els territoris de parla catalana",
@@ -181,20 +176,16 @@ def _setmana_actual() -> datetime.date:
 
 def _ranking_base_qs():
     """Common select_related and prefetch for ranking queries."""
-    return (
-        RankingSetmanal.objects
-        .select_related("canco", "canco__artista", "canco__album")
-        .prefetch_related("canco__artistes_col")
-    )
+    return RankingSetmanal.objects.select_related(
+        "canco", "canco__artista", "canco__album"
+    ).prefetch_related("canco__artistes_col")
 
 
 def _provisional_base_qs():
     """Common select_related and prefetch for provisional ranking queries."""
-    return (
-        RankingProvisional.objects
-        .select_related("canco", "canco__artista", "canco__album")
-        .prefetch_related("canco__artistes_col")
-    )
+    return RankingProvisional.objects.select_related(
+        "canco", "canco__artista", "canco__album"
+    ).prefetch_related("canco__artistes_col")
 
 
 def _get_ranking(
@@ -218,9 +209,7 @@ def _get_ranking(
 
     # Fallback to provisional (all territories including PPCC)
     provisional = list(
-        _provisional_base_qs()
-        .filter(territori=territori)
-        .order_by("posicio")[:40]
+        _provisional_base_qs().filter(territori=territori).order_by("posicio")[:40]
     )
     data_calcul = None
     if provisional:
@@ -233,13 +222,17 @@ def homepage(request: HttpRequest) -> HttpResponse:
     setmana = _setmana_actual()
     ranking, es_provisional, data_calcul = _get_ranking("PPCC", setmana)
 
-    return render(request, "web/homepage.html", {
-        "ranking": ranking,
-        "es_provisional": es_provisional,
-        "setmana": setmana,
-        "data_calcul": data_calcul,
-        "territori_actiu": "PPCC",
-    })
+    return render(
+        request,
+        "web/homepage.html",
+        {
+            "ranking": ranking,
+            "es_provisional": es_provisional,
+            "setmana": setmana,
+            "data_calcul": data_calcul,
+            "territori_actiu": "PPCC",
+        },
+    )
 
 
 def ranking_page(request: HttpRequest) -> HttpResponse:
@@ -253,12 +246,20 @@ def ranking_page(request: HttpRequest) -> HttpResponse:
 
     if not territori:
         # Territory selector page — PPCC featured on top, rest in flat grid
-        ppcc = {"codi": "PPCC", "nom": TERRITORI_NOMS["PPCC"], "desc": TERRITORI_DESCRIPCIONS["PPCC"]}
+        ppcc = {
+            "codi": "PPCC",
+            "nom": TERRITORI_NOMS["PPCC"],
+            "desc": TERRITORI_DESCRIPCIONS["PPCC"],
+        }
 
-        return render(request, "web/ranking_selector.html", {
-            "ppcc": ppcc,
-            "territoris": TERRITORIS_SELECTOR,
-        })
+        return render(
+            request,
+            "web/ranking_selector.html",
+            {
+                "ppcc": ppcc,
+                "territoris": TERRITORIS_SELECTOR,
+            },
+        )
 
     # AND/CNO/FRA/ALG redirect to ALT ranking
     if territori in TERRITORIS_REDIRECT_ALT:
@@ -281,16 +282,20 @@ def ranking_page(request: HttpRequest) -> HttpResponse:
     ranking, es_provisional, data_calcul = _get_ranking(territori, setmana)
     nom_territori = TERRITORI_NOMS[territori]
 
-    return render(request, "web/ranking.html", {
-        "ranking": ranking,
-        "es_provisional": es_provisional,
-        "setmana": setmana,
-        "data_calcul": data_calcul,
-        "territori": territori,
-        "territori_actiu": territori,
-        "nom_territori": nom_territori,
-        "territoris_nav": TERRITORIS_SELECTOR,
-    })
+    return render(
+        request,
+        "web/ranking.html",
+        {
+            "ranking": ranking,
+            "es_provisional": es_provisional,
+            "setmana": setmana,
+            "data_calcul": data_calcul,
+            "territori": territori,
+            "territori_actiu": territori,
+            "nom_territori": nom_territori,
+            "territoris_nav": TERRITORIS_SELECTOR,
+        },
+    )
 
 
 def ranking_territori_redirect(
@@ -305,7 +310,9 @@ def ranking_territori_redirect(
 
 def directori_artistes(request: HttpRequest) -> HttpResponse:
     """Browsable directory of approved artists with territory filter and search."""
-    qs = Artista.objects.filter(aprovat=True).prefetch_related("territoris", "localitats__municipi")
+    qs = Artista.objects.filter(aprovat=True).prefetch_related(
+        "territoris", "localitats__municipi"
+    )
 
     territori = request.GET.get("territori", "").upper()
     if territori in ("CAT", "VAL", "BAL"):
@@ -319,11 +326,15 @@ def directori_artistes(request: HttpRequest) -> HttpResponse:
     paginator = Paginator(qs, 40)
     page = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "web/artistes.html", {
-        "page": page,
-        "territori_filtre": territori,
-        "cerca": cerca,
-    })
+    return render(
+        request,
+        "web/artistes.html",
+        {
+            "page": page,
+            "territori_filtre": territori,
+            "cerca": cerca,
+        },
+    )
 
 
 def perfil_artista(request: HttpRequest, slug: str) -> HttpResponse:
@@ -337,9 +348,13 @@ def perfil_artista(request: HttpRequest, slug: str) -> HttpResponse:
     )
 
     if not artista.aprovat:
-        return render(request, "web/artista_no_verificat.html", {
-            "artista": artista,
-        })
+        return render(
+            request,
+            "web/artista_no_verificat.html",
+            {
+                "artista": artista,
+            },
+        )
 
     territoris = artista.get_territoris()
 
@@ -357,19 +372,22 @@ def perfil_artista(request: HttpRequest, slug: str) -> HttpResponse:
 
     # Discography: only verified tracks
     discografia = (
-        artista.albums
-        .filter(cancons__verificada=True)
+        artista.albums.filter(cancons__verificada=True)
         .prefetch_related("cancons")
         .distinct()
         .order_by("-data_llancament")
     )
 
-    return render(request, "web/artista.html", {
-        "artista": artista,
-        "territoris": territoris,
-        "historial_setmanes": historial_setmanes,
-        "discografia": discografia,
-    })
+    return render(
+        request,
+        "web/artista.html",
+        {
+            "artista": artista,
+            "territoris": territoris,
+            "historial_setmanes": historial_setmanes,
+            "discografia": discografia,
+        },
+    )
 
 
 def perfil_album(request: HttpRequest, slug: str) -> HttpResponse:
@@ -381,8 +399,7 @@ def perfil_album(request: HttpRequest, slug: str) -> HttpResponse:
 
     # Tracks on this album — verified ones first, then all
     cancons = (
-        album.cancons
-        .select_related("artista")
+        album.cancons.select_related("artista")
         .prefetch_related("artistes_col")
         .order_by("id")
     )
@@ -401,11 +418,15 @@ def perfil_album(request: HttpRequest, slug: str) -> HttpResponse:
     )
     cancons_al_ranking = ranking_cancons | provisional_cancons
 
-    return render(request, "web/album.html", {
-        "album": album,
-        "cancons": cancons,
-        "cancons_al_ranking": cancons_al_ranking,
-    })
+    return render(
+        request,
+        "web/album.html",
+        {
+            "album": album,
+            "cancons": cancons,
+            "cancons_al_ranking": cancons_al_ranking,
+        },
+    )
 
 
 def mapa(request: HttpRequest) -> HttpResponse:
@@ -415,7 +436,11 @@ def mapa(request: HttpRequest) -> HttpResponse:
     from django.db import connection
     from django.db.models import Count
 
-    latest = RankingSetmanal.objects.order_by("-setmana").values_list("setmana", flat=True).first()
+    latest = (
+        RankingSetmanal.objects.order_by("-setmana")
+        .values_list("setmana", flat=True)
+        .first()
+    )
     artist_ids: dict[int, int] = {}
     if latest:
         for r in (
@@ -458,7 +483,10 @@ def mapa(request: HttpRequest) -> HttpResponse:
                 town = loc.municipi.nom.lower()
                 com = loc.municipi.comarca.lower()
                 artista_by_localitat.setdefault(town, []).append(info)
-                if com not in artista_by_comarca or info["aparicions"] > artista_by_comarca[com]["aparicions"]:
+                if (
+                    com not in artista_by_comarca
+                    or info["aparicions"] > artista_by_comarca[com]["aparicions"]
+                ):
                     artista_by_comarca[com] = info
 
     comarques_data: dict[str, dict] = {}
@@ -489,10 +517,14 @@ def mapa(request: HttpRequest) -> HttpResponse:
     # (user-submitted via PropostaArtista.nom) can otherwise be weaponised
     # for XSS even though Django would normally escape HTML, because the
     # |safe filter disables that escaping.
-    return render(request, "web/mapa.html", {
-        "comarques_data": comarques_data,
-        "municipis_data": municipis_data,
-    })
+    return render(
+        request,
+        "web/mapa.html",
+        {
+            "comarques_data": comarques_data,
+            "municipis_data": municipis_data,
+        },
+    )
 
 
 # ── Error handlers (S13) — custom-styled 404 / 500 / 403 pages ──
@@ -500,6 +532,7 @@ def mapa(request: HttpRequest) -> HttpResponse:
 # Registered in topquaranta/urls.py via `handler404 = ...` etc. Django only
 # uses these when DEBUG=False; in local dev you still get the technical
 # 500 page.
+
 
 def handler_404(request: HttpRequest, exception=None) -> HttpResponse:
     template = loader.get_template("web/404.html")
@@ -518,6 +551,7 @@ def handler_403(request: HttpRequest, exception=None) -> HttpResponse:
 
 # ── Φ4 · public-facing transparency pages ────────────────────────────────
 
+
 def com_funciona(request: HttpRequest) -> HttpResponse:
     """The editorial explanation page: how TopQuaranta computes its ranking.
 
@@ -527,9 +561,13 @@ def com_funciona(request: HttpRequest) -> HttpResponse:
     surfaced alongside each week if we ever want to; the linked
     /com-funciona/historial/ page is a lighter stepping stone.
     """
-    return render(request, "web/com_funciona.html", {
-        "coeficients": _coeficients_context(),
-    })
+    return render(
+        request,
+        "web/com_funciona.html",
+        {
+            "coeficients": _coeficients_context(),
+        },
+    )
 
 
 def com_funciona_historial(request: HttpRequest) -> HttpResponse:
@@ -540,11 +578,9 @@ def com_funciona_historial(request: HttpRequest) -> HttpResponse:
     right to know WHEN and HOW the algorithm changed, but the identity
     of the staff member who ran the edit is a staff concern, not public.
     """
-    entries = (
-        StaffAuditLog.objects.filter(action="config_update")
-        .order_by("-created_at")
-        [:100]
-    )
+    entries = StaffAuditLog.objects.filter(action="config_update").order_by(
+        "-created_at"
+    )[:100]
     # Flatten the diff metadata for the template. Each entry becomes a
     # dict with date + a list of (field, human_label, before, after).
     rows = []
@@ -553,15 +589,21 @@ def com_funciona_historial(request: HttpRequest) -> HttpResponse:
         changes = []
         for field, beforeafter in diff_map.items():
             meta = COEFICIENTS_DESCRIPCIO.get(field, {"label": field, "blurb": ""})
-            changes.append({
-                "field": field,
-                "label": meta["label"],
-                "before": beforeafter.get("before", "—"),
-                "after": beforeafter.get("after", "—"),
-            })
+            changes.append(
+                {
+                    "field": field,
+                    "label": meta["label"],
+                    "before": beforeafter.get("before", "—"),
+                    "after": beforeafter.get("after", "—"),
+                }
+            )
         if changes:
             rows.append({"date": e.created_at, "changes": changes})
 
-    return render(request, "web/com_funciona_historial.html", {
-        "rows": rows,
-    })
+    return render(
+        request,
+        "web/com_funciona_historial.html",
+        {
+            "rows": rows,
+        },
+    )

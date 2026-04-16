@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0009_artista_deezer_nb_album_artista_deezer_nb_fan_and_more'),
+        ("music", "0009_artista_deezer_nb_album_artista_deezer_nb_fan_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='canco',
-            name='preview_url',
+            model_name="canco",
+            name="preview_url",
             field=models.URLField(blank=True),
         ),
     ]

@@ -20,6 +20,7 @@ def query_string(context, **kwargs):
 def lastfm_encode(value):
     """Encode a string for Last.fm URL path segments (spaces → +)."""
     from urllib.parse import quote_plus
+
     return quote_plus(str(value))
 
 
@@ -32,7 +33,9 @@ def ml_badge(canco):
     pct = f"{canco.ml_confianca * 100:.0f}" if canco.ml_confianca is not None else "?"
     return format_html(
         '<span class="staff-ml staff-ml--{}">{} ({}%)</span>',
-        css, canco.ml_classe, pct,
+        css,
+        canco.ml_classe,
+        pct,
     )
 
 

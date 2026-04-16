@@ -357,7 +357,10 @@ def _calcular_ranking_ppcc() -> list[dict]:
     best_by_canco: dict[int, dict] = {}
     for r in all_results:
         cid = r["canco_id"]
-        if cid not in best_by_canco or r["score_global"] > best_by_canco[cid]["score_global"]:
+        if (
+            cid not in best_by_canco
+            or r["score_global"] > best_by_canco[cid]["score_global"]
+        ):
             best_by_canco[cid] = r
 
     # Sort by score_global DESC and assign final positions
@@ -365,12 +368,14 @@ def _calcular_ranking_ppcc() -> list[dict]:
 
     results = []
     for i, r in enumerate(deduped[:100], start=1):
-        results.append({
-            "canco_id": r["canco_id"],
-            "score_setmanal": r["score_global"],
-            "posicio": i,
-            "posicio_anterior": r.get("posicio_anterior"),
-            "canvi_posicio": r.get("canvi_posicio"),
-            "dies_en_top": r.get("dies_en_top"),
-        })
+        results.append(
+            {
+                "canco_id": r["canco_id"],
+                "score_setmanal": r["score_global"],
+                "posicio": i,
+                "posicio_anterior": r.get("posicio_anterior"),
+                "canvi_posicio": r.get("canvi_posicio"),
+                "dies_en_top": r.get("dies_en_top"),
+            }
+        )
     return results

@@ -6,20 +6,20 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0030_r10_remove_artista_deezer_id'),
+        ("music", "0030_r10_remove_artista_deezer_id"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='artista',
-            name='comarca',
+            model_name="artista",
+            name="comarca",
         ),
         migrations.RemoveField(
-            model_name='artista',
-            name='localitat',
+            model_name="artista",
+            name="localitat",
         ),
         migrations.RemoveField(
-            model_name='artista',
-            name='provincia',
+            model_name="artista",
+            name="provincia",
         ),
     ]

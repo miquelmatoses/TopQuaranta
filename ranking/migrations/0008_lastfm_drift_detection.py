@@ -6,28 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0029_lastfm_drift_detection'),
-        ('ranking', '0007_alter_configuracioglobal_coeficient_penalitzacio_top_and_more'),
+        ("music", "0029_lastfm_drift_detection"),
+        (
+            "ranking",
+            "0007_alter_configuracioglobal_coeficient_penalitzacio_top_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='senyaldiari',
-            name='corregit',
+            model_name="senyaldiari",
+            name="corregit",
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AddField(
-            model_name='senyaldiari',
-            name='lastfm_returned_artista',
+            model_name="senyaldiari",
+            name="lastfm_returned_artista",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='senyaldiari',
-            name='lastfm_returned_track',
+            model_name="senyaldiari",
+            name="lastfm_returned_track",
             field=models.CharField(blank=True, max_length=500),
         ),
         migrations.AddIndex(
-            model_name='senyaldiari',
-            index=models.Index(fields=['data', 'corregit'], name='ranking_sen_data_bdf9eb_idx'),
+            model_name="senyaldiari",
+            index=models.Index(
+                fields=["data", "corregit"], name="ranking_sen_data_bdf9eb_idx"
+            ),
         ),
     ]

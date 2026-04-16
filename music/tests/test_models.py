@@ -7,8 +7,12 @@ from music.models import Album, Artista, Canco, Territori
 def territoris():
     """Get or create the 3 standard territories."""
     cat, _ = Territori.objects.get_or_create(codi="CAT", defaults={"nom": "Catalunya"})
-    val, _ = Territori.objects.get_or_create(codi="VAL", defaults={"nom": "País Valencià"})
-    bal, _ = Territori.objects.get_or_create(codi="BAL", defaults={"nom": "Illes Balears"})
+    val, _ = Territori.objects.get_or_create(
+        codi="VAL", defaults={"nom": "País Valencià"}
+    )
+    bal, _ = Territori.objects.get_or_create(
+        codi="BAL", defaults={"nom": "Illes Balears"}
+    )
     return {"CAT": cat, "VAL": val, "BAL": bal}
 
 
@@ -89,7 +93,5 @@ class TestCanco:
             [territoris["CAT"], territoris["VAL"], territoris["BAL"]]
         )
         album = Album.objects.create(nom="Disc", artista=artista)
-        canco = Canco.objects.create(
-            nom="Cançó", album=album, artista=artista
-        )
+        canco = Canco.objects.create(nom="Cançó", album=album, artista=artista)
         assert canco.get_territoris() == {"CAT", "VAL", "BAL"}

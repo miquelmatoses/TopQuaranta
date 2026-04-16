@@ -1,14 +1,14 @@
 from datetime import date
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 
 from ingesta.clients.deezer import (
     _normalize,
-    search_artist,
-    get_artist_albums,
     get_album_tracks,
+    get_artist_albums,
+    search_artist,
 )
 
 
@@ -117,10 +117,20 @@ class TestGetArtistAlbums:
     def test_no_min_date_returns_all(self, mock_get):
         mock_get.return_value = {
             "data": [
-                {"id": 1, "title": "A", "release_date": "2020-01-01",
-                 "cover_xl": "", "record_type": "single"},
-                {"id": 2, "title": "B", "release_date": "2026-01-01",
-                 "cover_xl": "", "record_type": "album"},
+                {
+                    "id": 1,
+                    "title": "A",
+                    "release_date": "2020-01-01",
+                    "cover_xl": "",
+                    "record_type": "single",
+                },
+                {
+                    "id": 2,
+                    "title": "B",
+                    "release_date": "2026-01-01",
+                    "cover_xl": "",
+                    "record_type": "album",
+                },
             ],
             "next": None,
         }
@@ -131,13 +141,27 @@ class TestGetArtistAlbums:
     def test_pagination(self, mock_get):
         mock_get.side_effect = [
             {
-                "data": [{"id": 1, "title": "A", "release_date": "2026-01-01",
-                           "cover_xl": "", "record_type": "album"}],
+                "data": [
+                    {
+                        "id": 1,
+                        "title": "A",
+                        "release_date": "2026-01-01",
+                        "cover_xl": "",
+                        "record_type": "album",
+                    }
+                ],
                 "next": "https://api.deezer.com/artist/1/albums?index=25",
             },
             {
-                "data": [{"id": 2, "title": "B", "release_date": "2026-02-01",
-                           "cover_xl": "", "record_type": "single"}],
+                "data": [
+                    {
+                        "id": 2,
+                        "title": "B",
+                        "release_date": "2026-02-01",
+                        "cover_xl": "",
+                        "record_type": "single",
+                    }
+                ],
                 "next": None,
             },
         ]
@@ -186,8 +210,12 @@ class TestGetAlbumTracks:
         mock_get.side_effect = [
             {
                 "data": [
-                    {"id": 500, "title": "Track", "duration": 180,
-                     "artist": {"id": 1, "name": "A"}},
+                    {
+                        "id": 500,
+                        "title": "Track",
+                        "duration": 180,
+                        "artist": {"id": 1, "name": "A"},
+                    },
                 ]
             },
             {"id": 500, "title": "Track"},  # no isrc field

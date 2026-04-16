@@ -65,10 +65,14 @@ class SpotifyClient:
                 return resp.json()
 
             except requests.RequestException as exc:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(
                     "Spotify attempt %d/%d failed for %s: %s — retry in %ds",
-                    attempt + 1, MAX_RETRIES, url, exc, wait,
+                    attempt + 1,
+                    MAX_RETRIES,
+                    url,
+                    exc,
+                    wait,
                 )
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(wait)
@@ -109,13 +113,15 @@ class SpotifyClient:
                 images = item.get("images", [])
                 image_url = images[0]["url"] if images else ""
 
-                albums.append({
-                    "id": item["id"],
-                    "name": item.get("name", ""),
-                    "release_date": release_date,
-                    "album_type": album_type,
-                    "image_url": image_url,
-                })
+                albums.append(
+                    {
+                        "id": item["id"],
+                        "name": item.get("name", ""),
+                        "release_date": release_date,
+                        "album_type": album_type,
+                        "image_url": image_url,
+                    }
+                )
 
             # Pagination
             next_url = data.get("next")
@@ -144,16 +150,18 @@ class SpotifyClient:
             # ISRC is on the full track object, not the simplified one.
             # We need to fetch the full album which includes external_ids
             # at the album level but not track level. We'll get ISRC separately.
-            tracks.append({
-                "id": item["id"],
-                "name": item.get("name", ""),
-                "duration_ms": item.get("duration_ms"),
-                "track_number": item.get("track_number", 0),
-                "artists": [
-                    {"id": a["id"], "name": a["name"]}
-                    for a in item.get("artists", [])
-                ],
-            })
+            tracks.append(
+                {
+                    "id": item["id"],
+                    "name": item.get("name", ""),
+                    "duration_ms": item.get("duration_ms"),
+                    "track_number": item.get("track_number", 0),
+                    "artists": [
+                        {"id": a["id"], "name": a["name"]}
+                        for a in item.get("artists", [])
+                    ],
+                }
+            )
 
         return tracks
 
@@ -169,10 +177,7 @@ class SpotifyClient:
             return None
 
         external_ids = data.get("external_ids", {})
-        artists = [
-            {"id": a["id"], "name": a["name"]}
-            for a in data.get("artists", [])
-        ]
+        artists = [{"id": a["id"], "name": a["name"]} for a in data.get("artists", [])]
 
         return {
             "id": data["id"],

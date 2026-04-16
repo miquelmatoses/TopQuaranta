@@ -10,11 +10,18 @@ from django.shortcuts import redirect, render
 
 from comptes.models import PropostaArtista, UserArtista
 from music.audit import log_staff_action
-from music.models import Artista, ArtistaDeezer, ArtistaLocalitat, HistorialRevisio, Municipi, StaffAuditLog, Territori
+from music.models import (
+    Artista,
+    ArtistaDeezer,
+    ArtistaLocalitat,
+    HistorialRevisio,
+    Municipi,
+    StaffAuditLog,
+    Territori,
+)
 from ranking.models import ConfiguracioGlobal, SenyalDiari
 
 from . import apply_ordering, paginate, staff_required
-
 
 # ── HistorialRevisio ──
 
@@ -42,24 +49,26 @@ def historial(request: HttpRequest) -> HttpResponse:
 
     cerca = request.GET.get("q", "").strip()
     if cerca:
-        qs = qs.filter(
-            Q(canco_nom__icontains=cerca) | Q(artista_nom__icontains=cerca)
-        )
+        qs = qs.filter(Q(canco_nom__icontains=cerca) | Q(artista_nom__icontains=cerca))
 
     qs, current_order, current_dir = apply_ordering(
         request, qs, HISTORIAL_ORDER_FIELDS, default="-created_at"
     )
     page = paginate(request, qs)
 
-    return render(request, "web/staff/historial.html", {
-        "staff_section": "historial",
-        "page": page,
-        "decisio": decisio,
-        "motiu": motiu,
-        "cerca": cerca,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/historial.html",
+        {
+            "staff_section": "historial",
+            "page": page,
+            "decisio": decisio,
+            "motiu": motiu,
+            "cerca": cerca,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 # ── SenyalDiari ──
@@ -103,15 +112,19 @@ def senyal(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs)
 
-    return render(request, "web/staff/senyal.html", {
-        "staff_section": "senyal",
-        "page": page,
-        "data_filtre": data_filtre,
-        "mena": mena,
-        "cerca": cerca,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/senyal.html",
+        {
+            "staff_section": "senyal",
+            "page": page,
+            "data_filtre": data_filtre,
+            "mena": mena,
+            "cerca": cerca,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -126,6 +139,7 @@ def senyal_acceptar_correccio(request: HttpRequest, canco_pk: int) -> HttpRespon
     if request.method != "POST":
         return redirect("staff:senyal")
     from music.models import Canco
+
     try:
         canco = Canco.objects.get(pk=canco_pk)
     except Canco.DoesNotExist:
@@ -140,8 +154,11 @@ def senyal_acceptar_correccio(request: HttpRequest, canco_pk: int) -> HttpRespon
     SenyalDiari.objects.filter(canco=canco, corregit=True).update(corregit=False)
 
     log_staff_action(
-        request, "canco_edit", target=canco,
-        field="lastfm_confirmed", new_value=True,
+        request,
+        "canco_edit",
+        target=canco,
+        field="lastfm_confirmed",
+        new_value=True,
         source="senyal_accept_correction",
     )
     messages.success(
@@ -177,13 +194,17 @@ def verificacio_artistes(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs, per_page=25)
 
-    return render(request, "web/staff/verificacio.html", {
-        "staff_section": "verificacio",
-        "page": page,
-        "verificat": verificat,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/verificacio.html",
+        {
+            "staff_section": "verificacio",
+            "page": page,
+            "verificat": verificat,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -229,8 +250,11 @@ def verificacio_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
     ua.estat = "rebutjat"
     ua.save(update_fields=["estat"])
     log_staff_action(
-        request, "sollicitud_rebutjar", target=ua,
-        artista=ua.artista.nom, usuari=ua.usuari.email,
+        request,
+        "sollicitud_rebutjar",
+        target=ua,
+        artista=ua.artista.nom,
+        usuari=ua.usuari.email,
     )
     info = f"{ua.artista.nom} ({ua.usuari.email})"
     messages.success(request, f"Sol\u00b7licitud rebutjada: {info}.")
@@ -261,20 +285,26 @@ def propostes_artistes(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs, per_page=25)
 
-    return render(request, "web/staff/propostes.html", {
-        "staff_section": "propostes",
-        "page": page,
-        "estat": estat,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/propostes.html",
+        {
+            "staff_section": "propostes",
+            "page": page,
+            "estat": estat,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
 def proposta_detall(request: HttpRequest, pk: int) -> HttpResponse:
     """View details of a new artist proposal."""
     try:
-        proposta = PropostaArtista.objects.select_related("usuari", "artista_creat").get(pk=pk)
+        proposta = PropostaArtista.objects.select_related(
+            "usuari", "artista_creat"
+        ).get(pk=pk)
     except PropostaArtista.DoesNotExist:
         messages.error(request, "Proposta no trobada.")
         return redirect("staff:propostes_artistes")
@@ -288,9 +318,13 @@ def proposta_detall(request: HttpRequest, pk: int) -> HttpResponse:
                 if "municipi_id" in loc:
                     try:
                         m = Municipi.objects.get(pk=loc["municipi_id"])
-                        localitzacions.append(f"{m.nom}, {m.comarca} ({m.territori_id})")
+                        localitzacions.append(
+                            f"{m.nom}, {m.comarca} ({m.territori_id})"
+                        )
                     except Municipi.DoesNotExist:
-                        localitzacions.append(f"Municipi ID {loc['municipi_id']} (no trobat)")
+                        localitzacions.append(
+                            f"Municipi ID {loc['municipi_id']} (no trobat)"
+                        )
                 elif "manual" in loc:
                     localitzacions.append(f"{loc['manual']} (manual)")
         except (json.JSONDecodeError, TypeError):
@@ -306,13 +340,17 @@ def proposta_detall(request: HttpRequest, pk: int) -> HttpResponse:
         if val:
             social_links.append({"label": label, "url": val})
 
-    return render(request, "web/staff/proposta_detall.html", {
-        "staff_section": "propostes",
-        "proposta": proposta,
-        "localitzacions": localitzacions,
-        "deezer_ids": deezer_ids,
-        "social_links": social_links,
-    })
+    return render(
+        request,
+        "web/staff/proposta_detall.html",
+        {
+            "staff_section": "propostes",
+            "proposta": proposta,
+            "localitzacions": localitzacions,
+            "deezer_ids": deezer_ids,
+            "social_links": social_links,
+        },
+    )
 
 
 @staff_required
@@ -353,7 +391,9 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
         for i, dz_id in enumerate(deezer_ids):
             try:
                 ArtistaDeezer.objects.create(
-                    artista=artista, deezer_id=dz_id, principal=(i == 0),
+                    artista=artista,
+                    deezer_id=dz_id,
+                    principal=(i == 0),
                 )
             except Exception:
                 pass
@@ -369,14 +409,17 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
                     if "municipi_id" in loc:
                         try:
                             m = Municipi.objects.get(pk=loc["municipi_id"])
-                            al = ArtistaLocalitat.objects.create(artista=artista, municipi=m)
+                            al = ArtistaLocalitat.objects.create(
+                                artista=artista, municipi=m
+                            )
                             if not first_loc:
                                 first_loc = al
                         except Municipi.DoesNotExist:
                             pass
                     elif "manual" in loc:
                         al = ArtistaLocalitat.objects.create(
-                            artista=artista, municipi=None,
+                            artista=artista,
+                            municipi=None,
                             localitat_manual=loc["manual"],
                         )
                         if not first_loc:
@@ -393,13 +436,17 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
         proposta.save(update_fields=["estat", "artista_creat"])
 
     log_staff_action(
-        request, "proposta_aprovar", target=proposta,
+        request,
+        "proposta_aprovar",
+        target=proposta,
         artista_creat_id=artista.pk,
         artista_nom=artista.nom,
         deezer_ids=deezer_ids,
         usuari_proposant=proposta.usuari.email,
     )
-    messages.success(request, f"Artista \u00ab{artista.nom}\u00bb creat des de la proposta.")
+    messages.success(
+        request, f"Artista \u00ab{artista.nom}\u00bb creat des de la proposta."
+    )
     return redirect("staff:propostes_artistes")
 
 
@@ -418,7 +465,9 @@ def proposta_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
     proposta.estat = PropostaArtista.ESTAT_REBUTJAT
     proposta.save(update_fields=["estat"])
     log_staff_action(
-        request, "proposta_rebutjar", target=proposta,
+        request,
+        "proposta_rebutjar",
+        target=proposta,
         artista_nom=proposta.nom,
         usuari_proposant=proposta.usuari.email,
     )
@@ -435,8 +484,11 @@ def configuracio(request: HttpRequest) -> HttpResponse:
     config = ConfiguracioGlobal.load()
 
     if request.method == "POST":
-        fields = [f for f in ConfiguracioGlobal._meta.get_fields()
-                  if hasattr(f, "attname") and f.attname != "id"]
+        fields = [
+            f
+            for f in ConfiguracioGlobal._meta.get_fields()
+            if hasattr(f, "attname") and f.attname != "id"
+        ]
 
         # Snapshot before values so we can record a field-level diff.
         before = {f.attname: getattr(config, f.attname) for f in fields}
@@ -445,13 +497,16 @@ def configuracio(request: HttpRequest) -> HttpResponse:
             val = request.POST.get(field.attname, "").strip()
             if val:
                 try:
-                    setattr(config, field.attname, type(getattr(config, field.attname))(val))
+                    setattr(
+                        config, field.attname, type(getattr(config, field.attname))(val)
+                    )
                 except (ValueError, TypeError):
                     pass
         # R8: full_clean() in ConfiguracioGlobal.save() will raise
         # ValidationError if any coefficient is out of range. Surface the
         # error to the staff user instead of 500-ing.
         from django.core.exceptions import ValidationError
+
         try:
             config.save()
         except ValidationError as exc:
@@ -464,11 +519,14 @@ def configuracio(request: HttpRequest) -> HttpResponse:
         after = {f.attname: getattr(config, f.attname) for f in fields}
         diff = {
             name: {"before": str(before[name]), "after": str(after[name])}
-            for name in before if str(before[name]) != str(after[name])
+            for name in before
+            if str(before[name]) != str(after[name])
         }
         if diff:
             log_staff_action(
-                request, "config_update", target=config,
+                request,
+                "config_update",
+                target=config,
                 changed_fields=list(diff.keys()),
                 diff=diff,
             )
@@ -478,18 +536,24 @@ def configuracio(request: HttpRequest) -> HttpResponse:
     fields_data = []
     for field in ConfiguracioGlobal._meta.get_fields():
         if hasattr(field, "attname") and field.attname != "id":
-            fields_data.append({
-                "name": field.attname,
-                "label": field.attname.replace("_", " ").title(),
-                "value": getattr(config, field.attname),
-                "help": getattr(field, "help_text", ""),
-            })
+            fields_data.append(
+                {
+                    "name": field.attname,
+                    "label": field.attname.replace("_", " ").title(),
+                    "value": getattr(config, field.attname),
+                    "help": getattr(field, "help_text", ""),
+                }
+            )
 
-    return render(request, "web/staff/configuracio.html", {
-        "staff_section": "configuracio",
-        "config": config,
-        "fields": fields_data,
-    })
+    return render(
+        request,
+        "web/staff/configuracio.html",
+        {
+            "staff_section": "configuracio",
+            "config": config,
+            "fields": fields_data,
+        },
+    )
 
 
 # ── StaffAuditLog (read-only view) ──
@@ -514,11 +578,15 @@ def auditlog(request: HttpRequest) -> HttpResponse:
 
     page = paginate(request, qs, per_page=50)
 
-    return render(request, "web/staff/auditlog.html", {
-        "staff_section": "auditlog",
-        "page": page,
-        "action": action,
-        "actor_email": actor_email,
-        "cerca": cerca,
-        "action_choices": StaffAuditLog.ACTION_CHOICES,
-    })
+    return render(
+        request,
+        "web/staff/auditlog.html",
+        {
+            "staff_section": "auditlog",
+            "page": page,
+            "action": action,
+            "actor_email": actor_email,
+            "cerca": cerca,
+            "action_choices": StaffAuditLog.ACTION_CHOICES,
+        },
+    )

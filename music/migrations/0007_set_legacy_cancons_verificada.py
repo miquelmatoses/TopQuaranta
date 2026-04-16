@@ -11,11 +11,15 @@ from django.db import migrations
 
 def set_legacy_verificada(apps, schema_editor):
     Canco = apps.get_model("music", "Canco")
-    updated = Canco.objects.filter(
-        spotify_id__isnull=False,
-    ).exclude(
-        spotify_id="",
-    ).update(verificada=True)
+    updated = (
+        Canco.objects.filter(
+            spotify_id__isnull=False,
+        )
+        .exclude(
+            spotify_id="",
+        )
+        .update(verificada=True)
+    )
     print(f"\n  Marked {updated} legacy cançons as verificada=True")
 
 

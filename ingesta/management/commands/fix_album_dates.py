@@ -20,9 +20,11 @@ class Command(BaseCommand):
         limit = options["limit"]
         dry_run = options["dry_run"]
 
-        qs = Album.objects.filter(deezer_id__isnull=False).exclude(
-            cancons__deezer_id__isnull=True
-        ).distinct()
+        qs = (
+            Album.objects.filter(deezer_id__isnull=False)
+            .exclude(cancons__deezer_id__isnull=True)
+            .distinct()
+        )
         total = qs.count()
         self.stdout.write(f"Albums to check: {total}")
 
@@ -33,7 +35,7 @@ class Command(BaseCommand):
         errors = 0
         checked = 0
 
-        for album in (qs if limit else qs.iterator()):
+        for album in qs if limit else qs.iterator():
             # Get first track with deezer_id from this album
             track = album.cancons.filter(deezer_id__isnull=False).first()
             if not track:
@@ -53,7 +55,11 @@ class Command(BaseCommand):
             album_date = _parse_date(album_date_str)
             checked += 1
 
-            if album_date and album.data_llancament and album_date < album.data_llancament:
+            if (
+                album_date
+                and album.data_llancament
+                and album_date < album.data_llancament
+            ):
                 if dry_run:
                     self.stdout.write(
                         f"  FIX: {album.nom} — {album.data_llancament} → {album_date}"

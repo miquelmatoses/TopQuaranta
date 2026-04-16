@@ -7,10 +7,16 @@ from django.db.models import Q
 def unapprove_without_location(apps, schema_editor):
     """Set aprovat=False for artists missing localitat or comarca."""
     Artista = apps.get_model("music", "Artista")
-    count = Artista.objects.filter(aprovat=True).filter(
-        Q(localitat="") | Q(localitat__isnull=True) |
-        Q(comarca="") | Q(comarca__isnull=True)
-    ).update(aprovat=False)
+    count = (
+        Artista.objects.filter(aprovat=True)
+        .filter(
+            Q(localitat="")
+            | Q(localitat__isnull=True)
+            | Q(comarca="")
+            | Q(comarca__isnull=True)
+        )
+        .update(aprovat=False)
+    )
     if count:
         print(f"  Unapproved {count} artists without localitat/comarca.")
 
@@ -35,7 +41,7 @@ def noop(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0021_copy_deezer_ids_to_m2m'),
+        ("music", "0021_copy_deezer_ids_to_m2m"),
     ]
 
     operations = [

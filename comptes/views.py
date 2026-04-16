@@ -115,12 +115,16 @@ class TQLoginView(LoginView):
         regular users, flip the branch here.
         """
         user = self.request.user
-        next_url = self.request.GET.get("next") or self.request.POST.get("next") \
-                   or "/compte/dashboard/"
+        next_url = (
+            self.request.GET.get("next")
+            or self.request.POST.get("next")
+            or "/compte/dashboard/"
+        )
 
         if user.is_staff:
             has_confirmed = TOTPDevice.objects.filter(
-                user=user, confirmed=True,
+                user=user,
+                confirmed=True,
             ).exists()
             if not has_confirmed:
                 return f"/compte/2fa/configurar/?next={next_url}"
@@ -210,20 +214,25 @@ def dos_fa_configurar(request: HttpRequest) -> HttpResponse:
     img.save(buf, format="PNG")
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
 
-    return render(request, "comptes/dos_fa_configurar.html", {
-        "qr_b64": qr_b64,
-        "secret": device.bin_key.hex().upper(),
-        "error": error,
-        "backup_codes": backup_codes,
-    })
+    return render(
+        request,
+        "comptes/dos_fa_configurar.html",
+        {
+            "qr_b64": qr_b64,
+            "secret": device.bin_key.hex().upper(),
+            "error": error,
+            "backup_codes": backup_codes,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
 def dos_fa_verificar(request: HttpRequest) -> HttpResponse:
     """S11a · challenge screen — accepts TOTP or a single-use backup code."""
     user = request.user
-    next_url = request.GET.get("next") or request.POST.get("next") \
-               or "/compte/dashboard/"
+    next_url = (
+        request.GET.get("next") or request.POST.get("next") or "/compte/dashboard/"
+    )
 
     # If the session is already verified, skip straight to destination.
     if user.is_verified():
@@ -256,10 +265,14 @@ def dos_fa_verificar(request: HttpRequest) -> HttpResponse:
             error = "Codi incorrecte."
             logger.warning("2FA failed for %s", user.email)
 
-    return render(request, "comptes/dos_fa_verificar.html", {
-        "error": error,
-        "next": next_url,
-    })
+    return render(
+        request,
+        "comptes/dos_fa_verificar.html",
+        {
+            "error": error,
+            "next": next_url,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
@@ -268,16 +281,15 @@ def dos_fa_gestio(request: HttpRequest) -> HttpResponse:
     user = request.user
     has_totp = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
     has_backup = StaticDevice.objects.filter(
-        user=user, token_set__isnull=False,
+        user=user,
+        token_set__isnull=False,
     ).exists()
 
     new_codes = None
     if request.method == "POST":
         # Mutations require the session be 2FA-verified.
         if not user.is_verified():
-            return redirect(
-                f"/compte/2fa/verificar/?next=/compte/2fa/"
-            )
+            return redirect(f"/compte/2fa/verificar/?next=/compte/2fa/")
         action = request.POST.get("action", "")
         if action == "regenerar_codis":
             new_codes = _generate_backup_codes(user)
@@ -293,18 +305,23 @@ def dos_fa_gestio(request: HttpRequest) -> HttpResponse:
                 TOTPDevice.objects.filter(user=user).delete()
                 StaticDevice.objects.filter(user=user).delete()
                 messages.success(
-                    request, "Dispositiu 2FA eliminat. Hauràs de tornar a configurar-lo.",
+                    request,
+                    "Dispositiu 2FA eliminat. Hauràs de tornar a configurar-lo.",
                 )
                 return redirect("comptes:dos_fa_configurar")
             else:
                 messages.error(request, "Contrasenya incorrecta.")
 
-    return render(request, "comptes/dos_fa_gestio.html", {
-        "has_totp": has_totp,
-        "has_backup": has_backup,
-        "is_verified": user.is_verified(),
-        "new_codes": new_codes,
-    })
+    return render(
+        request,
+        "comptes/dos_fa_gestio.html",
+        {
+            "has_totp": has_totp,
+            "has_backup": has_backup,
+            "is_verified": user.is_verified(),
+            "new_codes": new_codes,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
@@ -321,15 +338,17 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         .order_by("-created_at")
     )
     # For the artist portal card, find first verified link
-    artista_verificat = next(
-        (ua for ua in gestio_list if ua.verificat), None
-    )
+    artista_verificat = next((ua for ua in gestio_list if ua.verificat), None)
 
-    return render(request, "comptes/dashboard.html", {
-        "gestio_list": gestio_list,
-        "propostes_list": propostes_list,
-        "artista_verificat": artista_verificat,
-    })
+    return render(
+        request,
+        "comptes/dashboard.html",
+        {
+            "gestio_list": gestio_list,
+            "propostes_list": propostes_list,
+            "artista_verificat": artista_verificat,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
@@ -346,7 +365,9 @@ def perfil(request: HttpRequest) -> HttpResponse:
         artista = user_artista.artista
         ranking_qs = RankingSetmanal.objects.filter(canco__artista=artista)
         setmanes = ranking_qs.values("setmana").distinct().count()
-        millor = ranking_qs.order_by("posicio").values_list("posicio", flat=True).first()
+        millor = (
+            ranking_qs.order_by("posicio").values_list("posicio", flat=True).first()
+        )
         cancons = ranking_qs.values("canco_id").distinct().count()
         territoris = ranking_qs.values("territori").distinct().count()
         stats = {
@@ -356,10 +377,14 @@ def perfil(request: HttpRequest) -> HttpResponse:
             "territoris_presents": territoris,
         }
 
-    return render(request, "comptes/perfil.html", {
-        "user_artista": user_artista,
-        "stats": stats,
-    })
+    return render(
+        request,
+        "comptes/perfil.html",
+        {
+            "user_artista": user_artista,
+            "stats": stats,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
@@ -373,7 +398,9 @@ def sollicitud_gestio(request: HttpRequest) -> HttpResponse:
                 ua.usuari = request.user
                 ua.save()
             try:
-                _notify_admins("gestió", ua.artista.nom, request.user.email, ua.sollicitud_text)
+                _notify_admins(
+                    "gestió", ua.artista.nom, request.user.email, ua.sollicitud_text
+                )
             except Exception as exc:
                 logger.warning("Admin notification skipped (gestió): %s", exc)
             return redirect("comptes:dashboard")
@@ -387,10 +414,14 @@ def sollicitud_gestio(request: HttpRequest) -> HttpResponse:
         .order_by("-created_at")
     )
 
-    return render(request, "comptes/sollicitud_gestio.html", {
-        "form": form,
-        "historial": historial,
-    })
+    return render(
+        request,
+        "comptes/sollicitud_gestio.html",
+        {
+            "form": form,
+            "historial": historial,
+        },
+    )
 
 
 @login_required(login_url="/compte/login/")
@@ -409,9 +440,15 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
         if not errors:
             # Collect social links
             social_fields = [
-                "spotify_url", "viasona_url", "web_url", "bandcamp_url",
-                "youtube_url", "viquipedia_url", "soundcloud_url",
-                "tiktok_url", "facebook_url",
+                "spotify_url",
+                "viasona_url",
+                "web_url",
+                "bandcamp_url",
+                "youtube_url",
+                "viquipedia_url",
+                "soundcloud_url",
+                "tiktok_url",
+                "facebook_url",
             ]
             social_data = {}
             for field in social_fields:
@@ -452,10 +489,15 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
                 for field, msgs in exc.message_dict.items():
                     for msg in msgs:
                         errors.append(f"{field}: {msg}")
-                return render(request, "comptes/sollicitud_proposta.html", {
-                    "errors": errors, "historial": [],
-                    "form_data": request.POST,
-                })
+                return render(
+                    request,
+                    "comptes/sollicitud_proposta.html",
+                    {
+                        "errors": errors,
+                        "historial": [],
+                        "form_data": request.POST,
+                    },
+                )
             with transaction.atomic():
                 proposta.save()
 
@@ -466,13 +508,18 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
             return redirect("comptes:dashboard")
 
         # Re-render with errors
-        return render(request, "comptes/sollicitud_proposta.html", {
-            "errors": errors,
-            "historial": list(
-                PropostaArtista.objects.filter(usuari=request.user)
-                .order_by("-created_at")
-            ),
-        })
+        return render(
+            request,
+            "comptes/sollicitud_proposta.html",
+            {
+                "errors": errors,
+                "historial": list(
+                    PropostaArtista.objects.filter(usuari=request.user).order_by(
+                        "-created_at"
+                    )
+                ),
+            },
+        )
 
     # GET
     historial = list(
@@ -481,10 +528,14 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
         .order_by("-created_at")
     )
 
-    return render(request, "comptes/sollicitud_proposta.html", {
-        "errors": [],
-        "historial": historial,
-    })
+    return render(
+        request,
+        "comptes/sollicitud_proposta.html",
+        {
+            "errors": [],
+            "historial": historial,
+        },
+    )
 
 
 def _notify_admins(tipus: str, artista_nom: str, email: str, text: str) -> None:
@@ -502,7 +553,10 @@ def _notify_admins(tipus: str, artista_nom: str, email: str, text: str) -> None:
     except Exception as exc:
         # SMTP not configured in this environment — log and continue.
         logger.warning(
-            "Admin email skipped for %s '%s': %s", tipus, artista_nom, exc,
+            "Admin email skipped for %s '%s': %s",
+            tipus,
+            artista_nom,
+            exc,
         )
 
 
@@ -549,13 +603,19 @@ def portal_artista(request: HttpRequest) -> HttpResponse:
     )
 
     # Songs pending verification
-    pendents = artista.cancons.filter(verificada=False).order_by("-data_llancament")[:20]
+    pendents = artista.cancons.filter(verificada=False).order_by("-data_llancament")[
+        :20
+    ]
 
-    return render(request, "comptes/portal_artista.html", {
-        "artista": artista,
-        "territoris": territoris,
-        "historial_setmanes": historial_setmanes,
-        "evolucio": evolucio,
-        "provisional": provisional,
-        "pendents": pendents,
-    })
+    return render(
+        request,
+        "comptes/portal_artista.html",
+        {
+            "artista": artista,
+            "territoris": territoris,
+            "historial_setmanes": historial_setmanes,
+            "evolucio": evolucio,
+            "provisional": provisional,
+            "pendents": pendents,
+        },
+    )

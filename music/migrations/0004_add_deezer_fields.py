@@ -6,28 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0003_remove_artista_actiu'),
+        ("music", "0003_remove_artista_actiu"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='album',
-            name='deezer_id',
+            model_name="album",
+            name="deezer_id",
             field=models.IntegerField(blank=True, null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='deezer_id',
+            model_name="artista",
+            name="deezer_id",
             field=models.IntegerField(blank=True, null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='deezer_no_trobat',
-            field=models.BooleanField(default=False, help_text='True if Deezer search failed ISRC validation — skip in future runs.'),
+            model_name="artista",
+            name="deezer_no_trobat",
+            field=models.BooleanField(
+                default=False,
+                help_text="True if Deezer search failed ISRC validation — skip in future runs.",
+            ),
         ),
         migrations.AddField(
-            model_name='canco',
-            name='deezer_id',
+            model_name="canco",
+            name="deezer_id",
             field=models.IntegerField(blank=True, null=True, unique=True),
         ),
     ]

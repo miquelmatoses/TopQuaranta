@@ -15,7 +15,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true")
-        parser.add_argument("--limit", type=int, default=None, help="Max groups to process.")
+        parser.add_argument(
+            "--limit", type=int, default=None, help="Max groups to process."
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
@@ -49,8 +51,7 @@ class Command(BaseCommand):
 
             # Order: verificada=True first, then highest deezer_id (most recent)
             cancons = list(
-                Canco.objects.filter(isrc=isrc)
-                .order_by("-verificada", "-deezer_id")
+                Canco.objects.filter(isrc=isrc).order_by("-verificada", "-deezer_id")
             )
 
             principal = cancons[0]
@@ -83,8 +84,9 @@ class Command(BaseCommand):
                 for dup in duplicades:
                     # Move SenyalDiari records that don't conflict
                     existing_dates = set(
-                        SenyalDiari.objects.filter(canco=principal)
-                        .values_list("data", flat=True)
+                        SenyalDiari.objects.filter(canco=principal).values_list(
+                            "data", flat=True
+                        )
                     )
                     moved = 0
                     for senyal in SenyalDiari.objects.filter(canco=dup):
@@ -113,9 +115,7 @@ class Command(BaseCommand):
                     principal.deezer_id = best_deezer_id
                     principal.save(update_fields=["deezer_id"])
 
-                logger.info(
-                    "ISRC %s: %d → 1 (kept id=%d)", isrc, cnt, principal.pk
-                )
+                logger.info("ISRC %s: %d → 1 (kept id=%d)", isrc, cnt, principal.pk)
 
             groups_processed += 1
             cancons_removed += len(duplicades)

@@ -21,7 +21,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("email", help="Email address of the user to reset")
         parser.add_argument(
-            "--yes", action="store_true",
+            "--yes",
+            action="store_true",
             help="Skip the interactive confirmation prompt.",
         )
 
@@ -51,7 +52,9 @@ class Command(BaseCommand):
 
         TOTPDevice.objects.filter(user=user).delete()
         StaticDevice.objects.filter(user=user).delete()
-        self.stdout.write(self.style.SUCCESS(
-            f"Removed {totp_n} TOTP + {static_n} static devices for {user.email}. "
-            "They will be forced through enrollment on next /staff/ access."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Removed {totp_n} TOTP + {static_n} static devices for {user.email}. "
+                "They will be forced through enrollment on next /staff/ access."
+            )
+        )

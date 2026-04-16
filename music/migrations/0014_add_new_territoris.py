@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 NEW_TERRITORIS = [
     ("CNO", "Catalunya del Nord"),
     ("AND", "Andorra"),

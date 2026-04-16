@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0028_add_user_audit_actions'),
+        ("music", "0028_add_user_audit_actions"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='canco',
-            name='lastfm_confirmed',
+            model_name="canco",
+            name="lastfm_confirmed",
             field=models.BooleanField(default=False),
         ),
     ]

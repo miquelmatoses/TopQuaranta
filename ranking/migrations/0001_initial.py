@@ -9,68 +9,173 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('music', '0001_initial'),
+        ("music", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ConfiguracioGlobal',
+            name="ConfiguracioGlobal",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('dia_setmana_ranking', models.IntegerField(default=6)),
-                ('penalitzacio_descens', models.DecimalField(decimal_places=3, default=0.025, max_digits=5)),
-                ('exponent_penalitzacio_antiguitat', models.DecimalField(decimal_places=2, default=2.5, max_digits=5)),
-                ('max_factor_a', models.DecimalField(decimal_places=2, default=1.0, max_digits=5)),
-                ('max_factor_b', models.DecimalField(decimal_places=2, default=1.0, max_digits=5)),
-                ('max_factor_c', models.DecimalField(decimal_places=2, default=1.0, max_digits=5)),
-                ('max_factor_final', models.DecimalField(decimal_places=2, default=1.5, max_digits=5)),
-                ('penalitzacio_album_per_canco', models.DecimalField(decimal_places=3, default=0.25, max_digits=5)),
-                ('penalitzacio_artista_per_canco', models.DecimalField(decimal_places=3, default=0.2, max_digits=5)),
-                ('coeficient_penalitzacio_top', models.DecimalField(decimal_places=3, default=0.075, max_digits=5)),
-                ('penalitzacio_setmana_0', models.DecimalField(decimal_places=3, default=0.1, max_digits=5)),
-                ('penalitzacio_setmana_1', models.DecimalField(decimal_places=3, default=0.05, max_digits=5)),
-                ('penalitzacio_setmana_2', models.DecimalField(decimal_places=3, default=0.0, max_digits=5)),
-                ('suavitat', models.DecimalField(decimal_places=2, default=5.0, max_digits=5)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("dia_setmana_ranking", models.IntegerField(default=6)),
+                (
+                    "penalitzacio_descens",
+                    models.DecimalField(decimal_places=3, default=0.025, max_digits=5),
+                ),
+                (
+                    "exponent_penalitzacio_antiguitat",
+                    models.DecimalField(decimal_places=2, default=2.5, max_digits=5),
+                ),
+                (
+                    "max_factor_a",
+                    models.DecimalField(decimal_places=2, default=1.0, max_digits=5),
+                ),
+                (
+                    "max_factor_b",
+                    models.DecimalField(decimal_places=2, default=1.0, max_digits=5),
+                ),
+                (
+                    "max_factor_c",
+                    models.DecimalField(decimal_places=2, default=1.0, max_digits=5),
+                ),
+                (
+                    "max_factor_final",
+                    models.DecimalField(decimal_places=2, default=1.5, max_digits=5),
+                ),
+                (
+                    "penalitzacio_album_per_canco",
+                    models.DecimalField(decimal_places=3, default=0.25, max_digits=5),
+                ),
+                (
+                    "penalitzacio_artista_per_canco",
+                    models.DecimalField(decimal_places=3, default=0.2, max_digits=5),
+                ),
+                (
+                    "coeficient_penalitzacio_top",
+                    models.DecimalField(decimal_places=3, default=0.075, max_digits=5),
+                ),
+                (
+                    "penalitzacio_setmana_0",
+                    models.DecimalField(decimal_places=3, default=0.1, max_digits=5),
+                ),
+                (
+                    "penalitzacio_setmana_1",
+                    models.DecimalField(decimal_places=3, default=0.05, max_digits=5),
+                ),
+                (
+                    "penalitzacio_setmana_2",
+                    models.DecimalField(decimal_places=3, default=0.0, max_digits=5),
+                ),
+                (
+                    "suavitat",
+                    models.DecimalField(decimal_places=2, default=5.0, max_digits=5),
+                ),
             ],
             options={
-                'verbose_name': 'Configuració global',
-                'verbose_name_plural': 'Configuració global',
+                "verbose_name": "Configuració global",
+                "verbose_name_plural": "Configuració global",
             },
         ),
         migrations.CreateModel(
-            name='IngestaDiari',
+            name="IngestaDiari",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('data', models.DateField()),
-                ('lastfm_playcount', models.BigIntegerField(null=True)),
-                ('lastfm_listeners', models.IntegerField(null=True)),
-                ('score_entrada', models.FloatField(help_text='Normalized score (0-100) for the ranking algorithm.', null=True)),
-                ('error', models.BooleanField(default=False)),
-                ('error_msg', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('canco', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ingestes', to='music.canco')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("data", models.DateField()),
+                ("lastfm_playcount", models.BigIntegerField(null=True)),
+                ("lastfm_listeners", models.IntegerField(null=True)),
+                (
+                    "score_entrada",
+                    models.FloatField(
+                        help_text="Normalized score (0-100) for the ranking algorithm.",
+                        null=True,
+                    ),
+                ),
+                ("error", models.BooleanField(default=False)),
+                ("error_msg", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "canco",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ingestes",
+                        to="music.canco",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-data'],
-                'indexes': [models.Index(fields=['canco', 'data'], name='ranking_ing_canco_i_587ef5_idx'), models.Index(fields=['data', 'error'], name='ranking_ing_data_83e5bf_idx')],
-                'unique_together': {('canco', 'data')},
+                "ordering": ["-data"],
+                "indexes": [
+                    models.Index(
+                        fields=["canco", "data"], name="ranking_ing_canco_i_587ef5_idx"
+                    ),
+                    models.Index(
+                        fields=["data", "error"], name="ranking_ing_data_83e5bf_idx"
+                    ),
+                ],
+                "unique_together": {("canco", "data")},
             },
         ),
         migrations.CreateModel(
-            name='RankingSetmanal',
+            name="RankingSetmanal",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('territori', models.CharField(choices=[('CAT', 'Catalunya'), ('VAL', 'País Valencià'), ('BAL', 'Illes Balears')], max_length=3)),
-                ('setmana', models.DateField()),
-                ('posicio', models.PositiveSmallIntegerField()),
-                ('score_setmanal', models.FloatField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('canco', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rankings', to='music.canco')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "territori",
+                    models.CharField(
+                        choices=[
+                            ("CAT", "Catalunya"),
+                            ("VAL", "País Valencià"),
+                            ("BAL", "Illes Balears"),
+                        ],
+                        max_length=3,
+                    ),
+                ),
+                ("setmana", models.DateField()),
+                ("posicio", models.PositiveSmallIntegerField()),
+                ("score_setmanal", models.FloatField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "canco",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="rankings",
+                        to="music.canco",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['territori', 'posicio'],
-                'indexes': [models.Index(fields=['setmana', 'territori'], name='ranking_ran_setmana_05f28b_idx')],
-                'unique_together': {('canco', 'territori', 'setmana')},
+                "ordering": ["territori", "posicio"],
+                "indexes": [
+                    models.Index(
+                        fields=["setmana", "territori"],
+                        name="ranking_ran_setmana_05f28b_idx",
+                    )
+                ],
+                "unique_together": {("canco", "territori", "setmana")},
             },
         ),
     ]

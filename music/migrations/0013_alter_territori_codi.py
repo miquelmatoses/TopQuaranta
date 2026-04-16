@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0012_canco_ml_classe_canco_ml_confianca'),
+        ("music", "0012_canco_ml_classe_canco_ml_confianca"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='territori',
-            name='codi',
+            model_name="territori",
+            name="codi",
             field=models.CharField(max_length=4, primary_key=True, serialize=False),
         ),
     ]

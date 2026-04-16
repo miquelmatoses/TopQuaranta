@@ -25,5 +25,9 @@ urlpatterns = [
     path("mapa/", views.mapa, name="mapa"),
     # Φ4 · public algorithm transparency
     path("com-funciona/", views.com_funciona, name="com_funciona"),
-    path("com-funciona/historial/", views.com_funciona_historial, name="com_funciona_historial"),
+    path(
+        "com-funciona/historial/",
+        views.com_funciona_historial,
+        name="com_funciona_historial",
+    ),
 ]

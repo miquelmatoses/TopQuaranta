@@ -2,10 +2,28 @@
 
 from typing import Optional
 
-PARTICLES = frozenset({
-    "de", "la", "el", "els", "i", "o", "un", "una", "per", "a", "amb",
-    "en", "del", "al", "als", "les", "dels", "pels",
-})
+PARTICLES = frozenset(
+    {
+        "de",
+        "la",
+        "el",
+        "els",
+        "i",
+        "o",
+        "un",
+        "una",
+        "per",
+        "a",
+        "amb",
+        "en",
+        "del",
+        "al",
+        "als",
+        "les",
+        "dels",
+        "pels",
+    }
+)
 
 APOSTROPHE_PARTICLES = frozenset({"l'", "d'"})
 
@@ -72,7 +90,7 @@ def titlecase_catala(text: Optional[str]) -> str:
 
         if apostrophe_match is not None:
             prefix = apostrophe_match
-            rest = word[len(prefix):]
+            rest = word[len(prefix) :]
             if is_first:
                 # Capitalize the prefix and the rest
                 result.append(_capitalize_word(prefix) + _capitalize_word(rest))

@@ -1,0 +1,23 @@
+# O3: tool config for the CI lint job.
+#
+# isort + black disagree by default; the `profile = "black"` setting makes
+# them produce compatible output. line-length matches black's default (88).
+# Excluded: migrations (Django generates them) and node_modules (mm-design
+# tokens, not Python).
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+skip = ["migrations", "node_modules", ".venv"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = '''
+/(
+    migrations
+  | node_modules
+  | \.venv
+)/
+'''

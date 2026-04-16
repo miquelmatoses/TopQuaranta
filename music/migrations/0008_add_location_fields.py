@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0007_set_legacy_cancons_verificada'),
+        ("music", "0007_set_legacy_cancons_verificada"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='artista',
-            name='comarca',
+            model_name="artista",
+            name="comarca",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='localitat',
+            model_name="artista",
+            name="localitat",
             field=models.CharField(blank=True, max_length=255),
         ),
         migrations.AddField(
-            model_name='artista',
-            name='provincia',
+            model_name="artista",
+            name="provincia",
             field=models.CharField(blank=True, max_length=255),
         ),
     ]

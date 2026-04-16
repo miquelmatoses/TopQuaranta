@@ -15,7 +15,10 @@ from ranking.algorisme import (
     territoris_amb_ranking_propi,
 )
 from ranking.models import (
-    ConfiguracioGlobal, RankingProvisional, RankingSetmanal, SenyalDiari,
+    ConfiguracioGlobal,
+    RankingProvisional,
+    RankingSetmanal,
+    SenyalDiari,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,14 +33,21 @@ ALGORITHM_VERSION = "v1.0"
 # R1: coefficients we snapshot into each RankingSetmanal row. Matches the
 # fields stored in ConfiguracioGlobal.
 _CONFIG_SNAPSHOT_FIELDS = [
-    "dia_setmana_ranking", "penalitzacio_descens",
+    "dia_setmana_ranking",
+    "penalitzacio_descens",
     "exponent_penalitzacio_antiguitat",
-    "max_factor_a", "max_factor_b", "max_factor_c", "max_factor_final",
-    "penalitzacio_album_per_canco", "penalitzacio_artista_per_canco",
+    "max_factor_a",
+    "max_factor_b",
+    "max_factor_c",
+    "max_factor_final",
+    "penalitzacio_album_per_canco",
+    "penalitzacio_artista_per_canco",
     "coeficient_penalitzacio_top",
-    "penalitzacio_setmana_0", "penalitzacio_setmana_1",
+    "penalitzacio_setmana_0",
+    "penalitzacio_setmana_1",
     "penalitzacio_setmana_2",
-    "suavitat", "min_cancons_ranking_propi",
+    "suavitat",
+    "min_cancons_ranking_propi",
 ]
 
 
@@ -86,9 +96,13 @@ class Command(BaseCommand):
             try:
                 setmana = date.fromisoformat(options["setmana"])
             except ValueError:
-                raise CommandError(f"Invalid date: {options['setmana']}. Use YYYY-MM-DD.")
+                raise CommandError(
+                    f"Invalid date: {options['setmana']}. Use YYYY-MM-DD."
+                )
             if setmana.weekday() != 0:
-                raise CommandError(f"{setmana} is not a Monday (weekday={setmana.weekday()}).")
+                raise CommandError(
+                    f"{setmana} is not a Monday (weekday={setmana.weekday()})."
+                )
         else:
             today = date.today()
             setmana = today - timedelta(days=today.weekday())
@@ -101,7 +115,9 @@ class Command(BaseCommand):
             # Same set for provisional and setmanal: fixed + aggregates (+ optional for provisional).
             # Aggregates run LAST so they can read the just-computed individual results.
             if provisional:
-                non_agg = sorted(t for t in ALL_TERRITORIS if t not in TERRITORIS_AGREGATS)
+                non_agg = sorted(
+                    t for t in ALL_TERRITORIS if t not in TERRITORIS_AGREGATS
+                )
             else:
                 non_agg = sorted(TERRITORIS_FIXOS)
             agg = sorted(TERRITORIS_AGREGATS)
@@ -117,14 +133,20 @@ class Command(BaseCommand):
 
         # Pre-flight: check data availability
         total_verified = Canco.objects.filter(
-            verificada=True, activa=True,
+            verificada=True,
+            activa=True,
             data_llancament__gte=date.today() - timedelta(days=DIES_CADUCITAT),
         ).count()
-        with_score = SenyalDiari.objects.filter(
-            data__gte=date.today() - timedelta(days=7),
-            error=False,
-            score_entrada__isnull=False,
-        ).values("canco_id").distinct().count()
+        with_score = (
+            SenyalDiari.objects.filter(
+                data__gte=date.today() - timedelta(days=7),
+                error=False,
+                score_entrada__isnull=False,
+            )
+            .values("canco_id")
+            .distinct()
+            .count()
+        )
 
         coverage = (with_score / total_verified * 100) if total_verified > 0 else 0
         self.stdout.write(
@@ -132,9 +154,11 @@ class Command(BaseCommand):
             f"have score_entrada in last 7 days ({coverage:.0f}%)"
         )
         if coverage < 50:
-            self.stdout.write(self.style.WARNING(
-                "  WARNING: coverage below 50%. Results may be incomplete."
-            ))
+            self.stdout.write(
+                self.style.WARNING(
+                    "  WARNING: coverage below 50%. Results may be incomplete."
+                )
+            )
 
         # Distinct dates with data
         distinct_dates = (
@@ -142,7 +166,10 @@ class Command(BaseCommand):
                 data__gte=date.today() - timedelta(days=7),
                 error=False,
                 score_entrada__isnull=False,
-            ).values_list("data", flat=True).distinct().count()
+            )
+            .values_list("data", flat=True)
+            .distinct()
+            .count()
         )
         self.stdout.write(f"  Days with data in window: {distinct_dates}")
 
@@ -159,7 +186,9 @@ class Command(BaseCommand):
                 if territori in (TERRITORIS_AGREGATS | TERRITORIS_OPCIONALS):
                     self.stdout.write(f"  No data for {territori} — skipping.")
                 else:
-                    self.stdout.write(self.style.WARNING(f"  No results for {territori}"))
+                    self.stdout.write(
+                        self.style.WARNING(f"  No results for {territori}")
+                    )
                 continue
 
             summary.append((territori, len(top40)))
@@ -168,22 +197,26 @@ class Command(BaseCommand):
                 self._print_top(territori, top40[:20])
             elif provisional:
                 self._save_provisional(territori, top40)
-                self.stdout.write(f"  Saved {len(top40)} provisional positions for {territori}")
+                self.stdout.write(
+                    f"  Saved {len(top40)} provisional positions for {territori}"
+                )
             else:
                 self._save_ranking(territori, setmana, top40)
                 self.stdout.write(f"  Saved {len(top40)} positions for {territori}")
 
         # Summary
-        self.stdout.write(self.style.SUCCESS(
-            "\n" + " | ".join(f"{t}: {n} posicions" for t, n in summary)
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                "\n" + " | ".join(f"{t}: {n} posicions" for t, n in summary)
+            )
+        )
 
     def _print_top(self, territori: str, rows: list[dict]) -> None:
         """Print ranking table for dry-run."""
         canco_ids = [r["canco_id"] for r in rows]
         cancons = {
-            c.id: c for c in
-            Canco.objects.filter(id__in=canco_ids).select_related("artista")
+            c.id: c
+            for c in Canco.objects.filter(id__in=canco_ids).select_related("artista")
         }
 
         self.stdout.write(f"\n  TOP {len(rows)} {territori}:")
@@ -218,22 +251,25 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             RankingSetmanal.objects.filter(
-                territori=territori, setmana=setmana,
+                territori=territori,
+                setmana=setmana,
             ).delete()
             objs = []
             for r in rows:
                 canco_nom, artista_nom = names.get(r["canco_id"], ("", ""))
-                objs.append(RankingSetmanal(
-                    canco_id=r["canco_id"],
-                    territori=territori,
-                    setmana=setmana,
-                    posicio=r["posicio"],
-                    score_setmanal=r["score_setmanal"] or 0.0,
-                    canco_nom_snapshot=(canco_nom or "")[:500],
-                    artista_nom_snapshot=(artista_nom or "")[:255],
-                    algorithm_version=ALGORITHM_VERSION,
-                    config_snapshot=config_snapshot,
-                ))
+                objs.append(
+                    RankingSetmanal(
+                        canco_id=r["canco_id"],
+                        territori=territori,
+                        setmana=setmana,
+                        posicio=r["posicio"],
+                        score_setmanal=r["score_setmanal"] or 0.0,
+                        canco_nom_snapshot=(canco_nom or "")[:500],
+                        artista_nom_snapshot=(artista_nom or "")[:255],
+                        algorithm_version=ALGORITHM_VERSION,
+                        config_snapshot=config_snapshot,
+                    )
+                )
             RankingSetmanal.objects.bulk_create(objs)
 
     def _save_provisional(self, territori: str, rows: list[dict]) -> None:
@@ -241,9 +277,10 @@ class Command(BaseCommand):
         # Get latest playcount per canco from SenyalDiari
         canco_ids = [r["canco_id"] for r in rows]
         latest_date = (
-            SenyalDiari.objects.filter(
-                canco_id__in=canco_ids, error=False
-            ).order_by("-data").values_list("data", flat=True).first()
+            SenyalDiari.objects.filter(canco_id__in=canco_ids, error=False)
+            .order_by("-data")
+            .values_list("data", flat=True)
+            .first()
         )
         playcount_map = {}
         if latest_date:
@@ -256,12 +293,14 @@ class Command(BaseCommand):
             RankingProvisional.objects.filter(territori=territori).delete()
             objs = []
             for r in rows:
-                objs.append(RankingProvisional(
-                    canco_id=r["canco_id"],
-                    territori=territori,
-                    posicio=r["posicio"],
-                    score_setmanal=r["score_setmanal"] or 0.0,
-                    lastfm_playcount=playcount_map.get(r["canco_id"]),
-                    dies_en_top=r.get("dies_en_top"),
-                ))
+                objs.append(
+                    RankingProvisional(
+                        canco_id=r["canco_id"],
+                        territori=territori,
+                        posicio=r["posicio"],
+                        score_setmanal=r["score_setmanal"] or 0.0,
+                        lastfm_playcount=playcount_map.get(r["canco_id"]),
+                        dies_en_top=r.get("dies_en_top"),
+                    )
+                )
             RankingProvisional.objects.bulk_create(objs)

@@ -26,10 +26,10 @@ from pathlib import Path
 from django.db.models import QuerySet
 
 from .constants import (
-    ML_CLASSE_A_THRESHOLD,
-    ML_CLASSE_B_THRESHOLD,
     MIN_NEW_DECISIONS,
     MIN_TRAINING_SAMPLES,
+    ML_CLASSE_A_THRESHOLD,
+    ML_CLASSE_B_THRESHOLD,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ def _get_tfidf():
     global _tfidf
     if _tfidf is None and TFIDF_PATH.exists():
         import joblib
+
         _tfidf = joblib.load(TFIDF_PATH)
     return _tfidf
 
@@ -98,6 +99,7 @@ def _isrc_category(isrc: str) -> tuple[int, int, int, int]:
 
 def _get_rejection_ratio(artista_nom: str) -> tuple[int, float]:
     from music.models import HistorialRevisio
+
     total = HistorialRevisio.objects.filter(artista_nom=artista_nom).count()
     if total == 0:
         return (0, 0.5)
@@ -109,6 +111,7 @@ def _get_rejection_ratio(artista_nom: str) -> tuple[int, float]:
 
 def _get_isrc_prefix_rejection_ratio(isrc: str) -> float:
     from music.models import HistorialRevisio
+
     prefix = isrc[:2].upper() if len(isrc) >= 2 else ""
     if not prefix:
         return 0.5
@@ -123,6 +126,7 @@ def _get_isrc_prefix_rejection_ratio(isrc: str) -> float:
 
 def _get_registrant_rejection_ratio(isrc: str) -> float:
     from music.models import HistorialRevisio
+
     registrant = isrc[2:5] if len(isrc) >= 5 else ""
     if not registrant:
         return 0.5
@@ -137,6 +141,7 @@ def _get_registrant_rejection_ratio(isrc: str) -> float:
 
 def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> float:
     from music.models import HistorialRevisio
+
     registrant = isrc[2:5] if len(isrc) >= 5 else ""
     if not registrant:
         return 0.5
@@ -158,9 +163,7 @@ def _build_features(canco) -> list[float]:
     es, digital, intl, empty = _isrc_category(isrc)
     nb_decisions, ratio_reb = _get_rejection_ratio(artista.nom)
     nb_col = canco.artistes_col.count()
-    nb_approved = Canco.objects.filter(
-        artista=artista, verificada=True
-    ).count()
+    nb_approved = Canco.objects.filter(artista=artista, verificada=True).count()
 
     return [
         float(es),
@@ -169,7 +172,11 @@ def _build_features(canco) -> list[float]:
         float(empty),
         float(artista.deezer_nb_fan or 0),
         float(artista.deezer_nb_album or 0),
-        float(artista.deezer_nom_similitud if artista.deezer_nom_similitud is not None else 0.5),
+        float(
+            artista.deezer_nom_similitud
+            if artista.deezer_nom_similitud is not None
+            else 0.5
+        ),
         float(len(artista.nom)),
         float(nb_decisions),
         float(ratio_reb),
@@ -188,12 +195,15 @@ def _build_features(canco) -> list[float]:
 def _build_features_from_historial(rec) -> list[float]:
     """Extract feature vector from an HistorialRevisio record."""
     from music.models import HistorialRevisio
+
     isrc = rec.canco_isrc or ""
     es, digital, intl, empty = _isrc_category(isrc)
     prefix = isrc[:2].upper() if len(isrc) >= 2 else ""
 
     # Rejection ratios from historial (excluding this record to avoid leak)
-    others = HistorialRevisio.objects.filter(artista_nom=rec.artista_nom).exclude(pk=rec.pk)
+    others = HistorialRevisio.objects.filter(artista_nom=rec.artista_nom).exclude(
+        pk=rec.pk
+    )
     total_others = others.count()
     if total_others > 0:
         rej_others = others.filter(decisio="rebutjada").count()
@@ -201,7 +211,9 @@ def _build_features_from_historial(rec) -> list[float]:
     else:
         ratio_reb = 0.5
 
-    prefix_others = HistorialRevisio.objects.filter(isrc_prefix=prefix).exclude(pk=rec.pk)
+    prefix_others = HistorialRevisio.objects.filter(isrc_prefix=prefix).exclude(
+        pk=rec.pk
+    )
     total_prefix = prefix_others.count()
     if total_prefix >= 3:
         ratio_prefix = prefix_others.filter(decisio="rebutjada").count() / total_prefix
@@ -215,7 +227,9 @@ def _build_features_from_historial(rec) -> list[float]:
         float(empty),
         float(rec.artista_deezer_nb_fan or 0),
         float(rec.artista_deezer_nb_album or 0),
-        float(rec.artista_nom_similitud if rec.artista_nom_similitud is not None else 0.5),
+        float(
+            rec.artista_nom_similitud if rec.artista_nom_similitud is not None else 0.5
+        ),
         float(len(rec.artista_nom)),
         float(total_others),
         float(ratio_reb),
@@ -234,10 +248,13 @@ def _build_features_from_historial(rec) -> list[float]:
 def _artista_aprovat_from_historial(rec) -> int:
     """Look up whether the artist is currently approved."""
     from music.models import ArtistaDeezer
+
     if rec.artista_deezer_id:
-        ad = ArtistaDeezer.objects.filter(
-            deezer_id=rec.artista_deezer_id
-        ).select_related("artista").first()
+        ad = (
+            ArtistaDeezer.objects.filter(deezer_id=rec.artista_deezer_id)
+            .select_related("artista")
+            .first()
+        )
         if ad:
             return 1 if ad.artista.aprovat else 0
     return 0
@@ -248,14 +265,17 @@ def entrenar_model() -> bool:
     Train TF-IDF vectorizer + RandomForestClassifier from HistorialRevisio.
     Saves both to disk. Returns True if trained.
     """
+    import joblib
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.feature_extraction.text import TfidfVectorizer
-    import joblib
+
     from music.models import HistorialRevisio
 
     recs = list(HistorialRevisio.objects.all())
     if len(recs) < MIN_TRAINING_SAMPLES:
-        logger.info("Not enough training data (%d < %d)", len(recs), MIN_TRAINING_SAMPLES)
+        logger.info(
+            "Not enough training data (%d < %d)", len(recs), MIN_TRAINING_SAMPLES
+        )
         return False
 
     # Train TF-IDF on all titles first
@@ -290,8 +310,11 @@ def entrenar_model() -> bool:
 
     importances = dict(zip(FEATURE_NAMES, clf.feature_importances_))
     sorted_imp = sorted(importances.items(), key=lambda x: -x[1])
-    logger.info("RF model trained with %d samples. Feature importances: %s",
-                len(X), sorted_imp[:5])
+    logger.info(
+        "RF model trained with %d samples. Feature importances: %s",
+        len(X),
+        sorted_imp[:5],
+    )
     return True
 
 
@@ -303,6 +326,7 @@ def pre_classificar(canco) -> dict:
     if MODEL_PATH.exists():
         try:
             import joblib
+
             clf = joblib.load(MODEL_PATH)
             features = _build_features(canco)
             proba = clf.predict_proba([features])[0]

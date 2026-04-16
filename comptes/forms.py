@@ -60,11 +60,13 @@ class SollicitudGestioForm(forms.ModelForm):
     )
     sollicitud_text = forms.CharField(
         label="Justificació",
-        widget=forms.Textarea(attrs={
-            "rows": 4,
-            "placeholder": "Explica per què representes aquest artista "
-            "(ets un membre del grup, el/la mànager, etc.)",
-        }),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 4,
+                "placeholder": "Explica per què representes aquest artista "
+                "(ets un membre del grup, el/la mànager, etc.)",
+            }
+        ),
     )
 
     class Meta:

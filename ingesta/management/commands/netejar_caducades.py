@@ -29,7 +29,9 @@ class Command(BaseCommand):
 
         if dry_run:
             self.stdout.write(
-                self.style.WARNING(f"DRY RUN — s'esborrarien {count} cançons (data_llancament < {cutoff})")
+                self.style.WARNING(
+                    f"DRY RUN — s'esborrarien {count} cançons (data_llancament < {cutoff})"
+                )
             )
             return
 
@@ -37,5 +39,7 @@ class Command(BaseCommand):
             deleted, _ = qs.delete()
 
         self.stdout.write(
-            self.style.SUCCESS(f"Esborrades {deleted} cançons caducades (data_llancament < {cutoff})")
+            self.style.SUCCESS(
+                f"Esborrades {deleted} cançons caducades (data_llancament < {cutoff})"
+            )
         )

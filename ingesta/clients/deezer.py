@@ -58,7 +58,8 @@ def _get(url: str, params: dict | None = None) -> dict | None:
                     logger.error(
                         "Quota Deezer exhaurida — reintenta demà "
                         "(error code=%s, message='%s')",
-                        error_code, error.get("message", ""),
+                        error_code,
+                        error.get("message", ""),
                     )
                     return None
                 logger.warning("Deezer error for %s: %s", url, error)
@@ -67,10 +68,14 @@ def _get(url: str, params: dict | None = None) -> dict | None:
             return data
 
         except requests.RequestException as exc:
-            wait = 2 ** attempt
+            wait = 2**attempt
             logger.warning(
                 "Deezer attempt %d/%d failed for %s: %s — retry in %ds",
-                attempt + 1, MAX_RETRIES, url, exc, wait,
+                attempt + 1,
+                MAX_RETRIES,
+                url,
+                exc,
+                wait,
             )
             if attempt < MAX_RETRIES - 1:
                 time.sleep(wait)
@@ -110,8 +115,11 @@ def search_artist(nom: str) -> dict | None:
         if nom_norm in deezer_norm or deezer_norm in nom_norm:
             return {"id": artist["id"], "name": artist["name"]}
 
-    logger.info("Deezer: no matching artist for '%s' (candidates: %s)",
-                nom, [a["name"] for a in results[:3]])
+    logger.info(
+        "Deezer: no matching artist for '%s' (candidates: %s)",
+        nom,
+        [a["name"] for a in results[:3]],
+    )
     return None
 
 
@@ -154,13 +162,15 @@ def get_artist_albums(deezer_id: int, min_date: date | None = None) -> list[dict
 
             record_type = item.get("record_type", "album")
 
-            albums.append({
-                "id": item["id"],
-                "title": item.get("title", ""),
-                "release_date": release_date,
-                "cover_xl": item.get("cover_xl", ""),
-                "record_type": record_type,
-            })
+            albums.append(
+                {
+                    "id": item["id"],
+                    "title": item.get("title", ""),
+                    "release_date": release_date,
+                    "cover_xl": item.get("cover_xl", ""),
+                    "record_type": record_type,
+                }
+            )
 
         next_url = data.get("next")
         if next_url:
@@ -193,26 +203,29 @@ def get_album_tracks(album_id: int) -> list[dict]:
         preview = full.get("preview", "") if full else ""
         # Use album.release_date (original), not track.release_date (may be re-release)
         album_release = (
-            full.get("album", {}).get("release_date")
-            or full.get("release_date", "")
-        ) if full else ""
+            (full.get("album", {}).get("release_date") or full.get("release_date", ""))
+            if full
+            else ""
+        )
         contributors = []
         if full:
             for c in full.get("contributors", []):
                 contributors.append({"id": c.get("id"), "name": c.get("name", "")})
 
         artist = item.get("artist", {})
-        tracks.append({
-            "id": track_id,
-            "title": item.get("title", ""),
-            "duration": item.get("duration", 0),
-            "isrc": isrc,
-            "artist_id": artist.get("id"),
-            "artist_name": artist.get("name", ""),
-            "preview": preview,
-            "album_release_date": album_release,
-            "contributors": contributors,
-        })
+        tracks.append(
+            {
+                "id": track_id,
+                "title": item.get("title", ""),
+                "duration": item.get("duration", 0),
+                "isrc": isrc,
+                "artist_id": artist.get("id"),
+                "artist_name": artist.get("name", ""),
+                "preview": preview,
+                "album_release_date": album_release,
+                "contributors": contributors,
+            }
+        )
 
     return tracks
 

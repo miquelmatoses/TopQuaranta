@@ -40,7 +40,9 @@ class Command(BaseCommand):
             if not dates:
                 self.stdout.write("No dates with NULL score_entrada found.")
                 return
-            self.stdout.write(f"Processing {len(dates)} dates: {dates[0]} → {dates[-1]}")
+            self.stdout.write(
+                f"Processing {len(dates)} dates: {dates[0]} → {dates[-1]}"
+            )
         elif options["data"]:
             try:
                 target = date.fromisoformat(options["data"])
@@ -57,5 +59,7 @@ class Command(BaseCommand):
             self.stdout.write(f"  {d}: {updated} rows updated")
 
         self.stdout.write(
-            self.style.SUCCESS(f"\nTotal: {total_updated} rows updated across {len(dates)} dates")
+            self.style.SUCCESS(
+                f"\nTotal: {total_updated} rows updated across {len(dates)} dates"
+            )
         )

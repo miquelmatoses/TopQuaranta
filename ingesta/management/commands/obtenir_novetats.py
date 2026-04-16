@@ -27,7 +27,11 @@ RECORD_TYPE_MAP = {
 
 def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
     """Look up artist by Deezer ID (via ArtistaDeezer), or create new."""
-    ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+    ad = (
+        ArtistaDeezer.objects.filter(deezer_id=deezer_id)
+        .select_related("artista")
+        .first()
+    )
     if ad:
         return ad.artista
     try:
@@ -44,7 +48,11 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
         )
         return artista
     except IntegrityError:
-        ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+        ad = (
+            ArtistaDeezer.objects.filter(deezer_id=deezer_id)
+            .select_related("artista")
+            .first()
+        )
         return ad.artista if ad else None
 
 
@@ -115,7 +123,9 @@ class Command(BaseCommand):
                     break
                 if data:
                     self._process_track_data(canco, data)
-                    self.stdout.write(f"  P1 track {canco.deezer_id} → ISRC={canco.isrc}")
+                    self.stdout.write(
+                        f"  P1 track {canco.deezer_id} → ISRC={canco.isrc}"
+                    )
                 continue
 
             # --- P2: albums with deezer_id but cancons_obtingudes=False ---
@@ -150,12 +160,14 @@ class Command(BaseCommand):
                 continue
 
             # --- P3: approved artists, oldest checked first ---
-            p3_qs = Artista.objects.filter(
-                aprovat=True,
-                deezer_ids__isnull=False,
-                deezer_no_trobat=False,
-            ).distinct().order_by(
-                F("last_checked_deezer").asc(nulls_first=True)
+            p3_qs = (
+                Artista.objects.filter(
+                    aprovat=True,
+                    deezer_ids__isnull=False,
+                    deezer_no_trobat=False,
+                )
+                .distinct()
+                .order_by(F("last_checked_deezer").asc(nulls_first=True))
             )
             if seen_p3:
                 p3_qs = p3_qs.exclude(pk__in=seen_p3)
@@ -191,9 +203,7 @@ class Command(BaseCommand):
             )
 
             if calls % 100 == 0:
-                self.stdout.write(
-                    f"  ... {calls} crides (P1={p1}, P2={p2}, P3={p3})"
-                )
+                self.stdout.write(f"  ... {calls} crides (P1={p1}, P2={p2}, P3={p3})")
 
         quota_msg = "Sí" if deezer.quota_exhausted() else "No"
         self.stdout.write(
@@ -240,7 +250,9 @@ class Command(BaseCommand):
                     if collab:
                         canco.artistes_col.add(collab)
 
-        canco.save(update_fields=["isrc", "preview_url", "artista_id", "data_llancament"])
+        canco.save(
+            update_fields=["isrc", "preview_url", "artista_id", "data_llancament"]
+        )
         classificar_i_guardar(canco)
 
     def _create_track(self, album: Album, track_data: dict) -> bool:
@@ -278,7 +290,9 @@ class Command(BaseCommand):
                             existing.artistes_col.add(collab)
                 logger.info(
                     "ISRC %s: merged deezer_id=%s into existing canco id=%s",
-                    isrc, dz_id, existing.pk,
+                    isrc,
+                    dz_id,
+                    existing.pk,
                 )
                 return False
 
@@ -310,7 +324,11 @@ class Command(BaseCommand):
                 nom=titlecase_catala(track_data["title"]),
                 album=album,
                 artista=artista,
-                durada_ms=track_data.get("duration", 0) * 1000 if track_data.get("duration") else None,
+                durada_ms=(
+                    track_data.get("duration", 0) * 1000
+                    if track_data.get("duration")
+                    else None
+                ),
                 isrc=isrc,
                 preview_url=track_data.get("preview", ""),
                 data_llancament=album.data_llancament,

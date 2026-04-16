@@ -39,14 +39,19 @@ class UserArtista(models.Model):
     ]
 
     usuari = models.ForeignKey(
-        Usuari, on_delete=models.CASCADE, related_name="artistes_vinculats",
+        Usuari,
+        on_delete=models.CASCADE,
+        related_name="artistes_vinculats",
     )
     artista = models.ForeignKey(
-        "music.Artista", on_delete=models.CASCADE,
+        "music.Artista",
+        on_delete=models.CASCADE,
     )
     verificat = models.BooleanField(default=False)
     estat = models.CharField(
-        max_length=10, choices=ESTAT_CHOICES, default=ESTAT_PENDENT,
+        max_length=10,
+        choices=ESTAT_CHOICES,
+        default=ESTAT_PENDENT,
     )
     sollicitud_text = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -77,7 +82,9 @@ class PropostaArtista(models.Model):
     ]
 
     usuari = models.ForeignKey(
-        Usuari, on_delete=models.CASCADE, related_name="propostes_artista",
+        Usuari,
+        on_delete=models.CASCADE,
+        related_name="propostes_artista",
     )
     # Artist info
     nom = models.CharField(max_length=255)
@@ -102,11 +109,16 @@ class PropostaArtista(models.Model):
 
     # Status
     estat = models.CharField(
-        max_length=10, choices=ESTAT_CHOICES, default=ESTAT_PENDENT,
+        max_length=10,
+        choices=ESTAT_CHOICES,
+        default=ESTAT_PENDENT,
     )
     # FK to the artist created from this proposal (set on approval)
     artista_creat = models.ForeignKey(
-        "music.Artista", on_delete=models.SET_NULL, null=True, blank=True,
+        "music.Artista",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="propostes_origen",
     )
     created_at = models.DateTimeField(auto_now_add=True)

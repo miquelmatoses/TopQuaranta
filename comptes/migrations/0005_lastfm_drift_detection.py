@@ -7,53 +7,98 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('comptes', '0004_proposta_artista_estat'),
+        ("comptes", "0004_proposta_artista_estat"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='propostaartista',
-            name='bandcamp_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="bandcamp_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='facebook_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="facebook_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='soundcloud_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="soundcloud_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='spotify_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="spotify_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='tiktok_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="tiktok_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='viasona_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="viasona_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='viquipedia_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="viquipedia_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='web_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="web_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='propostaartista',
-            name='youtube_url',
-            field=models.URLField(blank=True, validators=[django.core.validators.URLValidator(schemes=['http', 'https'])]),
+            model_name="propostaartista",
+            name="youtube_url",
+            field=models.URLField(
+                blank=True,
+                validators=[
+                    django.core.validators.URLValidator(schemes=["http", "https"])
+                ],
+            ),
         ),
     ]

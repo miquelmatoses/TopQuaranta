@@ -36,7 +36,9 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN — no DB writes."))
             for a in qs[:10]:
-                self.stdout.write(f"  Would fetch: {a.nom} (deezer_id={a.deezer_id_principal})")
+                self.stdout.write(
+                    f"  Would fetch: {a.nom} (deezer_id={a.deezer_id_principal})"
+                )
             if total > 10:
                 self.stdout.write(f"  ... and {total - 10} more")
             return
@@ -64,14 +66,20 @@ class Command(BaseCommand):
                 artista.deezer_nom_similitud = difflib.SequenceMatcher(
                     None, artista.nom.lower(), deezer_name.lower()
                 ).ratio()
-                artista.save(update_fields=[
-                    "deezer_nb_fan", "deezer_nb_album",
-                    "deezer_nom", "deezer_nom_similitud",
-                ])
+                artista.save(
+                    update_fields=[
+                        "deezer_nb_fan",
+                        "deezer_nb_album",
+                        "deezer_nom",
+                        "deezer_nom_similitud",
+                    ]
+                )
                 ok += 1
 
             if i % 100 == 0:
-                self.stdout.write(f"  Processed {i}/{total}... (ok={ok}, errors={errors})")
+                self.stdout.write(
+                    f"  Processed {i}/{total}... (ok={ok}, errors={errors})"
+                )
 
         self.stdout.write(
             self.style.SUCCESS(f"Backfill complete: {ok} updated, {errors} errors.")

@@ -1,7 +1,7 @@
-import pytest
 from datetime import date, timedelta
 from io import StringIO
 
+import pytest
 from django.conf import settings
 from django.core.management import call_command
 
@@ -17,21 +17,29 @@ class TestCalcularRankingCommand:
     @pytest.fixture
     def setup_data(self):
         """Create minimal data for ranking: config + territory + artist + tracks + signals."""
-        from music.models import Territori, Artista, Album, Canco
+        from music.models import Album, Artista, Canco, Territori
 
         ConfiguracioGlobal.objects.create(pk=1)
-        cat, _ = Territori.objects.get_or_create(codi="CAT", defaults={"nom": "Catalunya"})
+        cat, _ = Territori.objects.get_or_create(
+            codi="CAT", defaults={"nom": "Catalunya"}
+        )
         artista = Artista.objects.create(nom="Feliu", lastfm_nom="Feliu", aprovat=True)
         artista.territoris.add(cat)
         album = Album.objects.create(
-            artista=artista, nom="Album", data_llancament=date(2026, 3, 1),
+            artista=artista,
+            nom="Album",
+            data_llancament=date(2026, 3, 1),
         )
 
         cancons = []
         for i in range(5):
             c = Canco.objects.create(
-                artista=artista, album=album, nom=f"Track {i}",
-                data_llancament=date(2026, 3, 1), verificada=True, activa=True,
+                artista=artista,
+                album=album,
+                nom=f"Track {i}",
+                data_llancament=date(2026, 3, 1),
+                verificada=True,
+                activa=True,
             )
             cancons.append(c)
 
@@ -41,9 +49,12 @@ class TestCalcularRankingCommand:
             d = today - timedelta(days=day_offset)
             for j, c in enumerate(cancons):
                 SenyalDiari.objects.create(
-                    canco=c, data=d, lastfm_playcount=(j + 1) * 1000,
+                    canco=c,
+                    data=d,
+                    lastfm_playcount=(j + 1) * 1000,
                     lastfm_listeners=(j + 1) * 100,
-                    score_entrada=(j + 1) * 20.0, error=False,
+                    score_entrada=(j + 1) * 20.0,
+                    error=False,
                 )
 
         return cancons
@@ -54,16 +65,23 @@ class TestCalcularRankingCommand:
         output = out.getvalue()
         assert "DRY RUN" in output or "dry" in output.lower()
         from ranking.models import RankingSetmanal
+
         assert RankingSetmanal.objects.count() == 0
 
     def test_provisional_flag_writes_to_provisional(self, setup_data):
         out = StringIO()
-        call_command("calcular_ranking", "--provisional", "--territori", "CAT", stdout=out)
+        call_command(
+            "calcular_ranking", "--provisional", "--territori", "CAT", stdout=out
+        )
         assert RankingProvisional.objects.filter(territori="CAT").exists()
 
     def test_provisional_truncates_on_rerun(self, setup_data):
-        call_command("calcular_ranking", "--provisional", "--territori", "CAT", stdout=StringIO())
+        call_command(
+            "calcular_ranking", "--provisional", "--territori", "CAT", stdout=StringIO()
+        )
         first_count = RankingProvisional.objects.filter(territori="CAT").count()
-        call_command("calcular_ranking", "--provisional", "--territori", "CAT", stdout=StringIO())
+        call_command(
+            "calcular_ranking", "--provisional", "--territori", "CAT", stdout=StringIO()
+        )
         second_count = RankingProvisional.objects.filter(territori="CAT").count()
         assert first_count == second_count

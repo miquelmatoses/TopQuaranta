@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.management import call_command
@@ -14,7 +14,9 @@ def territoris():
     Territori.objects.get_or_create(codi="VAL", defaults={"nom": "País Valencià"})
 
 
-def _make_artista(nom="Zoo", spotify_id="sp_zoo", deezer_id=None, aprovat=True, territori="CAT"):
+def _make_artista(
+    nom="Zoo", spotify_id="sp_zoo", deezer_id=None, aprovat=True, territori="CAT"
+):
     a = Artista.objects.create(
         nom=nom,
         lastfm_nom=nom,
@@ -78,8 +80,11 @@ class TestIngestarMetadataDeezer:
             spotify_id="alb_old", nom="Old Album", artista=artista
         )
         Canco.objects.create(
-            spotify_id="trk_old", nom="Old Track", album=album,
-            artista=artista, isrc="ES0001234567",
+            spotify_id="trk_old",
+            nom="Old Track",
+            album=album,
+            artista=artista,
+            isrc="ES0001234567",
         )
 
         mock_deezer.search_artist.return_value = {"id": 98469, "name": "ZOO"}
@@ -87,13 +92,28 @@ class TestIngestarMetadataDeezer:
         # First get_artist_albums call: for ISRC validation (up to 3 albums)
         # Second call: for actual album fetching
         mock_deezer.get_artist_albums.side_effect = [
-            [{"id": 900, "title": "Val Album", "release_date": RECENT,
-              "cover_xl": "", "record_type": "album"}],
+            [
+                {
+                    "id": 900,
+                    "title": "Val Album",
+                    "release_date": RECENT,
+                    "cover_xl": "",
+                    "record_type": "album",
+                }
+            ],
             [MOCK_ALBUM],
         ]
         mock_deezer.get_album_tracks.side_effect = [
-            [{"id": 901, "title": "Match", "duration": 180, "isrc": "ES0001234567",
-              "artist_id": 98469, "artist_name": "Zoo"}],
+            [
+                {
+                    "id": 901,
+                    "title": "Match",
+                    "duration": 180,
+                    "isrc": "ES0001234567",
+                    "artist_id": 98469,
+                    "artist_name": "Zoo",
+                }
+            ],
             [MOCK_TRACK],
         ]
 
@@ -118,22 +138,34 @@ class TestIngestarMetadataDeezer:
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_isrc_validation_fails(self, mock_deezer):
         artista = _make_artista(deezer_id=None)
-        album = Album.objects.create(
-            spotify_id="alb1", nom="Album", artista=artista
-        )
+        album = Album.objects.create(spotify_id="alb1", nom="Album", artista=artista)
         Canco.objects.create(
-            spotify_id="trk1", nom="Track", album=album,
-            artista=artista, isrc="REAL_ISRC_123",
+            spotify_id="trk1",
+            nom="Track",
+            album=album,
+            artista=artista,
+            isrc="REAL_ISRC_123",
         )
 
         mock_deezer.search_artist.return_value = {"id": 999, "name": "Wrong Artist"}
         mock_deezer.get_artist_albums.return_value = [
-            {"id": 800, "title": "X", "release_date": RECENT,
-             "cover_xl": "", "record_type": "album"}
+            {
+                "id": 800,
+                "title": "X",
+                "release_date": RECENT,
+                "cover_xl": "",
+                "record_type": "album",
+            }
         ]
         mock_deezer.get_album_tracks.return_value = [
-            {"id": 801, "title": "Y", "duration": 100,
-             "isrc": "DIFFERENT_ISRC", "artist_id": 999, "artist_name": "Wrong"}
+            {
+                "id": 801,
+                "title": "Y",
+                "duration": 100,
+                "isrc": "DIFFERENT_ISRC",
+                "artist_id": 999,
+                "artist_name": "Wrong",
+            }
         ]
 
         call_command("obtenir_metadata", artista_id=artista.pk)
@@ -182,16 +214,26 @@ class TestIngestarMetadataDeezer:
             deezer_id=100, nom="Old Name", artista=artista, tipus="album"
         )
         Canco.objects.create(
-            deezer_id=500, nom="Old Track", album=album,
-            artista=artista, isrc="OLD",
+            deezer_id=500,
+            nom="Old Track",
+            album=album,
+            artista=artista,
+            isrc="OLD",
         )
 
-        mock_deezer.get_artist_albums.return_value = [{
-            **MOCK_ALBUM, "title": "New Name",
-        }]
-        mock_deezer.get_album_tracks.return_value = [{
-            **MOCK_TRACK, "title": "New Track", "isrc": "NEW123",
-        }]
+        mock_deezer.get_artist_albums.return_value = [
+            {
+                **MOCK_ALBUM,
+                "title": "New Name",
+            }
+        ]
+        mock_deezer.get_album_tracks.return_value = [
+            {
+                **MOCK_TRACK,
+                "title": "New Track",
+                "isrc": "NEW123",
+            }
+        ]
 
         call_command("obtenir_metadata", artista_id=artista.pk, force=True)
 

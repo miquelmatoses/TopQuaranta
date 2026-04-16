@@ -76,19 +76,26 @@ def llista(request: HttpRequest) -> HttpResponse:
         qs = qs.filter(Q(email__icontains=cerca) | Q(username__icontains=cerca))
 
     qs, current_order, current_dir = apply_ordering(
-        request, qs, USUARIS_ORDER_FIELDS, default="-date_joined",
+        request,
+        qs,
+        USUARIS_ORDER_FIELDS,
+        default="-date_joined",
     )
     page = paginate(request, qs, per_page=50)
 
-    return render(request, "web/staff/usuaris.html", {
-        "staff_section": "usuaris",
-        "page": page,
-        "estat": estat,
-        "rol": rol,
-        "cerca": cerca,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/usuaris.html",
+        {
+            "staff_section": "usuaris",
+            "page": page,
+            "estat": estat,
+            "rol": rol,
+            "cerca": cerca,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -106,34 +113,43 @@ def detall(request: HttpRequest, pk: int) -> HttpResponse:
         .select_related("artista")
         .order_by("-created_at")
     )
-    artistes_verificats = [
-        ua.artista for ua in sollicituds if ua.verificat
-    ]
+    artistes_verificats = [ua.artista for ua in sollicituds if ua.verificat]
 
     # Staff audit rows ABOUT this user (target_type='usuari' with matching pk).
-    audit_sobre = StaffAuditLog.objects.filter(
-        target_type="usuari", target_id=usuari.pk,
-    ).select_related("actor").order_by("-created_at")[:30]
+    audit_sobre = (
+        StaffAuditLog.objects.filter(
+            target_type="usuari",
+            target_id=usuari.pk,
+        )
+        .select_related("actor")
+        .order_by("-created_at")[:30]
+    )
 
     # Staff audit rows the user themselves performed (if they are staff).
     audit_per_usuari = None
     if usuari.is_staff:
         audit_per_usuari = StaffAuditLog.objects.filter(
             actor=usuari,
-        ).order_by("-created_at")[:30]
+        ).order_by(
+            "-created_at"
+        )[:30]
 
     has_totp = TOTPDevice.objects.filter(user=usuari, confirmed=True).exists()
 
-    return render(request, "web/staff/usuari_detall.html", {
-        "staff_section": "usuaris",
-        "usuari": usuari,
-        "propostes": propostes,
-        "sollicituds": sollicituds,
-        "artistes_verificats": artistes_verificats,
-        "audit_sobre": audit_sobre,
-        "audit_per_usuari": audit_per_usuari,
-        "has_totp": has_totp,
-    })
+    return render(
+        request,
+        "web/staff/usuari_detall.html",
+        {
+            "staff_section": "usuaris",
+            "usuari": usuari,
+            "propostes": propostes,
+            "sollicituds": sollicituds,
+            "artistes_verificats": artistes_verificats,
+            "audit_sobre": audit_sobre,
+            "audit_per_usuari": audit_per_usuari,
+            "has_totp": has_totp,
+        },
+    )
 
 
 @staff_required
@@ -161,8 +177,11 @@ def toggle_actiu(request: HttpRequest, pk: int) -> HttpResponse:
 
     action = "usuari_reactivar" if usuari.is_active else "usuari_desactivar"
     log_staff_action(
-        request, action, target=usuari,
-        email=usuari.email, nou_estat_actiu=usuari.is_active,
+        request,
+        action,
+        target=usuari,
+        email=usuari.email,
+        nou_estat_actiu=usuari.is_active,
     )
 
     estat_text = "reactivat" if usuari.is_active else "desactivat"
@@ -195,9 +214,12 @@ def reset_2fa(request: HttpRequest, pk: int) -> HttpResponse:
     StaticDevice.objects.filter(user=usuari).delete()
 
     log_staff_action(
-        request, "usuari_reset_2fa", target=usuari,
+        request,
+        "usuari_reset_2fa",
+        target=usuari,
         email=usuari.email,
-        totp_removed=totp_n, static_removed=static_n,
+        totp_removed=totp_n,
+        static_removed=static_n,
     )
     messages.success(
         request,

@@ -6,18 +6,21 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('music', '0015_artistapendent_album_cancons_ingerades_and_more'),
+        ("music", "0015_artistapendent_album_cancons_ingerades_and_more"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='album',
-            old_name='cancons_ingerades',
-            new_name='cancons_obtingudes',
+            model_name="album",
+            old_name="cancons_ingerades",
+            new_name="cancons_obtingudes",
         ),
         migrations.AddField(
-            model_name='album',
-            name='descartat',
-            field=models.BooleanField(default=False, help_text='True if all tracks were rejected. Skipped by obtenir_novetats.'),
+            model_name="album",
+            name="descartat",
+            field=models.BooleanField(
+                default=False,
+                help_text="True if all tracks were rejected. Skipped by obtenir_novetats.",
+            ),
         ),
     ]

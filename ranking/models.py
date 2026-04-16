@@ -37,59 +37,86 @@ class ConfiguracioGlobal(models.Model):
     # 0.02500000000000000138...).
     dia_setmana_ranking = models.IntegerField(default=6, validators=_DAY_RANGE)
     penalitzacio_descens = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.025"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.025"),
         validators=_PENALTY_RANGE,
     )
     exponent_penalitzacio_antiguitat = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("2.5"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("2.5"),
         validators=_EXPONENT_RANGE,
     )
     max_factor_a = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("1.0"),
         validators=_FACTOR_RANGE,
     )
     max_factor_b = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("1.0"),
         validators=_FACTOR_RANGE,
     )
     max_factor_c = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("1.0"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("1.0"),
         validators=_FACTOR_RANGE,
     )
     max_factor_final = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("1.5"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("1.5"),
         validators=_FACTOR_RANGE,
     )
     penalitzacio_album_per_canco = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.25"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.25"),
         validators=_PENALTY_RANGE,
     )
     penalitzacio_artista_per_canco = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.2"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.2"),
         validators=_PENALTY_RANGE,
     )
     coeficient_penalitzacio_top = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.075"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.075"),
         validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_0 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.1"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.1"),
         validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_1 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.05"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.05"),
         validators=_PENALTY_RANGE,
     )
     penalitzacio_setmana_2 = models.DecimalField(
-        max_digits=5, decimal_places=3, default=Decimal("0.0"),
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.0"),
         validators=_PENALTY_RANGE,
     )
     suavitat = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("5.0"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("5.0"),
         validators=_SMOOTH_RANGE,
     )
     min_cancons_ranking_propi = models.IntegerField(
-        default=20, validators=_COUNT_RANGE,
+        default=20,
+        validators=_COUNT_RANGE,
     )
 
     class Meta:
@@ -118,7 +145,10 @@ class SenyalDiari(models.Model):
     # A null canco row becomes an anonymous data point; it's raw Last.fm
     # telemetry, there's no snapshot name to preserve here.
     canco = models.ForeignKey(
-        Canco, on_delete=models.SET_NULL, null=True, related_name="senyals",
+        Canco,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="senyals",
     )
     data = models.DateField()
 
@@ -174,7 +204,10 @@ class RankingSetmanal(models.Model):
     # historical chart positions. unique_together is per (canco, ...),
     # which tolerates null canco because Postgres treats NULLs as distinct.
     canco = models.ForeignKey(
-        Canco, on_delete=models.SET_NULL, null=True, related_name="rankings",
+        Canco,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="rankings",
     )
     territori = models.CharField(max_length=4)
     setmana = models.DateField()
@@ -216,7 +249,9 @@ class RankingProvisional(models.Model):
     # weaker here. No snapshot — a null canco is effectively a tombstone
     # that the next rebuild will replace.
     canco = models.ForeignKey(
-        Canco, on_delete=models.SET_NULL, null=True,
+        Canco,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name="ranking_provisional",
     )
     territori = models.CharField(max_length=4)

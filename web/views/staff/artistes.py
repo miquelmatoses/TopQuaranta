@@ -9,12 +9,18 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from comptes.models import UserArtista
+from music.audit import log_staff_action
 from music.constants import MOTIUS_REBUIG
 from music.ml import recalcular_ml_si_cal
 from music.models import (
-    Album, Artista, ArtistaDeezer, ArtistaLocalitat, Canco, Municipi, Territori,
+    Album,
+    Artista,
+    ArtistaDeezer,
+    ArtistaLocalitat,
+    Canco,
+    Municipi,
+    Territori,
 )
-from music.audit import log_staff_action
 from music.services import rebutjar_artista
 
 from . import apply_ordering, paginate, staff_required
@@ -57,16 +63,20 @@ def llista(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs)
 
-    return render(request, "web/staff/artistes.html", {
-        "staff_section": "artistes",
-        "page": page,
-        "aprovat": aprovat,
-        "deezer": deezer,
-        "territori": territori,
-        "cerca": cerca,
-        "current_order": current_order,
-        "current_dir": current_dir,
-    })
+    return render(
+        request,
+        "web/staff/artistes.html",
+        {
+            "staff_section": "artistes",
+            "page": page,
+            "aprovat": aprovat,
+            "deezer": deezer,
+            "territori": territori,
+            "cerca": cerca,
+            "current_order": current_order,
+            "current_dir": current_dir,
+        },
+    )
 
 
 @staff_required
@@ -108,7 +118,9 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
                     messages.warning(request, f"Municipi ID {mid} no trobat.")
             elif manual:
                 ArtistaLocalitat.objects.create(
-                    artista=artista, municipi=None, localitat_manual=manual,
+                    artista=artista,
+                    municipi=None,
+                    localitat_manual=manual,
                 )
         # Signal auto-syncs territories.
         # R11: legacy localitat/comarca/provincia gone — nothing to sync back.
@@ -134,7 +146,9 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
             if dz_id not in existing_dz:
                 try:
                     ArtistaDeezer.objects.create(
-                        artista=artista, deezer_id=dz_id, principal=(i == 0),
+                        artista=artista,
+                        deezer_id=dz_id,
+                        principal=(i == 0),
                     )
                 except Exception:
                     messages.warning(request, f"Deezer ID {dz_id} ja existeix.")
@@ -151,14 +165,18 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
         artista.localitats.select_related("municipi", "municipi__territori").all()
     )
 
-    return render(request, "web/staff/artista_edit.html", {
-        "staff_section": "artistes",
-        "artista": artista,
-        "localitats": localitats,
-        "deezer_ids_actuals": deezer_ids_actuals,
-        "social_fields": Artista.SOCIAL_LINK_FIELDS,
-        "percentatge_choices": Artista.PERCENTATGE_FEMENI_CHOICES,
-    })
+    return render(
+        request,
+        "web/staff/artista_edit.html",
+        {
+            "staff_section": "artistes",
+            "artista": artista,
+            "localitats": localitats,
+            "deezer_ids_actuals": deezer_ids_actuals,
+            "social_fields": Artista.SOCIAL_LINK_FIELDS,
+            "percentatge_choices": Artista.PERCENTATGE_FEMENI_CHOICES,
+        },
+    )
 
 
 @staff_required
@@ -184,8 +202,11 @@ def accio(request: HttpRequest) -> HttpResponse:
                 count = rebutjar_artista(artista, motiu)
                 total_cancons += count
                 log_staff_action(
-                    request, "artista_marcar_sense_deezer", target=artista,
-                    motiu=motiu, cancons_afectades=count,
+                    request,
+                    "artista_marcar_sense_deezer",
+                    target=artista,
+                    motiu=motiu,
+                    cancons_afectades=count,
                 )
         recalcular_ml_si_cal()
         messages.success(
@@ -248,14 +269,16 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
             Album.objects.filter(artista=source).update(artista=target)
             # Move Deezer IDs
             ArtistaDeezer.objects.filter(artista=source).update(
-                artista=target, principal=False,
+                artista=target,
+                principal=False,
             )
             # Move UserArtista links
             UserArtista.objects.filter(artista=source).update(artista=target)
             # Move ArtistaLocalitat entries (avoid duplicate municipis)
             target_municipis = set(
-                target.localitats.filter(municipi__isnull=False)
-                .values_list("municipi_id", flat=True)
+                target.localitats.filter(municipi__isnull=False).values_list(
+                    "municipi_id", flat=True
+                )
             )
             for al in source.localitats.all():
                 if al.municipi_id and al.municipi_id in target_municipis:
@@ -275,7 +298,9 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
         # Signal syncs territories from merged localitats
 
     log_staff_action(
-        request, "artista_fusionar", target=target,
+        request,
+        "artista_fusionar",
+        target=target,
         sources_merged=[{"pk": a.pk, "nom": a.nom} for a in sources],
         target_artista_pk=target.pk,
     )

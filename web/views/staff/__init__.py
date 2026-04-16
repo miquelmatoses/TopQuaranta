@@ -24,6 +24,7 @@ def staff_required(view_func):
         user = request.user
         if not user.is_authenticated or not user.is_staff:
             from django.shortcuts import render
+
             return render(request, "web/403.html", status=403)
 
         if not user.is_verified():
@@ -32,12 +33,18 @@ def staff_required(view_func):
             from django_otp.plugins.otp_totp.models import TOTPDevice
 
             has_device = TOTPDevice.objects.filter(
-                user=user, confirmed=True,
+                user=user,
+                confirmed=True,
             ).exists()
-            target = "comptes:dos_fa_verificar" if has_device \
+            target = (
+                "comptes:dos_fa_verificar"
+                if has_device
                 else "comptes:dos_fa_configurar"
-            return redirect(f"/compte/2fa/{'verificar' if has_device else 'configurar'}/"
-                            f"?next={request.get_full_path()}")
+            )
+            return redirect(
+                f"/compte/2fa/{'verificar' if has_device else 'configurar'}/"
+                f"?next={request.get_full_path()}"
+            )
 
         return view_func(request, *args, **kwargs)
 
@@ -50,7 +57,9 @@ def paginate(request: HttpRequest, queryset, per_page: int = 50):
     return paginator.get_page(request.GET.get("page"))
 
 
-def apply_ordering(request: HttpRequest, queryset, allowed_fields: dict[str, str], default: str = ""):
+def apply_ordering(
+    request: HttpRequest, queryset, allowed_fields: dict[str, str], default: str = ""
+):
     """Apply column ordering from GET params.
 
     allowed_fields maps URL param names to ORM field paths,

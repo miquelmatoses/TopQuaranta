@@ -35,11 +35,14 @@ def _normalize_for_match(s: str) -> str:
 
 
 def _fuzzy_ratio(a: str, b: str) -> float:
-    return SequenceMatcher(None, _normalize_for_match(a), _normalize_for_match(b)).ratio()
+    return SequenceMatcher(
+        None, _normalize_for_match(a), _normalize_for_match(b)
+    ).ratio()
 
 
-def _detect_drift(asked_artist: str, asked_track: str,
-                  returned_artist: str, returned_track: str) -> bool:
+def _detect_drift(
+    asked_artist: str, asked_track: str, returned_artist: str, returned_track: str
+) -> bool:
     """True if the returned names diverge significantly from what we asked.
 
     Normalises both sides through the same `(feat. X)` / `(Remaster)` /
@@ -59,8 +62,9 @@ def _detect_drift(asked_artist: str, asked_track: str,
     returned_track_n = _normalize_track(returned_track)
     artist_ratio = _fuzzy_ratio(asked_artist, returned_artist)
     track_ratio = _fuzzy_ratio(asked_track_n, returned_track_n)
-    return (artist_ratio < _ARTIST_DRIFT_THRESHOLD
-            or track_ratio < _TRACK_DRIFT_THRESHOLD)
+    return (
+        artist_ratio < _ARTIST_DRIFT_THRESHOLD or track_ratio < _TRACK_DRIFT_THRESHOLD
+    )
 
 
 class Command(BaseCommand):
@@ -166,10 +170,8 @@ class Command(BaseCommand):
                 # opt-out for tracks where the autocorrect is known-good.
                 returned_artist = result.get("returned_artist", "")
                 returned_track = result.get("returned_track", "")
-                is_drift = (
-                    not canco.lastfm_confirmed
-                    and _detect_drift(artist_name, track_name,
-                                      returned_artist, returned_track)
+                is_drift = not canco.lastfm_confirmed and _detect_drift(
+                    artist_name, track_name, returned_artist, returned_track
                 )
                 if is_drift:
                     drifts += 1
