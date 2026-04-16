@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.exceptions import ValidationError
 from django.core.mail import mail_admins, send_mail
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
@@ -226,15 +227,29 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
                 elif manual:
                     locs.append({"manual": manual})
 
+            # S8: run field validators explicitly. Model.objects.create()
+            # does NOT call full_clean(); without this, URL scheme restrictions
+            # on social_data would be ignored.
+            proposta = PropostaArtista(
+                usuari=request.user,
+                nom=nom,
+                justificacio=justificacio,
+                deezer_ids=deezer_ids,
+                localitzacions_json=json.dumps(locs) if locs else "",
+                **social_data,
+            )
+            try:
+                proposta.full_clean()
+            except ValidationError as exc:
+                for field, msgs in exc.message_dict.items():
+                    for msg in msgs:
+                        errors.append(f"{field}: {msg}")
+                return render(request, "comptes/sollicitud_proposta.html", {
+                    "errors": errors, "historial": [],
+                    "form_data": request.POST,
+                })
             with transaction.atomic():
-                proposta = PropostaArtista.objects.create(
-                    usuari=request.user,
-                    nom=nom,
-                    justificacio=justificacio,
-                    deezer_ids=deezer_ids,
-                    localitzacions_json=json.dumps(locs) if locs else "",
-                    **social_data,
-                )
+                proposta.save()
 
             try:
                 _notify_admins("proposta", nom, request.user.email, justificacio)

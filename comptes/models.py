@@ -1,5 +1,11 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import URLValidator
 from django.db import models
+
+# S8: accept only http(s) in user-submitted URL fields. Django's default
+# URLValidator also allows ftp/ftps; restrict to web schemes explicitly
+# so a typo or malicious entry can't land with e.g. ftp:// data.
+HTTP_ONLY_URL = URLValidator(schemes=["http", "https"])
 
 
 class Usuari(AbstractUser):
@@ -77,16 +83,16 @@ class PropostaArtista(models.Model):
     nom = models.CharField(max_length=255)
     justificacio = models.TextField()
 
-    # Social links (all optional)
-    spotify_url = models.URLField(blank=True)
-    viasona_url = models.URLField(blank=True)
-    web_url = models.URLField(blank=True)
-    bandcamp_url = models.URLField(blank=True)
-    youtube_url = models.URLField(blank=True)
-    viquipedia_url = models.URLField(blank=True)
-    soundcloud_url = models.URLField(blank=True)
-    tiktok_url = models.URLField(blank=True)
-    facebook_url = models.URLField(blank=True)
+    # Social links (all optional). S8: validators restricted to http/https.
+    spotify_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    viasona_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    web_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    bandcamp_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    youtube_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    viquipedia_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    soundcloud_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    tiktok_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    facebook_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
 
     # Deezer IDs stored as comma-separated string
     deezer_ids = models.CharField(max_length=255, blank=True)
