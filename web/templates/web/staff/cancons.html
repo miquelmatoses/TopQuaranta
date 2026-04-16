@@ -74,11 +74,11 @@
           <td>{% ml_badge canco %}</td>
           <td><a href="{% url 'staff:canco_editar' pk=canco.pk %}" class="staff-edit-link">{{ canco.nom }}</a></td>
           <td><a href="{% url 'staff:artista_editar' pk=canco.artista.pk %}" class="staff-edit-link">{{ canco.artista.nom }}</a></td>
-          <td class="staff-cell-muted"><a href="{% url 'staff:album_editar' pk=canco.album.pk %}" class="staff-edit-link">{{ canco.album.nom }}</a></td>
+          <td class="staff-cell-muted">{% if canco.album %}<a href="{% url 'staff:album_editar' pk=canco.album.pk %}" class="staff-edit-link">{{ canco.album.nom }}</a>{% else %}<span class="staff-cell-muted">—</span>{% endif %}</td>
           <td class="staff-cell-muted">{{ canco.data_llancament|date:"Y-m-d" }}</td>
           <td class="staff-cell-links">
             {% if canco.deezer_id %}<a href="https://www.deezer.com/track/{{ canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
-            {% if canco.artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ canco.artista.deezer_id }}" target="_blank" rel="noopener">DzA</a>{% endif %}
+            {% with dz_artista=canco.artista.deezer_id_principal %}{% if dz_artista %}<a href="https://www.deezer.com/artist/{{ dz_artista }}" target="_blank" rel="noopener">DzA</a>{% endif %}{% endwith %}
             <a href="https://www.viasona.cat/cerca?que={{ canco.artista.nom|urlencode }}+{{ canco.nom|urlencode }}" target="_blank" rel="noopener">Vi</a>
           </td>
           <td class="staff-cell-mono">{{ canco.isrc|default:"-" }}</td>

@@ -59,7 +59,7 @@
           <td class="staff-cell-mono">{{ entry.dies_en_top|default:"-" }}</td>
           <td class="staff-cell-links">
             {% if entry.canco.deezer_id %}<a href="https://www.deezer.com/track/{{ entry.canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
-            {% if entry.canco.artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ entry.canco.artista.deezer_id }}" target="_blank" rel="noopener">DzA</a>{% endif %}
+            {% with dz_artista=entry.canco.artista.deezer_id_principal %}{% if dz_artista %}<a href="https://www.deezer.com/artist/{{ dz_artista }}" target="_blank" rel="noopener">DzA</a>{% endif %}{% endwith %}
             <a href="https://www.last.fm/music/{{ entry.canco.artista.nom|lastfm_encode }}/{{ entry.canco.nom|lastfm_encode }}" target="_blank" rel="noopener">Lf</a>
           </td>
         </tr>

@@ -45,7 +45,7 @@
   <a href="{% url 'web:artista' slug=artista.slug %}" class="artistes-card">
     <span class="artistes-nom">{{ artista.nom }}</span>
     <span class="artistes-meta">
-      {% for loc in artista.localitats.all %}{% if loc.municipi %}{{ loc.municipi.nom }}{% else %}{{ loc.localitat_manual }}{% endif %}{% if not forloop.last %}, {% endif %}{% empty %}{% if artista.localitat %}{{ artista.localitat }}{% endif %}{% endfor %}
+      {% for loc in artista.localitats.all %}{% if loc.municipi %}{{ loc.municipi.nom }}{% else %}{{ loc.localitat_manual }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
     </span>
     <div class="artistes-territori-tags">
       {% for t in artista.territoris.all %}

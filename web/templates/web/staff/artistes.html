@@ -77,9 +77,9 @@
             {% endfor %}
           </td>
           <td class="staff-cell-links">
-            {% if artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener">{{ artista.deezer_id }}</a>
+            {% with dz=artista.deezer_id_principal %}{% if dz %}<a href="https://www.deezer.com/artist/{{ dz }}" target="_blank" rel="noopener">{{ dz }}</a>
             {% elif artista.deezer_no_trobat %}<span class="staff-badge-no">No trobat</span>
-            {% else %}-{% endif %}
+            {% else %}-{% endif %}{% endwith %}
           </td>
           <td class="staff-cell-muted">{{ artista.genere|default:"-"|truncatewords:3 }}</td>
           <td>{% if artista.aprovat %}<span class="staff-badge-ok">V</span>{% else %}<span class="staff-badge-no">-</span>{% endif %}</td>
