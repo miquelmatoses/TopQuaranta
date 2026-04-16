@@ -344,9 +344,15 @@ def mapa(request: HttpRequest) -> HttpResponse:
             "artistes": sorted(artistes, key=lambda a: -a["aparicions"])[:5],
         }
 
+    # S7: pass dicts directly so the template can use {% json_script %},
+    # which safely serialises into a <script type="application/json"> tag
+    # instead of being injected verbatim into executable JS. Artist names
+    # (user-submitted via PropostaArtista.nom) can otherwise be weaponised
+    # for XSS even though Django would normally escape HTML, because the
+    # |safe filter disables that escaping.
     return render(request, "web/mapa.html", {
-        "comarques_json": json.dumps(comarques_data, ensure_ascii=False),
-        "municipis_json": json.dumps(municipis_data, ensure_ascii=False),
+        "comarques_data": comarques_data,
+        "municipis_data": municipis_data,
     })
 
 

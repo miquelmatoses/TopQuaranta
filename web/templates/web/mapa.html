@@ -12,6 +12,12 @@
 <div id="map" class="mapa-container"></div>
 <div id="tooltip" class="mapa-tooltip"></div>
 
+{# S7: json_script writes the JSON into a <script type="application/json"> #}
+{# element. Because that element type is non-executable, no malicious string #}
+{# inside an artist name can escape into JS context. #}
+{{ comarques_data|json_script:"comarques-data" }}
+{{ municipis_data|json_script:"municipis-data" }}
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 (function() {
@@ -35,8 +41,8 @@
   var bgColor = cs.getPropertyValue('--mm-color-background').trim()
              || cs.getPropertyValue('--mm-color-white').trim();
 
-  var comData = {{ comarques_json|safe }};
-  var munData = {{ municipis_json|safe }};
+  var comData = JSON.parse(document.getElementById('comarques-data').textContent);
+  var munData = JSON.parse(document.getElementById('municipis-data').textContent);
 
   var el = document.getElementById('map');
   var tip = document.getElementById('tooltip');
