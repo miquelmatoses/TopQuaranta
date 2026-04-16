@@ -80,24 +80,34 @@ Les línies R1 (reproduïbilitat) i R9 (audit log) finalment es fan visibles
 al públic: qualsevol usuari ara pot veure com es calcula el top i cada canvi
 dels coeficients queda exposat (anonimitzat) en ordre cronològic invers.
 
-**Sessió 8 — Doble font de veritat eliminada (2026-04-16)** ✅
+**Sessió 8 — Doble font de veritat eliminada + cron retry (2026-04-16)** ✅
 
 | ID | Estat | Commit |
 |---|---|---|
 | **R10** Drop `Artista.deezer_id` — `ArtistaDeezer` és la única font | ✅ | `fdc649a` |
 | **R11** Drop `Artista.localitat`/`comarca`/`provincia` — `ArtistaLocalitat` és la única font | ✅ | `759bb87` |
+| **R10b** Regressió: 3 commands ingest oblidaven `deezer_id=` als `Artista.objects.create()` | ✅ | (pendent commit) |
+| **R7** Retry intern a `tq-run` (3 intents, backoff 60s/300s) + `tq-recover` cron horari | ✅ | (pendent commit) |
 
 Pre-flight audit per a R10: 3.794 artistes amb camp directe, 3.795 files a
 `ArtistaDeezer`, 0 orfes. Pre-flight per a R11: 2.288 artistes aprovats,
 tots tenien ja almenys una `ArtistaLocalitat`. Les dades ja eren
 consistents — només calia eliminar la possibilitat física de divergència.
-Schema simplificat, 4 columnes legacy esborrades, propietat
-`localitat_principal` afegida com a única manera de mostrar la
-localització "principal" d'un artista.
 
-Queda pendent de Tier 1 + 2:
-- **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
-- **R7** Retry automàtic de crons que fallin
+R10b: tres commands d'ingest (`obtenir_novetats`, `obtenir_metadata`,
+`fix_artista_principal`) creaven Artistes amb `deezer_id=...` directe;
+detectat quan tq-run va capturar el primer FAIL real (`TypeError:
+Artista() got unexpected keyword arguments: 'deezer_id'`). Substituït per
+crear l'`Artista` sol i un `ArtistaDeezer.get_or_create(...)` darrere.
+
+R7 implementat com a defensa-en-profunditat de dos nivells:
+1. `tq-run` retry per intent. Per defecte 3 intents amb sleep 60s i 300s.
+   Excepció: `obtenir_novetats` (hourly, 1 intent — el següent tick ja és
+   el retry natural). Status file ara inclou `attempts=` i `max_attempts=`.
+2. `tq-recover` (nou): cron */30 minuts. Per a cada cron diari, si el
+   status file és absent / FAIL / amb last_run anterior al cutoff d'avui,
+   torna a executar via tq-run. Cap a `MAX_RECOVER_PER_DAY=5` per evitar
+   tempestes en outages persistents. Comptador per dia a `<tag>.recover`.
 
 Tier 3 (Architecture), Tier 4 (Culture), Tier 5 (Exquisitesa) per a sessions futures.
 
@@ -205,8 +215,9 @@ Last.fm canvia el nom de track / artista silenciosament. Nosaltres guardem el `p
 ### R6. PPCC es calcula per 5× el treball
 `calcular_ppcc_ranking` crida `calcular_ranking_territori(t)` per a cada territori font (CAT, VAL, BAL, ALT, + opcionals). **Cada crida executa les 14 CTEs completes.** A 1000ms per CTE run, PPCC triga 5 segons. La solució correcta és calcular un cop per territori i agregar en memòria o en una CTE final addicional.
 
-### R7. Sense retry a nivell de cron
+### R7. Sense retry a nivell de cron ✅ resolt (Sessió 8)
 Si `obtenir_senyal` de dimarts falla (Last.fm caigut 10 min), **no s'executa de nou avui**. `actualitzar_score_entrada` pot omplir el buit només si hi ha `SenyalDiari` rows a backfillejar, però si no s'han inserit mai, quedem amb un dia sense ranking signal. El `score_entrada` per al dia és `NULL`, i el rànquing provisional de l'endemà inclou dades incompletes. **Caldria un mecanisme de detecció de "missing days" amb re-run automàtic.**
+> **Resolució:** dos nivells. (1) `tq-run` retry intern: 3 intents amb backoff 60s/300s per a comandes diàries; 1 intent per a `obtenir_novetats` (que ja és horari). (2) Nou `tq-recover` (cron */30 min) que detecta status absent / FAIL / last_run anterior al cutoff diari i rellança via tq-run. Cap a 5 recoveries per dia per comanda per evitar tempestes en outages persistents.
 
 ### R8. `ConfiguracioGlobal` és editable en viu sense validació de rangs
 A `/staff/configuracio/` un staff pot escriure `-999.99` a `penalitzacio_descens`. **No hi ha `MinValueValidator`, `MaxValueValidator`, ni tipus de dades que impedeixin valors absurds.** Un error tipogràfic (`0.25` → `25`) pot destruir el rànquing d'una setmana.

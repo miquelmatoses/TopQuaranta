@@ -48,7 +48,8 @@ service is stopped and disabled. Port 8081 is free.
 ```
 /home/topquaranta/
 ├── bin/                 # ops scripts (outside the Django project)
-│   ├── tq-run           # wrapper: runs manage.py command, records status
+│   ├── tq-run           # wrapper: runs manage.py command with retry, records status
+│   ├── tq-recover       # detects missed/failed daily runs, relaunches via tq-run
 │   ├── tq-health        # reads status files + errors.log; non-zero on issue
 │   └── tq-backup        # pg_dump + tiered retention; runs as postgres
 ├── backups/             # daily/ weekly/ monthly/ — pg_dump snapshots (gzipped)
