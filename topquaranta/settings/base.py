@@ -12,6 +12,9 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
     "axes",  # S4: brute-force login protection
+    "django_otp",                   # S11: TOTP 2FA base
+    "django_otp.plugins.otp_totp",  # S11: TOTP devices (Google Auth / Authy)
+    "django_otp.plugins.otp_static",  # S11: single-use backup codes
     # Project apps
     "music",
     "ingesta",
@@ -44,11 +47,18 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # S11: django-otp's middleware annotates request.user with .is_verified()
+    # (True iff the user has successfully completed a 2FA challenge in this
+    # session). Must be AFTER AuthenticationMiddleware.
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # S4: must come AFTER AuthenticationMiddleware so request.user is set.
     "axes.middleware.AxesMiddleware",
 ]
+
+# S11: TOTP issuer shown in the user's authenticator app.
+OTP_TOTP_ISSUER = "TopQuaranta"
 
 # S4: django-axes configuration. Lock out after 5 failed attempts per
 # (username, IP) tuple for 1 hour; after 10 attempts, lock for 24 hours.
