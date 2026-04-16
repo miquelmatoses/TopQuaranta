@@ -25,10 +25,11 @@ class RegistreForm(forms.ModelForm):
         fields = ("email",)
 
     def clean_email(self) -> str:
-        email = self.cleaned_data["email"]
-        if Usuari.objects.filter(email=email).exists():
-            raise forms.ValidationError("Ja existeix un compte amb aquest correu.")
-        return email
+        # NOTE (S5): we deliberately do NOT tell the user whether an email
+        # is already registered — that would leak account existence to any
+        # passer-by. The view handles collisions silently and shows the same
+        # "check your email" page regardless.
+        return self.cleaned_data["email"]
 
     def clean_password2(self) -> str:
         p1 = self.cleaned_data.get("password1")

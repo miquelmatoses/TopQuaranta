@@ -30,15 +30,25 @@ def accedir(request: HttpRequest) -> HttpResponse:
 
 
 def registre(request: HttpRequest) -> HttpResponse:
-    """User registration: create inactive account and send verification email."""
+    """User registration: create inactive account and send verification email.
+
+    Anti-enumeration (S5): we always show the same "check your email" page
+    whether the address is new or already registered. If the email is taken
+    we silently skip user creation and the verification mail, so an attacker
+    cannot use the registration form to map existing accounts.
+    """
     if request.user.is_authenticated:
         return redirect("comptes:dashboard")
 
     if request.method == "POST":
         form = RegistreForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            _send_verification_email(request, user)
+            email = form.cleaned_data["email"]
+            if not Usuari.objects.filter(email=email).exists():
+                user = form.save()
+                _send_verification_email(request, user)
+            else:
+                logger.info("Registration for existing email ignored: %s", email)
             return render(request, "comptes/registre_ok.html")
     else:
         form = RegistreForm()
