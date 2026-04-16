@@ -1,199 +1,179 @@
-# CLAUDE_PIPELINE.md — Data Pipeline, API Clients, Management Commands
+# CLAUDE_PIPELINE.md — Ingest → Signal → Ranking
+
+> Daily + hourly automation. All commands run as user `topquaranta` from
+> `/etc/cron.d/topquaranta`, with `DJANGO_SETTINGS_MODULE=topquaranta.settings.production`.
 
 ---
 
-## 1. Artist Discovery Pipeline
-
-Multiple sources feed a shared candidate queue (artists with `aprovat=False`).
-A human approves or rejects each candidate via Django admin before the artist
-enters any ranking. This is the quality gate against false positives.
-
-### Sources
-
-1. **Collaborator detection (Deezer)**: `obtenir_metadata` reads `track["contributors"]`.
-   Creates `Artista(aprovat=False, font_descoberta='collaborador')` for unknown collaborators.
-
-2. **Viasona scraper** (pendent): viasona.cat is a Catalan-language music platform.
-   Legacy code: `scripts/update_from_viasona.py` — BeautifulSoup scraper.
-
-3. **Manual entry**: admin adds artist directly with `aprovat=True`.
-
-### Discovery flow
+## 1. Overview
 
 ```
-Collaborator detection  ─┐
-Viasona scraper (TODO)  ─┼─→  Artista(aprovat=False, font_descoberta=...)
-Manual admin entry      ─┘         (or aprovat=True for manual)
-                                          │
-                             Human review in Django admin
-                             (ArtistaPendentAdmin, filter: aprovat=False)
-                                          │
-                             Approve → aprovat=True
-                             Reject  → delete or keep with aprovat=False
-                                          │
-                             obtenir_novetats (hourly cron)
-                             Deezer: tracks released in last 12 months
-                             Store ISRC on each Canco
-                                          │
-                             obtenir_senyal (daily cron)
-                             Last.fm: playcount + listeners
+     Deezer (hourly, obtenir_novetats)     Last.fm (daily, obtenir_senyal)
+           │                                        │
+           ▼                                        ▼
+   new Canco (verificada=False)              SenyalDiari
+           │                                        │
+   staff review → verificada=True ──────────────────┤
+                                                    ▼
+                                          score_entrada (percent_rank)
+                                                    │
+                                                    ▼
+                                   calcular_ranking (daily provisional,
+                                                     Saturday official)
+                                                    │
+                                                    ▼
+                                        RankingProvisional / RankingSetmanal
 ```
 
----
+## 2. API clients (`ingesta/clients/`)
 
-## 2. API Clients
+All clients import `DEEZER_RATE_LIMIT`, `LASTFM_RATE_LIMIT`, `MAX_API_RETRIES`
+from `music/constants.py`. Never raise — return `None` on any failure.
 
-### 2.1 Last.fm (`ingesta/clients/lastfm.py`)
+### `deezer.py` — primary metadata source
+- Public API, no auth. Base: `https://api.deezer.com`.
+- Rate limit 1.0 s, retry 3× with exponential backoff.
+- Detects error code 4 ("Quota limit exceeded"), sets a session-scoped flag
+  that stops further calls until next day (`quota_exhausted()`).
+- Functions: `search_artist`, `get_artist_info`, `get_artist_albums`,
+  `get_album_tracks`. Returns dict or `None`.
 
-**Endpoint:** `GET https://ws.audioscrobbler.com/2.0/?method=track.getInfo`
-- Params: `api_key`, `artist`, `track`, `format=json`, `autocorrect=1`
-- Returns: `{playcount: int, listeners: int}` or `None`
-- Rate limit: 0.2s between calls
-- Retry: 3 attempts, exponential backoff (2^n seconds)
-- Never raises
+### `lastfm.py` — daily signal
+- Endpoint: `track.getInfo?autocorrect=1`.
+- Rate 0.2 s, retry 3×.
+- On error 6 ("Track not found"), automatically retries once with the track
+  name normalized: strips `(feat. X)`, `(Acoustic Version)`, `- Live`, `- Remix`,
+  etc., and converts Unicode quotes to ASCII. Recovers ~10–15% of errors.
 
-### 2.2 Deezer (`ingesta/clients/deezer.py`) — PRIMARY METADATA SOURCE
+### `spotify.py` — fallback (unused)
+- Blocked since 2024 (requires Premium). Kept for reference; no command imports it.
 
-**API:** Public, no authentication. Base URL: `https://api.deezer.com`
+### `viasona.py` — stub (TODO)
+- Placeholder. The Viasona scraper was on the Phase 6 wishlist but is not
+  implemented. Safe to remove when the project decides against it.
 
-**Functions:**
-- `search_artist(nom)` → `{"id": int, "name": str}` or `None` (normalized matching)
-- `get_artist_info(deezer_id)` → `{id, name, nb_fan, nb_album}`
-- `get_artist_albums(deezer_id, min_date)` → list of album dicts (paginated)
-- `get_album_tracks(album_id)` → list of track dicts with ISRC + contributors
+## 3. Management commands
 
-Rate limit: 1.0s. Retry: 3x with backoff. Quota detection (error code 4) stops session.
+### Rules (all commands)
+- `self.stdout.write()`, never `print()`.
+- `raise CommandError(...)`, never `sys.exit()`.
+- All DB writes inside `transaction.atomic()`.
+- Idempotent where possible.
+- Final line: counts of processed / success / errors.
 
-### 2.3 Spotify (`ingesta/clients/spotify.py`) — FALLBACK
-
-Blocked since 2024 (requires Premium). Client implemented but returns 403.
-Kept as fallback if Premium is restored.
-
----
-
-## 3. Management Commands
-
-### Rules for all commands
-
-- `self.stdout.write()` — never `print()`
-- `raise CommandError(...)` — never `sys.exit()`
-- All DB writes inside `transaction.atomic()`
-- Idempotent where possible
-- End with summary line: processed / success / errors
-
-### 3.1 obtenir_senyal (daily — 06:00)
-
-```
+### 3.1 `obtenir_senyal` — daily 06:00
+```bash
 python manage.py obtenir_senyal [--data YYYY-MM-DD] [--limit N] [--dry-run]
 ```
+Selects `verificada=True AND activa=True AND artista.aprovat=True AND
+data_llancament ≥ today - DIES_CADUCITAT` tracks, calls Last.fm per track,
+writes `SenyalDiari`. At end, calls `ranking.senyal.normalize_score_entrada`
+to compute percent_rank over the day. Skips tracks already ingested for that
+date (idempotent).
 
-Queries verified + active + recent + approved tracks. Calls Last.fm, stores
-`SenyalDiari`. Computes `score_entrada` via percent_rank at end.
-
-### 3.2 actualitzar_score_entrada (daily — 06:30, safety net)
-
-```
+### 3.2 `actualitzar_score_entrada` — daily 06:30 (safety net)
+```bash
 python manage.py actualitzar_score_entrada [--data YYYY-MM-DD] [--tots]
 ```
+Backfills `score_entrada` for rows where it is NULL or where yesterday was
+missed.
 
-Backfills `score_entrada` for rows where it is NULL. Uses `percentileofscore`.
-
-### 3.3 calcular_ranking (daily provisional + weekly official)
-
+### 3.3 `calcular_ranking`
+```bash
+python manage.py calcular_ranking [--setmana YYYY-MM-DD] [--territori CODE]
+                                   [--dry-run] [--provisional]
 ```
-python manage.py calcular_ranking [--setmana YYYY-MM-DD] [--territori CODE] [--dry-run] [--provisional]
+- Without `--provisional`: writes `RankingSetmanal`. Run Saturday 08:00.
+  Territories processed: `TERRITORIS_FIXOS = {CAT, VAL, BAL}` + aggregates
+  `{ALT, PPCC}`. Each territory is `delete + bulk_create` inside a transaction
+  (prevents stale entries from previous runs).
+- With `--provisional`: writes `RankingProvisional`. Run daily 07:00. Includes
+  all eligible territories (fixed + aggregates + optional if they cross the
+  `min_cancons_ranking_propi` threshold).
+- Aggregates (ALT, PPCC) must run last — they read the just-computed individual
+  rankings in memory (`algorisme.calcular_ppcc_ranking` calls the per-territory
+  function for each source territory).
+
+### 3.4 `obtenir_novetats` — hourly (every :00)
+```bash
+python manage.py obtenir_novetats [--limit N] [--dry-run]
 ```
+Incremental Deezer ingestion with a 3-tier priority queue:
+- **P1** — tracks with `deezer_id` but no ISRC; fetches full track to backfill.
+- **P2** — albums with `cancons_obtingudes=False`; fetches tracks.
+- **P3** — approved artists, oldest `last_checked_deezer` first; fetches albums
+  released within `DIES_CADUCITAT` days.
 
-- `--provisional`: writes to `RankingProvisional` (all eligible territories, daily 07:00)
-- Without flag: writes to `RankingSetmanal` (fixed territories, Saturday 08:00)
+Uses an `fcntl.flock` on `/tmp/obtenir_novetats.lock` — if a run is still
+going, the next hour's run exits cleanly. All created Canco records start
+with `verificada=False`; `classificar_i_guardar(canco)` applies the ML class.
 
-### 3.4 obtenir_novetats (hourly)
-
-```
-python manage.py obtenir_novetats [--limit N]
-```
-
-Incremental Deezer ingestion with 3-tier priority queue:
-- P1: backfill ISRC + preview for tracks missing them
-- P2: fetch tracks for albums with `cancons_obtingudes=False`
-- P3: check approved artists for new albums (oldest-checked first)
-
-### 3.5 obtenir_metadata (on demand)
-
-```
+### 3.5 `obtenir_metadata` — on demand
+```bash
 python manage.py obtenir_metadata [--artista-id N] [--force] [--dry-run] [--limit N]
 ```
+For approved artists, resolves Deezer ID (name search + ISRC cross-validation)
+and pulls albums + tracks. If validation fails, sets `deezer_no_trobat=True`
+and skips the artist next time.
 
-Deezer metadata fetch for approved artists. ISRC validation flow.
-
-### 3.6 netejar_caducades (daily — 04:00)
-
-```
+### 3.6 `netejar_caducades` — daily 04:00
+```bash
 python manage.py netejar_caducades
 ```
+Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 
-Deletes unverified tracks older than 12 months.
+### 3.7 Utility / ad-hoc commands (not cron-scheduled)
+- `fix_album_dates`, `fix_artista_principal` — one-off corrections from Deezer.
+- `deduplicar_isrc` — merges Cancons that share an ISRC.
+- `backfill_deezer_artistes`, `backfill_preview_url` — populate new fields.
+- `recalcular_ml` — force retrain the RF model and reclassify all unverified
+  tracks. Normally runs automatically via `recalcular_ml_si_cal()` when 5+ new
+  decisions have accumulated.
 
-### 3.7 importar_legacy (one-off)
+## 4. Track verification (ML classifier)
 
-```
-python manage.py importar_legacy [--artistes] [--cancons] [--dry-run]
-```
+`music/ml.py` — Random Forest (100 estimators, `class_weight="balanced"`) on
+1,448 decisions from `HistorialRevisio`. 219 features: 19 structured + 200
+TF-IDF char n-grams of the track title. 5-fold CV: **97.2% accuracy, 99.8% ROC
+AUC**. Top features: rejection ratio per artist / per ISRC prefix / per ISRC
+registrant (~44% of importance combined).
 
-### 3.8 Other utility commands
+Classes: `A ≥ 0.7`, `B 0.4–0.7`, `C < 0.4`. Stored on `Canco.ml_classe` +
+`ml_confianca`. Model files: `music/ml_model.joblib` + `ml_tfidf.joblib`.
 
-- `matching_isrc_deezer` — find Deezer ID via legacy ISRC
-- `fix_artista_principal` — correct main artist using Deezer contributors
-- `deduplicar_isrc` — merge Canco records with same ISRC
-- `fix_album_dates` — correct dates from Deezer
-- `backfill_deezer_artistes` — populate deezer_nb_fan, deezer_nb_album
-- `backfill_preview_url` — fetch preview URLs
-- `poblar_isrc` — populate ISRC from legacy spotify_tracks
+Retraining is triggered automatically by `recalcular_ml_si_cal()` when there
+are ≥ `MIN_NEW_DECISIONS` new records since last run (marker file
+`/tmp/tq_last_ml_recalc`). Runs in a daemon thread; both files and the marker
+must be writable by the `topquaranta` user.
 
----
+If < `MIN_TRAINING_SAMPLES=20` decisions exist, `pre_classificar` falls back to
+a hand-tuned heuristic in `_heuristic_classificar`.
 
-## 4. Track Verification System
+## 5. Cron schedule
 
-### ML pre-classification (`music/ml.py`)
-
-Dual classifier: Random Forest (if >= 20 training samples) or heuristic fallback.
-
-**19 features** + 200 TF-IDF char n-gram features. Classes: A (green, >= 0.7), B (orange, 0.4-0.7), C (red, < 0.4).
-
-Model at `music/ml_model.joblib`, TF-IDF at `music/ml_tfidf.joblib`.
-Retrained automatically via `recalcular_ml_si_cal()` when >= 5 new decisions.
-
-### Admin actions with motiu
-
-All reject actions show intermediate confirmation page with required motiu dropdown.
-Every action calls `crear_historial()` before modifying/deleting records.
-
----
-
-## 5. Cron Schedule
-
-File: `/etc/cron.d/topquaranta` — runs as user `topquaranta`
+File: `/etc/cron.d/topquaranta` — user `topquaranta`.
 
 ```cron
-SHELL=/bin/bash
-PATH=/usr/local/bin:/usr/bin:/bin
-DJANGO_SETTINGS_MODULE=topquaranta.settings.production
-
-# Hourly Deezer novelty ingestion
-0 * * * *   topquaranta   obtenir_novetats >> novetats.log
-
-# Daily cleanup of expired unverified tracks — 04:00
-0 4 * * *   topquaranta   netejar_caducades >> neteja.log
-
-# Daily signal ingestion — 06:00
-0 6 * * *   topquaranta   obtenir_senyal >> senyal.log
-
-# Safety net: recompute score_entrada — 06:30
-30 6 * * *  topquaranta   actualitzar_score_entrada >> senyal.log
-
-# Daily provisional ranking — 07:00
-0 7 * * *   topquaranta   calcular_ranking --provisional >> provisional.log
-
-# Weekly official ranking — Saturday 08:00
-0 8 * * 6   topquaranta   calcular_ranking >> ranking.log
+0 * * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_novetats >> /var/log/topquaranta/novetats.log 2>&1
+0 4 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py netejar_caducades >> /var/log/topquaranta/neteja.log 2>&1
+0 6 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_senyal >> /var/log/topquaranta/senyal.log 2>&1
+30 6 * * *  topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py actualitzar_score_entrada >> /var/log/topquaranta/senyal.log 2>&1
+0 7 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
+0 8 * * 6   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1
 ```
+
+Logs rotate via `/etc/logrotate.d/topquaranta` (not shown).
+
+## 6. Artist discovery
+
+1. **Deezer contributor detection** — `obtenir_novetats` P3 reads an album's
+   tracks; unknown contributors get created as
+   `Artista(aprovat=False, auto_descobert=True, font_descoberta="collaborador")`.
+2. **User proposal** — `PropostaArtista` submitted via `/compte/artista/proposta/`;
+   staff approves via `/staff/propostes/<pk>/` which creates the Artista
+   together with its Deezer IDs + locations in one transaction.
+3. **Manual** — staff can create an approved artist directly.
+
+All auto-discovered artists sit in the pending queue (`/staff/artistes/pendents/`)
+until a human approves them with a municipality assignment (which auto-sets
+the territory via the `ArtistaLocalitat` → `Municipi` → `Territori` chain).
