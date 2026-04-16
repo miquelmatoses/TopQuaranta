@@ -11,6 +11,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "rest_framework",
+    "axes",  # S4: brute-force login protection
     # Project apps
     "music",
     "ingesta",
@@ -21,6 +22,22 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "comptes.Usuari"
 
+# S10: Argon2 is preferred; PBKDF2 variants retained so existing hashes
+# continue to verify. Django rehashes to Argon2 on next successful login.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
+# S4: django-axes authentication backend intercepts failed login attempts.
+# Must be first in the list. ModelBackend stays after it for actual auth.
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -29,7 +46,17 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # S4: must come AFTER AuthenticationMiddleware so request.user is set.
+    "axes.middleware.AxesMiddleware",
 ]
+
+# S4: django-axes configuration. Lock out after 5 failed attempts per
+# (username, IP) tuple for 1 hour; after 10 attempts, lock for 24 hours.
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # hours for the first-tier lockout
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "web/403.html"
 
 ROOT_URLCONF = "topquaranta.urls"
 
