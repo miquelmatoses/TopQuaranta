@@ -80,10 +80,24 @@ Les línies R1 (reproduïbilitat) i R9 (audit log) finalment es fan visibles
 al públic: qualsevol usuari ara pot veure com es calcula el top i cada canvi
 dels coeficients queda exposat (anonimitzat) en ordre cronològic invers.
 
+**Sessió 8 — Doble font de veritat eliminada (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **R10** Drop `Artista.deezer_id` — `ArtistaDeezer` és la única font | ✅ | `fdc649a` |
+| **R11** Drop `Artista.localitat`/`comarca`/`provincia` — `ArtistaLocalitat` és la única font | ✅ | `759bb87` |
+
+Pre-flight audit per a R10: 3.794 artistes amb camp directe, 3.795 files a
+`ArtistaDeezer`, 0 orfes. Pre-flight per a R11: 2.288 artistes aprovats,
+tots tenien ja almenys una `ArtistaLocalitat`. Les dades ja eren
+consistents — només calia eliminar la possibilitat física de divergència.
+Schema simplificat, 4 columnes legacy esborrades, propietat
+`localitat_principal` afegida com a única manera de mostrar la
+localització "principal" d'un artista.
+
 Queda pendent de Tier 1 + 2:
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin
-- **R10, R11** Resoldre doble font de veritat (deezer_id + legacy location)
 
 Tier 3 (Architecture), Tier 4 (Culture), Tier 5 (Exquisitesa) per a sessions futures.
 
@@ -202,11 +216,13 @@ Qui va aprovar quina proposta d'artista? Qui va canviar quin coeficient? Qui va 
 
 ## 🟡 MITJÀ
 
-### R10. Doble font de veritat per als Deezer IDs
+### R10. Doble font de veritat per als Deezer IDs ✅ resolt (Sessió 8, `fdc649a`)
 `Artista.deezer_id` (BigInteger directe, unique) vs `ArtistaDeezer` (M2M). El codi té fallback (`deezer_id_principal` property). **Poden divergir silenciosament.** Si algú actualitza només `Artista.deezer_id` però no l'`ArtistaDeezer` corresponent, la pipeline usa un mentre la UI mostra l'altre.
+> **Resolució:** la columna `Artista.deezer_id` s'ha esborrat (migració 0030). `ArtistaDeezer` és l'única font ara. La propietat `deezer_id_principal` ja no té fallback.
 
-### R11. Camps de localització legacy conviuen amb ArtistaLocalitat
+### R11. Camps de localització legacy conviuen amb ArtistaLocalitat ✅ resolt (Sessió 8, `759bb87`)
 `Artista.localitat`, `comarca`, `provincia` (CharField) i `ArtistaLocalitat` (FK a `Municipi`). La vista edit manté els dos. **Què passa si divergeixen?** No hi ha una regla clara. Aquest és deute de migració incomplet.
+> **Resolució:** les tres columnes legacy s'han esborrat (migració 0031). `ArtistaLocalitat` és l'única font. Nova propietat `localitat_principal` per a la cadena de display.
 
 ### R12. Signal fires in-transaction amb `self.territoris.set()` en mig
 Quan `proposta_aprovar` crea `Artista` + N `ArtistaLocalitat` dins d'una `atomic()` block, **el post_save signal dispara `sync_territoris_from_localitats()` després de cada ArtistaLocalitat**. Cada invocació fa `self.localitats.all()` + `self.territoris.set()`. Al final de la transacció estem en el mateix estat final, però intermèdiament el M2M `territoris` ha estat reescrit N vegades. Si un thread concurrent llegeix entre-mig, veu estats intermedis. La solució correcta és `transaction.on_commit()`.
