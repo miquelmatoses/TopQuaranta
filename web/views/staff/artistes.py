@@ -151,12 +151,8 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
                 except Exception:
                     messages.warning(request, f"Deezer ID {dz_id} ja existeix.")
 
-        # Update legacy deezer_id field
-        principal_ad = artista.deezer_ids.filter(principal=True).first()
-        artista.deezer_id = principal_ad.deezer_id if principal_ad else (
-            artista.deezer_ids.first().deezer_id if artista.deezer_ids.exists() else None
-        )
-        artista.save(update_fields=["deezer_id"])
+        # R10: legacy Artista.deezer_id removed; ArtistaDeezer above is the
+        # single source of truth now — nothing to sync back.
 
         log_staff_action(request, "artista_edit", target=artista)
         messages.success(request, f"Artista \u00ab{artista.nom}\u00bb actualitzat.")

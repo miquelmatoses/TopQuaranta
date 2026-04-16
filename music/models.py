@@ -66,7 +66,9 @@ class Artista(models.Model):
     ]
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
-    deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
+    # R10: `deezer_id` legacy direct field removed 2026-04-16. Use the
+    # ArtistaDeezer M2M exclusively (via `deezer_id_principal` property or
+    # `deezer_ids` related manager).
     lastfm_nom = models.CharField(
         max_length=255,
         help_text="Exact name for Last.fm API calls (case-sensitive).",
@@ -175,12 +177,18 @@ class Artista(models.Model):
 
     @property
     def deezer_id_principal(self) -> int | None:
-        """Primary Deezer ID from ArtistaDeezer (backwards compat)."""
+        """Primary Deezer ID from ArtistaDeezer.
+
+        R10: the direct `Artista.deezer_id` column was dropped; ArtistaDeezer
+        is now the single source of truth. Returns the row flagged
+        `principal=True`, or the first one if none is, or None if the
+        artist has no Deezer link yet.
+        """
         ad = self.deezer_ids.filter(principal=True).first()
         if ad:
             return ad.deezer_id
         ad = self.deezer_ids.first()
-        return ad.deezer_id if ad else self.deezer_id
+        return ad.deezer_id if ad else None
 
     @property
     def all_deezer_ids(self) -> list[int]:

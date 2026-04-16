@@ -357,9 +357,8 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
                 )
             except Exception:
                 pass
-        if deezer_ids:
-            artista.deezer_id = deezer_ids[0]
-            artista.save(update_fields=["deezer_id"])
+        # R10: legacy `Artista.deezer_id` removed; the loop above is the
+        # only source of truth now.
 
         # Create locations
         if proposta.localitzacions_json:

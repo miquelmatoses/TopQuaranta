@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Backfill deezer_nb_fan, deezer_nb_album, deezer_nom, deezer_nom_similitud for artists with deezer_id."
+    help = "Backfill deezer_nb_fan, deezer_nb_album, deezer_nom, deezer_nom_similitud for artists with a linked Deezer ID."
 
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=None)
@@ -20,10 +20,12 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         limit = options["limit"]
 
+        # R10: Artista.deezer_id legacy field is gone; filter via the
+        # ArtistaDeezer reverse manager instead.
         qs = Artista.objects.filter(
-            deezer_id__isnull=False,
+            deezer_ids__isnull=False,
             deezer_nb_fan__isnull=True,
-        )
+        ).distinct()
         total = qs.count()
         self.stdout.write(f"Artists to backfill: {total}")
 
@@ -34,7 +36,7 @@ class Command(BaseCommand):
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN — no DB writes."))
             for a in qs[:10]:
-                self.stdout.write(f"  Would fetch: {a.nom} (deezer_id={a.deezer_id})")
+                self.stdout.write(f"  Would fetch: {a.nom} (deezer_id={a.deezer_id_principal})")
             if total > 10:
                 self.stdout.write(f"  ... and {total - 10} more")
             return
@@ -44,14 +46,15 @@ class Command(BaseCommand):
         iterable = qs if limit else qs.iterator()
 
         for i, artista in enumerate(iterable, 1):
-            info = deezer.get_artist_info(artista.deezer_id)
+            dz_id = artista.deezer_id_principal
+            info = deezer.get_artist_info(dz_id)
             if deezer.quota_exhausted():
                 self.stderr.write(
                     self.style.ERROR("Quota Deezer exhaurida — reintenta demà.")
                 )
                 break
             if not info:
-                logger.warning("No Deezer info for %s (id=%d)", artista.nom, artista.deezer_id)
+                logger.warning("No Deezer info for %s (id=%s)", artista.nom, dz_id)
                 errors += 1
             else:
                 deezer_name = info["name"]

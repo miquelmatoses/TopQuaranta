@@ -81,7 +81,8 @@ class Command(BaseCommand):
 
         if dry_run:
             for a in qs[:20]:
-                status = f"deezer_id={a.deezer_id}" if a.deezer_id else "needs lookup"
+                dz = a.deezer_id_principal
+                status = f"deezer_id={dz}" if dz else "needs lookup"
                 self.stdout.write(f"  Would fetch: {a.nom} ({status})")
             if total > 20:
                 self.stdout.write(f"  ... and {total - 20} more")
@@ -233,14 +234,13 @@ class Command(BaseCommand):
 
         try:
             with transaction.atomic():
-                artista.deezer_id = candidate_id
                 artista.deezer_no_trobat = False
                 artista.save(update_fields=[
-                    "deezer_id", "deezer_no_trobat",
+                    "deezer_no_trobat",
                     "deezer_nb_fan", "deezer_nb_album",
                     "deezer_nom", "deezer_nom_similitud",
                 ])
-                # Also create ArtistaDeezer entry
+                # R10: ArtistaDeezer is the single source of truth now.
                 ArtistaDeezer.objects.get_or_create(
                     deezer_id=candidate_id,
                     defaults={"artista": artista, "principal": True},

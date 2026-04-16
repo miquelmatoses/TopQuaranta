@@ -61,10 +61,10 @@ def rebutjar_artista(artista: Artista, motiu: str) -> int:
     deleted = cancons.count()
     cancons.delete()
 
+    # R10: ArtistaDeezer is the sole source of truth; clearing it is enough.
     artista.deezer_ids.all().delete()
-    artista.deezer_id = None
     artista.deezer_no_trobat = True
-    artista.save(update_fields=["deezer_id", "deezer_no_trobat"])
+    artista.save(update_fields=["deezer_no_trobat"])
     Album.objects.filter(artista=artista).update(descartat=True)
 
     return deleted

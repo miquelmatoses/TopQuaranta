@@ -5,7 +5,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from music.models import Album, Artista, Canco, Territori
+from music.models import Album, Artista, ArtistaDeezer, Canco, Territori
 
 
 @pytest.fixture(autouse=True)
@@ -19,9 +19,11 @@ def _make_artista(nom="Zoo", spotify_id="sp_zoo", deezer_id=None, aprovat=True, 
         nom=nom,
         lastfm_nom=nom,
         spotify_id=spotify_id,
-        deezer_id=deezer_id,
         aprovat=aprovat,
     )
+    if deezer_id is not None:
+        # R10: link via ArtistaDeezer — the legacy direct field is gone.
+        ArtistaDeezer.objects.create(artista=a, deezer_id=deezer_id, principal=True)
     a.territoris.set([Territori.objects.get(codi=territori)])
     return a
 
@@ -98,7 +100,7 @@ class TestIngestarMetadataDeezer:
         call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
-        assert artista.deezer_id == 98469
+        assert artista.deezer_id_principal == 98469
         assert artista.deezer_no_trobat is False
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
@@ -111,7 +113,7 @@ class TestIngestarMetadataDeezer:
 
         artista.refresh_from_db()
         assert artista.deezer_no_trobat is True
-        assert artista.deezer_id is None
+        assert artista.deezer_id_principal is None
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_isrc_validation_fails(self, mock_deezer):
@@ -138,7 +140,7 @@ class TestIngestarMetadataDeezer:
 
         artista.refresh_from_db()
         assert artista.deezer_no_trobat is True
-        assert artista.deezer_id is None
+        assert artista.deezer_id_principal is None
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_skips_unapproved_artist(self, mock_deezer):
@@ -224,5 +226,5 @@ class TestIngestarMetadataDeezer:
         call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
-        assert artista.deezer_id == 98469
+        assert artista.deezer_id_principal == 98469
         assert Canco.objects.count() == 1
