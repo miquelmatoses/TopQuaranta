@@ -1,7 +1,7 @@
 # CLAUDE.md — TopQuaranta
 
 > Persistent memory for Claude Code. Read this file first on every session.
-> Last updated: 2026-04-16 — Post-Phase-8 audit & consolidation.
+> Last updated: 2026-04-16 — Post-Phase-8 audit, monitoring (tq-health), backups, settings cleanup.
 
 ## Other docs
 - **`CLAUDE_MODELS.md`** — every Django model with fields, relations, indexes.
@@ -45,35 +45,39 @@ service is stopped and disabled. Port 8081 is free.
 ## 3. Project structure
 
 ```
-/home/topquaranta/app/
-├── manage.py
-├── .env                 # never commit
-├── package.json         # declares mm-design npm git dep
-├── topquaranta/         # Django project
-│   ├── settings/        # base.py, production.py, web_server.py, local.py, test.py
-│   └── urls.py
-├── music/               # Artista, Album, Canco, Municipi, ArtistaLocalitat, HistorialRevisio,
-│   │                    # Territori, ArtistaDeezer + constants, ml.py, services.py, verificacio.py
-│   ├── models.py
-│   └── migrations/      # 26 migrations
-├── ingesta/             # pipeline code only
-│   ├── clients/         # deezer.py, lastfm.py, spotify.py (fallback), viasona.py (stub)
-│   └── management/commands/  # obtenir_novetats, obtenir_senyal, obtenir_metadata, netejar_caducades, ...
-├── ranking/             # ConfiguracioGlobal, SenyalDiari, RankingSetmanal, RankingProvisional
-│   ├── algorisme.py     # 14-CTE SQL + PPCC aggregation
-│   └── management/commands/calcular_ranking.py
-├── web/                 # public website + staff panel
-│   ├── views/
-│   │   ├── __init__.py  # public views (homepage, ranking, artistes, mapa, artist/album/canco profiles)
-│   │   └── staff/       # dashboard, cancons, albums, ranking, artistes, pendents, eines — see CLAUDE_STAFF.md
-│   ├── api/             # /api/v1/ — DRF map endpoint + location reference API
-│   ├── templates/web/
-│   │   ├── base.html
-│   │   └── staff/       # base_staff, _pagination, _select_all, + one template per page
-│   └── static/web/css/style.css
-├── comptes/             # Usuari (custom user), UserArtista, PropostaArtista, solicitud flows
-├── scripts/             # ad-hoc analysis scripts (not management commands)
-└── backups/             # pg_dump snapshots (owned by postgres)
+/home/topquaranta/
+├── bin/                 # ops scripts (outside the Django project)
+│   ├── tq-run           # wrapper: runs manage.py command, records status
+│   ├── tq-health        # reads status files + errors.log; non-zero on issue
+│   └── tq-backup        # pg_dump + tiered retention; runs as postgres
+├── backups/             # daily/ weekly/ monthly/ — pg_dump snapshots (gzipped)
+└── app/                         # Django project (this repo)
+    ├── manage.py
+    ├── .env                     # never commit
+    ├── package.json             # declares mm-design npm git dep
+    ├── topquaranta/             # Django settings + urls
+    │   ├── settings/            # base, production, web_server, local, test
+    │   └── urls.py
+    ├── music/                   # Artista, Album, Canco, Municipi, ArtistaLocalitat,
+    │   │                        # HistorialRevisio, Territori, ArtistaDeezer
+    │   ├── models.py, ml.py, services.py, verificacio.py, signals.py,
+    │   ├── constants.py, titlecase_catala.py, ml_model.joblib, ml_tfidf.joblib
+    │   └── migrations/          # 26 migrations
+    ├── ingesta/                 # pipeline code only
+    │   ├── clients/             # deezer.py, lastfm.py, spotify.py (fallback), viasona.py (stub)
+    │   └── management/commands/ # obtenir_novetats, obtenir_senyal, obtenir_metadata, ...
+    ├── ranking/                 # ConfiguracioGlobal, SenyalDiari, RankingSetmanal, RankingProvisional
+    │   ├── algorisme.py         # 14-CTE SQL + PPCC aggregation
+    │   └── management/commands/calcular_ranking.py
+    ├── web/                     # public website + staff panel
+    │   ├── views/
+    │   │   ├── __init__.py      # public views (homepage, ranking, artistes, mapa, profiles)
+    │   │   └── staff/           # dashboard, cancons, albums, ranking, artistes, pendents, eines
+    │   ├── api/                 # /api/v1/ — DRF map endpoint + location reference API
+    │   ├── templates/web/       # base.html + staff/base_staff, _pagination, _select_all, etc.
+    │   └── static/web/css/style.css
+    ├── comptes/                 # Usuari (custom), UserArtista, PropostaArtista, solicitud flows
+    └── scripts/                 # ad-hoc analysis scripts (not management commands)
 ```
 
 ## 4. Design system (mm-design)

@@ -1,7 +1,7 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-16 — Post audit: constants/indexes consolidated, docs rewritten.
+> Last updated: 2026-04-16 — Ops hardening: monitoring (tq-health), tiered backups, settings audit.
 
 ---
 
@@ -47,6 +47,23 @@ Django admin, no Wagtail admin.
 | 7 | Custom `/staff/` panel replaces Wagtail/Django admin | ✅ done |
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
+| Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
+
+---
+
+## Ops layer (2026-04-16)
+
+- **`/home/topquaranta/bin/tq-run`** wraps every cron command. Captures exit
+  codes and last output to `/var/log/topquaranta/status/<tag>.status`.
+- **`/home/topquaranta/bin/tq-health`** prints a summary and exits non-zero
+  if any command is FAIL / STALE or if today's Django `errors.log` has any
+  entries. Intended for manual SSH inspection; can be wired to any external
+  notifier later.
+- **`/home/topquaranta/bin/tq-backup`** runs as `postgres` at 03:00, tiered
+  retention (7 daily / 4 weekly / 12 monthly).
+- **`settings/base.py::LOGGING`** adds a file handler for ERROR+ to
+  `/var/log/topquaranta/errors.log`. Tests are isolated via NullHandler.
+- Root crontab cleaned (8 stale legacy entries removed).
 
 ---
 
@@ -57,24 +74,21 @@ Django admin, no Wagtail admin.
       genuinely does not index). Normalization already recovers ~3/4 of fixable
       cases; the rest may be genuine (unscrobbled tracks).
 - [ ] SEO: meta tags, Open Graph, sitemap.xml.
-- [ ] DNS A record for `legacy.topquaranta.cat` (if we ever re-enable the
-      legacy Wagtail service).
-- [ ] Mobile responsive polish (site works but could benefit from device testing).
+- [ ] Mobile responsive polish.
 
 ### Tech debt / nice-to-haves
-- [ ] Test coverage ≥ 70%. Currently a few pre-existing test failures in
-      `test_obtenir_metadata.py` (MagicMock interacting with Django queries).
+- [ ] Test coverage at 52%, target 70%. Main gaps with 0% coverage:
+      `music/services.py`, `music/verificacio.py`, `ranking/senyal.py`,
+      `ranking/management/commands/calcular_ranking.py`.
 - [ ] Decide whether to archive `/root/TopQuaranta/` (1.4 GB legacy Wagtail
       code). tar.gz or `rm -rf`.
-- [ ] SMTP configuration: `mail_admins` currently fails silently (log warning),
-      because no mail server is configured. Decide to configure a relay or keep
-      as a no-op.
-- [ ] Consider bigger refactors deferred from audit:
+- [ ] Optional: pipe `tq-health` to a push-based notifier (healthchecks.io,
+      Uptime Kuma) if on-call becomes a thing.
+- [ ] Bigger refactors still deferred:
       - Extract heuristic-classifier magic numbers to `music/constants.py`.
-      - Move hardcoded `PPCC_PENALITZACIO_PER_POSICIO = 0.04` into
-        `ConfiguracioGlobal` alongside other ranking coefficients.
-      - Consolidate reject-action handling; there are still some inline style
-        attributes in staff templates that could become CSS classes.
+      - Move `PPCC_PENALITZACIO_PER_POSICIO = 0.04` into `ConfiguracioGlobal`.
+      - Consolidate reject-action handling; some inline styles in staff
+        templates could become CSS classes.
 
 ### Shelved indefinitely
 - Image generation (PIL) for ranking posters.

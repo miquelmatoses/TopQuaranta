@@ -151,18 +151,50 @@ a hand-tuned heuristic in `_heuristic_classificar`.
 
 ## 5. Cron schedule
 
-File: `/etc/cron.d/topquaranta` — user `topquaranta`.
+File: `/etc/cron.d/topquaranta`. Commands go through
+`/home/topquaranta/bin/tq-run` which captures each run's exit code and last
+output into `/var/log/topquaranta/status/<tag>.status` — consumed by the
+health check (§7).
 
 ```cron
-0 * * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_novetats >> /var/log/topquaranta/novetats.log 2>&1
-0 4 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py netejar_caducades >> /var/log/topquaranta/neteja.log 2>&1
-0 6 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py obtenir_senyal >> /var/log/topquaranta/senyal.log 2>&1
-30 6 * * *  topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py actualitzar_score_entrada >> /var/log/topquaranta/senyal.log 2>&1
-0 7 * * *   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
-0 8 * * 6   topquaranta   cd /home/topquaranta/app && .venv/bin/python manage.py calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1
+# Pipeline
+0 * * * *   topquaranta   /home/topquaranta/bin/tq-run obtenir_novetats            >> /var/log/topquaranta/novetats.log    2>&1
+0 4 * * *   topquaranta   /home/topquaranta/bin/tq-run netejar_caducades           >> /var/log/topquaranta/neteja.log      2>&1
+0 6 * * *   topquaranta   /home/topquaranta/bin/tq-run obtenir_senyal              >> /var/log/topquaranta/senyal.log      2>&1
+30 6 * * *  topquaranta   /home/topquaranta/bin/tq-run actualitzar_score_entrada   >> /var/log/topquaranta/senyal.log      2>&1
+0 7 * * *   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
+0 8 * * 6   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking            >> /var/log/topquaranta/ranking.log     2>&1
+
+# DB backup
+0 3 * * *   postgres      /home/topquaranta/bin/tq-backup                          >> /var/log/topquaranta/backup.log      2>&1
 ```
 
-Logs rotate via `/etc/logrotate.d/topquaranta` (not shown).
+## 6. Backups
+
+`/home/topquaranta/bin/tq-backup` runs daily at 03:00 as `postgres`.
+Tiered retention in `/home/topquaranta/backups/`:
+- `daily/` — last 7 days
+- `weekly/` — Sundays, last 4 weeks
+- `monthly/` — 1st of month, last 12 months
+
+DB is ~45 MB uncompressed; gzipped ≈ 3 MB per backup. Total retention
+worst case ≈ 60 MB.
+
+## 7. Monitoring / health check
+
+No external services. Everything is file-based on the server.
+
+- **`errors.log`** (`/var/log/topquaranta/errors.log`): every `logger.error(...)`
+  / `logger.exception(...)` call across the project ends up here (configured
+  in `settings/base.py::LOGGING`). Tests are isolated via a `NullHandler` in
+  `settings/test.py` so this file only ever captures real production errors.
+- **Per-command status files** (`/var/log/topquaranta/status/<tag>.status`):
+  written by `tq-run`. Contain `status=OK|FAIL`, `exit_code`, `last_run`
+  (ISO-8601), and the last 20 lines of output.
+- **`/home/topquaranta/bin/tq-health`**: prints a summary table and exits
+  non-zero if any command is FAIL, STALE (past its expected cadence), or if
+  there are any Django ERROR-level entries logged today. Safe to pipe to a
+  notifier or to read manually when inspecting the server.
 
 ## 6. Artist discovery
 
