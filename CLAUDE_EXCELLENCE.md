@@ -86,8 +86,8 @@ dels coeficients queda exposat (anonimitzat) en ordre cronològic invers.
 |---|---|---|
 | **R10** Drop `Artista.deezer_id` — `ArtistaDeezer` és la única font | ✅ | `fdc649a` |
 | **R11** Drop `Artista.localitat`/`comarca`/`provincia` — `ArtistaLocalitat` és la única font | ✅ | `759bb87` |
-| **R10b** Regressió: 3 commands ingest oblidaven `deezer_id=` als `Artista.objects.create()` | ✅ | (pendent commit) |
-| **R7** Retry intern a `tq-run` (3 intents, backoff 60s/300s) + `tq-recover` cron horari | ✅ | (pendent commit) |
+| **R10b** Regressió: 3 commands ingest oblidaven `deezer_id=` als `Artista.objects.create()` | ✅ | `f1bf5f5` |
+| **R7** Retry intern a `tq-run` (3 intents, backoff 60s/300s) + `tq-recover` cron horari | ✅ | `835d6ac` |
 
 Pre-flight audit per a R10: 3.794 artistes amb camp directe, 3.795 files a
 `ArtistaDeezer`, 0 orfes. Pre-flight per a R11: 2.288 artistes aprovats,
@@ -109,7 +109,36 @@ R7 implementat com a defensa-en-profunditat de dos nivells:
    torna a executar via tq-run. Cap a `MAX_RECOVER_PER_DAY=5` per evitar
    tempestes en outages persistents. Comptador per dia a `<tag>.recover`.
 
-Tier 3 (Architecture), Tier 4 (Culture), Tier 5 (Exquisitesa) per a sessions futures.
+**Sessió 9 — Closing-out fiabilitat + CI (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **R13** Defensa templates `canco.album.X` + neteja regressions latents R10/R11 a 5 templates | ✅ | `080349b` |
+| **R12** Signal `sync_territoris_from_localitats` mou-se a `transaction.on_commit()` | ✅ | `33ba957` |
+| **D1** `Canco.isrc` partial unique constraint (només quan no buit) | ✅ | `b54623d` |
+| **R14** `tq-restore-test` mensual: restaura el backup més recent a una DB efímera, valida row counts | ✅ | `b641343` |
+| **O9** logrotate weekly per a `/var/log/topquaranta/*.log` | ✅ | `fee0472` |
+| **style** Baseline `black` + `isort` (100 fitxers) + `pyproject.toml` | ✅ | `f810c42` |
+| **O3** GitHub Actions CI: pytest + lint + missing-migration check | ✅ | `e0175df` |
+
+Audit pre-flight per a D1: 10.353 Cancons amb ISRC no buit, **0 duplicats**.
+Constraint aplicat sense backfill. Auditoria de templates per a R13 va
+trobar 5 regressions latents R10/R11 (links Deezer que no renderitzaven
+silenciosament perquè `{% if artista.deezer_id %}` retornava falsy
+després que el camp fos esborrat); fixades en el mateix commit.
+
+R14 verificat amb el dump de fa unes hores: artistes=4231/4239,
+cancons=19937/19961 — drift dins de la tolerància del 5%.
+
+O3 (CI): tres jobs paral·lels (tests, lint, missing-migrations check).
+Tests usen settings.test (SQLite in-memory) — no calen credencials ni
+servei Postgres a CI. El primer push amb el workflow ha de passar net
+gràcies al baseline d'estil del commit anterior.
+
+Phase 9 ja té **27 troballes resoltes** en 9 sessions. Tier 1 (security)
+i Tier 2 (reliability) completes; Ops avançat (R14, O3, O9 fets, queden
+O1/O2/O4-O7/O8). Tier 3 (Architecture), Tier 4 (Culture), Tier 5
+(Exquisitesa) per a sessions futures.
 
 ---
 
@@ -235,14 +264,17 @@ Qui va aprovar quina proposta d'artista? Qui va canviar quin coeficient? Qui va 
 `Artista.localitat`, `comarca`, `provincia` (CharField) i `ArtistaLocalitat` (FK a `Municipi`). La vista edit manté els dos. **Què passa si divergeixen?** No hi ha una regla clara. Aquest és deute de migració incomplet.
 > **Resolució:** les tres columnes legacy s'han esborrat (migració 0031). `ArtistaLocalitat` és l'única font. Nova propietat `localitat_principal` per a la cadena de display.
 
-### R12. Signal fires in-transaction amb `self.territoris.set()` en mig
+### R12. Signal fires in-transaction amb `self.territoris.set()` en mig ✅ resolt (Sessió 9, `33ba957`)
 Quan `proposta_aprovar` crea `Artista` + N `ArtistaLocalitat` dins d'una `atomic()` block, **el post_save signal dispara `sync_territoris_from_localitats()` després de cada ArtistaLocalitat**. Cada invocació fa `self.localitats.all()` + `self.territoris.set()`. Al final de la transacció estem en el mateix estat final, però intermèdiament el M2M `territoris` ha estat reescrit N vegades. Si un thread concurrent llegeix entre-mig, veu estats intermedis. La solució correcta és `transaction.on_commit()`.
+> **Resolució:** signals embolicats en `transaction.on_commit(lambda: _resync(artista_id))`. Es resync una sola vegada després del commit. Defensa addicional: re-fetch de l'artista per id, no-op si fou cascade-deleted entre-mig.
 
-### R13. Cançons amb `album=NULL` fan crashear la vista
+### R13. Cançons amb `album=NULL` fan crashear la vista ✅ resolt (Sessió 9, `080349b`)
 `Canco.album` és FK CASCADE, així que idealment no queda mai NULL. Però si alguna cosa trenca la integritat (suport migratori, ALTER manual), els templates `{{ canco.album.nom }}` crashen amb `NoneType`. No es fa servir `|default:"..."` a enlloc.
+> **Resolució:** templates staff defensats amb `{% if canco.album %}`. Auditoria va trobar a sobre 5 regressions latents R10/R11 (links Deezer i fallback de localitat) — totes fixades en el mateix commit.
 
-### R14. Backups no es testen en restore
+### R14. Backups no es testen en restore ✅ resolt (Sessió 9, `b641343`)
 Tenim backups. Mai s'han restaurat. **Un backup no testat no és un backup.** Un error de `pg_dump` podria estar generant fitxers gzip corruptes i només ho descobriríem en el moment pitjor.
+> **Resolució:** nou `tq-restore-test` (cron mensual el dia 1). Restaura el dump més recent a una DB efímera, valida row counts dins del 5% del live, drop. Status escrit a `tq-restore-test.status`, surfaced per `tq-health` (max-age 35 dies). Primer run real: artistes=4231/4239, cancons=19937/19961 — passat.
 
 ---
 
@@ -329,8 +361,9 @@ Un canvi d'algoritme és all-or-nothing. Amb un `FeatureFlag` a `ConfiguracioGlo
 
 ## 🟠 ALT
 
-### D1. `Canco.isrc` NO és unique
+### D1. `Canco.isrc` NO és unique ✅ resolt (Sessió 9, `b54623d`)
 Diverses cançons poden tenir el mateix ISRC (p. ex. reedicions). **La nostra pipeline tracta l'ISRC com a clau universal** (matching_isrc_deezer ho va fer). Però si algú crea dues `Canco` amb el mateix ISRC, què? No hi ha constraint. `deduplicar_isrc.py` suggereix que s'ha hagut de fer manualment. Hauria de ser unique o almenys amb `unique_together` amb `album`.
+> **Resolució:** partial UniqueConstraint `condition=~Q(isrc='')`. Els ~9k Cancons amb ISRC buit (legacy Last.fm-only) queden fora de l'index. Audit pre-flight: 10.353 Cancons amb ISRC, zero duplicats — constraint aplicat sense backfill.
 
 ## 🟡 MITJÀ
 
@@ -365,8 +398,9 @@ Un sol servidor, un sol disc, un sol proveïdor (Hetzner), un sol DC. **Un incid
 ### O2. Deploy = `git pull && systemctl restart` = downtime
 Sense blue-green, sense canary, sense rollback automàtic. **Un bug a un deploy = pàgina trencada en producció fins que es faci rollback manual.** Fa uns mesos això era acceptable. Amb usuaris reals ja no.
 
-### O3. Sense CI/CD
+### O3. Sense CI/CD ✅ resolt (Sessió 9, `e0175df`)
 No hi ha `.github/workflows/`. Cap test es corre automàticament en push. Cap validació de lint, type checking, format. **És qüestió de temps que algú (jo inclòs) committegi un fail que trenca producció.**
+> **Resolució:** `.github/workflows/ci.yml` amb 3 jobs paral·lels — pytest + `manage.py check` (SQLite in-memory), `black --check` + `isort --check-only`, i `makemigrations --check --dry-run`. Precedent: el commit `f810c42` estableix el baseline d'estil perquè el job de lint passi des del primer push.
 
 ### O4. Sense ambient de staging
 Els canvis van directe a producció. **Primera vegada que es veu el codi amb dades reals és en producció.** Errors que només apareixen amb volum real (performance, race conditions) es descobreixen amb l'usuari final.
@@ -385,8 +419,9 @@ Si el servidor s'incendia, els backups s'incendien amb ell. Una política 3-2-1 
 ### O8. Sense runbook ni playbook
 Què fas si el pipeline falla a les 6 AM un dissabte? Hi ha algun document que digui "mira A, si fail mira B"? No. **Tot el coneixement operacional és implícit al cap del manteniment.**
 
-### O9. Logrotate no configurat per `novetats.log`
+### O9. Logrotate no configurat per `novetats.log` ✅ resolt (Sessió 9, `fee0472`)
 El novetats.log de cada hora acumula. Ara fa 25 MB. En 6 mesos farà 180 MB. Sense rotació, pot acabar omplint disk. Caldria `/etc/logrotate.d/topquaranta`.
+> **Resolució:** `/etc/logrotate.d/topquaranta` (config a repo `deploy/logrotate.topquaranta`). Setmanal, 8 rotacions, gzip, copytruncate (perquè els crons amb `>>` no perdin el FD).
 
 ---
 
