@@ -1,0 +1,77 @@
+# O3: Continuous integration for TopQuaranta.
+#
+# Runs on every push and pull request to main. Three checks run in parallel:
+#   - tests: pytest suite + manage.py check (SQLite in-memory, no Postgres)
+#   - lint:  black --check + isort --check-only
+#   - migrations: detect models without a corresponding migration
+#
+# The repo's test settings (topquaranta.settings.test) use SQLite, so CI
+# doesn't need a Postgres service. External APIs (Last.fm, Deezer) are
+# mocked in tests, no network credentials needed.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Django system checks
+        env:
+          DJANGO_SETTINGS_MODULE: topquaranta.settings.test
+        run: python manage.py check
+      - name: Run pytest
+        run: python -m pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install black + isort
+        run: |
+          python -m pip install --upgrade pip
+          pip install black==25.1.0 isort==6.0.1
+      - name: black --check
+        run: black --check .
+      - name: isort --check
+        run: isort --check-only --diff .
+
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Detect missing migrations
+        env:
+          DJANGO_SETTINGS_MODULE: topquaranta.settings.test
+        run: python manage.py makemigrations --check --dry-run
