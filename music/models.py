@@ -116,11 +116,14 @@ class Artista(models.Model):
 
     # Genre and gender representation
     genere = models.CharField(
-        max_length=255, blank=True,
+        max_length=255,
+        blank=True,
         help_text="Musical genre (free text).",
     )
     percentatge_femeni = models.CharField(
-        max_length=10, blank=True, choices=PERCENTATGE_FEMENI_CHOICES,
+        max_length=10,
+        blank=True,
+        choices=PERCENTATGE_FEMENI_CHOICES,
         help_text="Female representation percentage.",
     )
 
@@ -137,7 +140,8 @@ class Artista(models.Model):
     facebook_url = models.URLField(blank=True)
 
     last_checked_deezer = models.DateTimeField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Last time Deezer was queried for new albums.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -227,8 +231,9 @@ class Artista(models.Model):
             return  # No ArtistaLocalitat entries — keep legacy M2M
         # Collect territories from municipis
         territori_ids = set(
-            localitats_qs.filter(municipi__isnull=False)
-            .values_list("municipi__territori_id", flat=True)
+            localitats_qs.filter(municipi__isnull=False).values_list(
+                "municipi__territori_id", flat=True
+            )
         )
         # If all entries have municipi=NULL → non-PPCC artist → ALT
         if not territori_ids:
@@ -253,7 +258,9 @@ class ArtistaDeezer(models.Model):
     """Links an Artista to one or more Deezer artist IDs."""
 
     artista = models.ForeignKey(
-        Artista, on_delete=models.CASCADE, related_name="deezer_ids",
+        Artista,
+        on_delete=models.CASCADE,
+        related_name="deezer_ids",
     )
     deezer_id = models.BigIntegerField(unique=True)
     principal = models.BooleanField(default=True)
@@ -339,7 +346,9 @@ class Album(models.Model):
 
     spotify_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     deezer_id = models.BigIntegerField(unique=True, null=True, blank=True)
-    artista = models.ForeignKey(Artista, on_delete=models.CASCADE, related_name="albums")
+    artista = models.ForeignKey(
+        Artista, on_delete=models.CASCADE, related_name="albums"
+    )
     nom = models.CharField(max_length=500)
     slug = models.SlugField(max_length=550, unique=True, blank=True)
     data_llancament = models.DateField(null=True, blank=True)
@@ -442,6 +451,16 @@ class Canco(models.Model):
         ordering = ["nom"]
         verbose_name = "Cançó"
         verbose_name_plural = "Cançons"
+        constraints = [
+            # D1: ISRC is the universal track key — once it's set, no two
+            # Cancons may share it. Empty string is allowed for legacy
+            # Last.fm-only entries that never got Deezer metadata.
+            models.UniqueConstraint(
+                fields=["isrc"],
+                condition=~models.Q(isrc=""),
+                name="canco_isrc_unique_when_set",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.nom} — {self.artista.nom}"
@@ -458,9 +477,9 @@ class Canco(models.Model):
         """
         codis = set(self.artista.territoris.values_list("codi", flat=True))
         codis.update(
-            Territori.objects.filter(
-                artistes__participacions=self
-            ).values_list("codi", flat=True)
+            Territori.objects.filter(artistes__participacions=self).values_list(
+                "codi", flat=True
+            )
         )
         return codis
 
@@ -496,11 +515,13 @@ class HistorialRevisio(models.Model):
     artista_nom_similitud = models.FloatField(null=True, blank=True)
 
     ml_classe_decisio = models.CharField(
-        max_length=1, blank=True,
+        max_length=1,
+        blank=True,
         help_text="ML class at the time of decision.",
     )
     ml_confianca_decisio = models.FloatField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="ML confidence at the time of decision.",
     )
 
@@ -577,18 +598,20 @@ class StaffAuditLog(models.Model):
         blank=True,
         related_name="staff_audit_entries",
         help_text="Staff user who performed the action. NULL if actor was "
-                  "deleted — the action itself is still in the record.",
+        "deleted — the action itself is still in the record.",
     )
     action = models.CharField(max_length=40, choices=ACTION_CHOICES)
 
     # Target snapshot — so the row remains meaningful after the target goes.
     target_type = models.CharField(
-        max_length=30, blank=True,
+        max_length=30,
+        blank=True,
         help_text='e.g. "Canco", "Artista", "Album", "Proposta", "Config".',
     )
     target_id = models.BigIntegerField(null=True, blank=True)
     target_label = models.CharField(
-        max_length=500, blank=True,
+        max_length=500,
+        blank=True,
         help_text="Human-readable identifier of the target at action time.",
     )
 
