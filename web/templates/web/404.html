@@ -1,0 +1,20 @@
+{% extends "web/base.html" %}
+
+{% block title %}No s'ha trobat (404) — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="container" style="padding: var(--mm-space-12) 0; text-align: center;">
+  <p class="section-label" style="margin-bottom: var(--mm-space-4);">error 404</p>
+  <h1 class="ranking-title" style="font-size: var(--mm-text-6xl); margin: 0 0 var(--mm-space-6);">
+    No hi trobem res
+  </h1>
+  <p style="font-size: var(--mm-text-lg); max-width: 40ch; margin: 0 auto var(--mm-space-8); color: var(--mm-color-text-muted);">
+    La pàgina que busques no existeix, o potser l'hem mogut. Prova de tornar
+    enrere o començar pel rànquing.
+  </p>
+  <div style="display: flex; gap: var(--mm-space-3); justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'web:homepage' %}" class="mm-btn mm-btn--primary">Tornar a l'inici</a>
+    <a href="{% url 'web:ranking' %}" class="mm-btn">Veure el rànquing</a>
+  </div>
+</section>
+{% endblock %}

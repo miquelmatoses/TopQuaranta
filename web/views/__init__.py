@@ -1,8 +1,9 @@
 import datetime
 
 from django.core.paginator import Paginator
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseForbidden, HttpResponseNotFound, HttpResponseServerError
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template import loader
 
 from music.constants import TERRITORI_NOMS, TERRITORIS_VALIDS  # noqa: F401 (re-exported)
 from music.models import Album, Artista, Canco, Municipi
@@ -347,3 +348,24 @@ def mapa(request: HttpRequest) -> HttpResponse:
         "comarques_json": json.dumps(comarques_data, ensure_ascii=False),
         "municipis_json": json.dumps(municipis_data, ensure_ascii=False),
     })
+
+
+# ── Error handlers (S13) — custom-styled 404 / 500 / 403 pages ──
+#
+# Registered in topquaranta/urls.py via `handler404 = ...` etc. Django only
+# uses these when DEBUG=False; in local dev you still get the technical
+# 500 page.
+
+def handler_404(request: HttpRequest, exception=None) -> HttpResponse:
+    template = loader.get_template("web/404.html")
+    return HttpResponseNotFound(template.render({"request": request}, request))
+
+
+def handler_500(request: HttpRequest) -> HttpResponse:
+    template = loader.get_template("web/500.html")
+    return HttpResponseServerError(template.render({"request": request}, request))
+
+
+def handler_403(request: HttpRequest, exception=None) -> HttpResponse:
+    template = loader.get_template("web/403.html")
+    return HttpResponseForbidden(template.render({"request": request}, request))

@@ -1,0 +1,19 @@
+{% extends "web/base.html" %}
+
+{% block title %}Error del servidor (500) — TopQuaranta{% endblock %}
+
+{% block content %}
+<section class="container" style="padding: var(--mm-space-12) 0; text-align: center;">
+  <p class="section-label" style="margin-bottom: var(--mm-space-4);">error 500</p>
+  <h1 class="ranking-title" style="font-size: var(--mm-text-6xl); margin: 0 0 var(--mm-space-6);">
+    Alguna cosa ha petat
+  </h1>
+  <p style="font-size: var(--mm-text-lg); max-width: 40ch; margin: 0 auto var(--mm-space-8); color: var(--mm-color-text-muted);">
+    Hi ha hagut un error a l'hora de servir aquesta pàgina. L'equip ja ho
+    sap. Prova d'actualitzar d'aquí uns minuts.
+  </p>
+  <div style="display: flex; gap: var(--mm-space-3); justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'web:homepage' %}" class="mm-btn mm-btn--primary">Tornar a l'inici</a>
+  </div>
+</section>
+{% endblock %}
