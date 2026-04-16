@@ -287,13 +287,90 @@ ORDER BY o.score_setmanal DESC
 
 def calcular_ranking_territori(territori: str) -> list[dict]:
     """
-    Run the 14-CTE ranking algorithm for a given territory.
+    Run the ranking algorithm for a given territory.
+
+    For regular territories (CAT, VAL, BAL, ALT, CNO, etc.):
+        Runs the full 14-CTE algorithm filtered by that territory.
+
+    For PPCC (aggregate / "general"):
+        Does NOT run the 14-CTE. Instead, aggregates results from all
+        non-aggregate territory rankings:
+        1. UNION ALL results from each territory's 14-CTE
+        2. Apply position-based penalty: score * (1 - (posicio-1) * 0.04)
+        3. Deduplicate by canco_id (keep best score_global)
+        4. Re-rank by score_global DESC, top 100
+
+    This mirrors the legacy vw_top40_weekly_ppcc SQL view exactly.
+
     Returns list of dicts with posicio, canco_id, score_setmanal, canvi_posicio.
     """
+    if territori == "PPCC":
+        return _calcular_ranking_ppcc()
+
     with connection.cursor() as cursor:
         cursor.execute(RANKING_SQL, {"territori": territori})
         col_names = [col[0] for col in cursor.description]
         results = []
         for row in cursor.fetchall():
             results.append(dict(zip(col_names, row)))
+    return results
+
+
+# Legacy PPCC aggregation: position penalty coefficient (0.04 per position)
+PPCC_PENALITZACIO_PER_POSICIO = 0.04
+
+
+def _calcular_ranking_ppcc() -> list[dict]:
+    """
+    Compute PPCC ranking by aggregating all non-aggregate territory rankings.
+
+    Mirrors legacy vw_top40_weekly_ppcc:
+      1. Run 14-CTE for each eligible territory (CAT, VAL, BAL, ALT, + optional)
+      2. Penalize by position: score_global = score * (1 - (pos-1) * 0.04)
+      3. Deduplicate: keep best score_global per canco_id
+      4. Rank by score_global DESC, top 100
+    """
+    # Collect all territory rankings (non-aggregate only)
+    all_results: list[dict] = []
+    source_territoris = territoris_amb_ranking_propi()
+
+    for t in source_territoris:
+        if t in TERRITORIS_AGREGATS:
+            continue  # Skip PPCC, ALT from feeding into themselves
+        territory_results = calcular_ranking_territori(t)
+        for r in territory_results:
+            r["territori_original"] = t
+        all_results.extend(territory_results)
+
+    if not all_results:
+        return []
+
+    # Apply position-based penalty
+    for r in all_results:
+        pos = r.get("posicio", 1)
+        score = r.get("score_setmanal") or 0.0
+        r["score_global"] = round(
+            float(score) * (1.0 - (pos - 1) * PPCC_PENALITZACIO_PER_POSICIO), 4
+        )
+
+    # Deduplicate by canco_id: keep best score_global
+    best_by_canco: dict[int, dict] = {}
+    for r in all_results:
+        cid = r["canco_id"]
+        if cid not in best_by_canco or r["score_global"] > best_by_canco[cid]["score_global"]:
+            best_by_canco[cid] = r
+
+    # Sort by score_global DESC and assign final positions
+    deduped = sorted(best_by_canco.values(), key=lambda x: -x["score_global"])
+
+    results = []
+    for i, r in enumerate(deduped[:100], start=1):
+        results.append({
+            "canco_id": r["canco_id"],
+            "score_setmanal": r["score_global"],
+            "posicio": i,
+            "posicio_anterior": r.get("posicio_anterior"),
+            "canvi_posicio": r.get("canvi_posicio"),
+            "dies_en_top": r.get("dies_en_top"),
+        })
     return results

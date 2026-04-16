@@ -64,12 +64,18 @@ class Command(BaseCommand):
             setmana = today - timedelta(days=today.weekday())
 
         # Territories to process
+        # PPCC must run LAST because it aggregates results from all other territories.
         if options["territori"]:
             territoris = [options["territori"].upper()]
-        elif provisional:
-            territoris = ALL_TERRITORIS
         else:
-            territoris = sorted(TERRITORIS_FIXOS)
+            # Same set for provisional and setmanal: fixed + aggregates (+ optional for provisional).
+            # Aggregates run LAST so they can read the just-computed individual results.
+            if provisional:
+                non_agg = sorted(t for t in ALL_TERRITORIS if t not in TERRITORIS_AGREGATS)
+            else:
+                non_agg = sorted(TERRITORIS_FIXOS)
+            agg = sorted(TERRITORIS_AGREGATS)
+            territoris = non_agg + agg
 
         mode = "PROVISIONAL" if provisional else "SETMANAL"
         self.stdout.write(f"Mode: {mode}")
@@ -165,18 +171,22 @@ class Command(BaseCommand):
             )
 
     def _save_ranking(self, territori: str, setmana: date, rows: list[dict]) -> None:
-        """Upsert ranking results to RankingSetmanal."""
+        """Replace ranking results for (territori, setmana) with the new top 40."""
         with transaction.atomic():
-            for r in rows:
-                RankingSetmanal.objects.update_or_create(
+            RankingSetmanal.objects.filter(
+                territori=territori, setmana=setmana,
+            ).delete()
+            objs = [
+                RankingSetmanal(
                     canco_id=r["canco_id"],
                     territori=territori,
                     setmana=setmana,
-                    defaults={
-                        "posicio": r["posicio"],
-                        "score_setmanal": r["score_setmanal"] or 0.0,
-                    },
+                    posicio=r["posicio"],
+                    score_setmanal=r["score_setmanal"] or 0.0,
                 )
+                for r in rows
+            ]
+            RankingSetmanal.objects.bulk_create(objs)
 
     def _save_provisional(self, territori: str, rows: list[dict]) -> None:
         """Replace provisional ranking for a territory."""
