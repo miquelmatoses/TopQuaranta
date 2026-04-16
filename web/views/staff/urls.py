@@ -45,4 +45,5 @@ urlpatterns = [
     path("propostes/<int:pk>/aprovar/", eines.proposta_aprovar, name="proposta_aprovar"),
     path("propostes/<int:pk>/rebutjar/", eines.proposta_rebutjar, name="proposta_rebutjar"),
     path("configuracio/", eines.configuracio, name="configuracio"),
+    path("auditlog/", eines.auditlog, name="auditlog"),
 ]

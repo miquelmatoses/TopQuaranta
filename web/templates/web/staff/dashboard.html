@@ -55,5 +55,10 @@
     <span class="staff-tool-title">Configuraci&oacute; global</span>
     <span class="staff-tool-desc">Coeficients de l'algorisme de ranking</span>
   </a>
+  <a href="{% url 'staff:auditlog' %}" class="staff-tool-card">
+    <img src="{% static 'mm-design/icons/ui/info-circle.svg' %}" alt="" class="staff-tool-icon" aria-hidden="true">
+    <span class="staff-tool-title">Auditoria staff</span>
+    <span class="staff-tool-desc">Registre immutable de totes les accions destructives</span>
+  </a>
 </nav>
 {% endblock %}
