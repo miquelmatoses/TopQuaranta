@@ -37,6 +37,7 @@ urlpatterns = [
     # P6: Eines restants
     path("historial/", eines.historial, name="historial"),
     path("senyal/", eines.senyal, name="senyal"),
+    path("senyal/<int:canco_pk>/acceptar-correccio/", eines.senyal_acceptar_correccio, name="senyal_acceptar_correccio"),
     path("verificacio/", eines.verificacio_artistes, name="verificacio_artistes"),
     path("verificacio/<int:pk>/toggle/", eines.verificacio_toggle, name="verificacio_toggle"),
     path("verificacio/<int:pk>/rebutjar/", eines.verificacio_rebutjar, name="verificacio_rebutjar"),

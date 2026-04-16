@@ -83,9 +83,14 @@ def senyal(request: HttpRequest) -> HttpResponse:
     if data_filtre:
         qs = qs.filter(data=data_filtre)
 
-    errors_only = request.GET.get("errors", "")
-    if errors_only == "1":
+    # `mena` dropdown: tots (default) / errors / correccions (R5) / confirmats
+    mena = request.GET.get("mena", "")
+    if mena == "errors":
         qs = qs.filter(error=True)
+    elif mena == "correccions":
+        qs = qs.filter(corregit=True)
+    elif mena == "confirmats":
+        qs = qs.filter(canco__lastfm_confirmed=True)
 
     cerca = request.GET.get("q", "").strip()
     if cerca:
@@ -102,11 +107,48 @@ def senyal(request: HttpRequest) -> HttpResponse:
         "staff_section": "senyal",
         "page": page,
         "data_filtre": data_filtre,
-        "errors_only": errors_only,
+        "mena": mena,
         "cerca": cerca,
         "current_order": current_order,
         "current_dir": current_dir,
     })
+
+
+@staff_required
+def senyal_acceptar_correccio(request: HttpRequest, canco_pk: int) -> HttpResponse:
+    """R5: staff marks Canco.lastfm_confirmed=True — future drifts aren't flagged.
+
+    Use when Last.fm's autocorrect is actually the right track (e.g. our
+    stored name has a typo or unusual punctuation). The flag is scoped to
+    the Canco, not to a single SenyalDiari row, because the drift will
+    recur every day with the same pair until we accept it.
+    """
+    if request.method != "POST":
+        return redirect("staff:senyal")
+    from music.models import Canco
+    try:
+        canco = Canco.objects.get(pk=canco_pk)
+    except Canco.DoesNotExist:
+        messages.error(request, "Cançó no trobada.")
+        return redirect("staff:senyal")
+
+    canco.lastfm_confirmed = True
+    canco.save(update_fields=["lastfm_confirmed"])
+
+    # Clear corregit flag on all existing SenyalDiari rows for this track
+    # so the list page no longer shows them as drift.
+    SenyalDiari.objects.filter(canco=canco, corregit=True).update(corregit=False)
+
+    log_staff_action(
+        request, "canco_edit", target=canco,
+        field="lastfm_confirmed", new_value=True,
+        source="senyal_accept_correction",
+    )
+    messages.success(
+        request,
+        f"Correcció acceptada per «{canco.nom}» — Last.fm passarà a considerar-se correcte.",
+    )
+    return redirect(request.META.get("HTTP_REFERER") or "staff:senyal")
 
 
 # ── UserArtista (verification requests) ──
