@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
@@ -492,3 +493,89 @@ class HistorialRevisio(models.Model):
 
     def __str__(self) -> str:
         return f"{self.canco_nom} — {self.decisio} ({self.motiu})"
+
+
+class StaffAuditLog(models.Model):
+    """R9: immutable record of every destructive or consequential staff action.
+
+    Append-only log. The UI at /staff/auditlog/ is read-only; by convention,
+    nothing in the codebase deletes or mutates rows after creation. Actor,
+    action, and target snapshot are captured so the log remains meaningful
+    even if the target record is later deleted.
+
+    `metadata` is a JSON blob for action-specific context — e.g. motiu of
+    a rejection, the field diff of a config change, the source/target of a
+    merge. Keep keys stable (documented where each action site creates
+    them) so the audit view can format them consistently.
+    """
+
+    # Action taxonomy. Extend conservatively — every new value should be
+    # usable as a filter on the audit page.
+    ACTION_CHOICES = [
+        # Cançons
+        ("canco_aprovar", "Cançó: aprovar"),
+        ("canco_rebutjar", "Cançó: rebutjar"),
+        ("canco_rebutjar_album", "Cançó: rebutjar àlbum sencer"),
+        ("canco_edit", "Cançó: edició"),
+        # Artistes
+        ("artista_aprovar", "Artista: aprovar"),
+        ("artista_rebutjar", "Artista: rebutjar"),
+        ("artista_marcar_sense_deezer", "Artista: marcar sense Deezer"),
+        ("artista_fusionar", "Artista: fusionar"),
+        ("artista_edit", "Artista: edició"),
+        # Artistes pendents (auto-discovered)
+        ("pendent_aprovar", "Pendent: aprovar"),
+        ("pendent_descartar", "Pendent: descartar"),
+        # Àlbums
+        ("album_edit", "Àlbum: edició"),
+        ("album_descartar", "Àlbum: descartar"),
+        # Propostes d'artistes nous
+        ("proposta_aprovar", "Proposta: aprovar"),
+        ("proposta_rebutjar", "Proposta: rebutjar"),
+        # Sol·licituds de gestió
+        ("sollicitud_aprovar", "Sol·licitud: aprovar"),
+        ("sollicitud_rebutjar", "Sol·licitud: rebutjar"),
+        # Configuració global
+        ("config_update", "Configuració global: actualitzada"),
+    ]
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff_audit_entries",
+        help_text="Staff user who performed the action. NULL if actor was "
+                  "deleted — the action itself is still in the record.",
+    )
+    action = models.CharField(max_length=40, choices=ACTION_CHOICES)
+
+    # Target snapshot — so the row remains meaningful after the target goes.
+    target_type = models.CharField(
+        max_length=30, blank=True,
+        help_text='e.g. "Canco", "Artista", "Album", "Proposta", "Config".',
+    )
+    target_id = models.BigIntegerField(null=True, blank=True)
+    target_label = models.CharField(
+        max_length=500, blank=True,
+        help_text="Human-readable identifier of the target at action time.",
+    )
+
+    # Action-specific context (reason, diff, counts, …). No schema.
+    metadata = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Entrada d'auditoria staff"
+        verbose_name_plural = "Auditoria staff"
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["action", "-created_at"]),
+            models.Index(fields=["actor", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        who = self.actor.email if self.actor_id else "(deleted user)"
+        return f"[{self.created_at:%Y-%m-%d %H:%M}] {who} · {self.action} · {self.target_label}"
