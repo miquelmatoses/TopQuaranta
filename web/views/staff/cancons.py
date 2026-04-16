@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS
 from music.ml import recalcular_ml_si_cal
 from music.models import Album, Artista, Canco
+from music.audit import log_staff_action
 from music.services import aprovar_canco, rebutjar_album, rebutjar_artista, rebutjar_canco
 
 from . import apply_ordering, paginate, staff_required
@@ -93,6 +94,7 @@ def accio(request: HttpRequest) -> HttpResponse:
         with transaction.atomic():
             for canco in cancons_qs:
                 aprovar_canco(canco)
+                log_staff_action(request, "canco_aprovar", target=canco)
         recalcular_ml_si_cal()
         messages.success(request, f"{cancons_qs.count()} cancons aprovades.")
         return redirect("staff:cancons")
@@ -110,15 +112,26 @@ def accio(request: HttpRequest) -> HttpResponse:
                 artista_ids = set(cancons_qs.values_list("artista_id", flat=True))
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
+                    log_staff_action(
+                        request, "artista_rebutjar", target=artista,
+                        motiu=motiu, cancons_afectades=count,
+                    )
                     msgs.append(f"{count} cancons de {artista.nom}")
             elif motiu == "album_incorrecte":
                 album_ids = set(cancons_qs.values_list("album_id", flat=True))
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
+                    log_staff_action(
+                        request, "canco_rebutjar_album", target=album,
+                        motiu=motiu, cancons_afectades=count,
+                    )
                     msgs.append(f"{count} cancons de l'album {album.nom}")
             else:
                 for canco in cancons_qs:
                     rebutjar_canco(canco, motiu)
+                    log_staff_action(
+                        request, "canco_rebutjar", target=canco, motiu=motiu,
+                    )
                 msgs.append(f"{cancons_qs.count()} cancons rebutjades")
         recalcular_ml_si_cal()
         messages.success(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
@@ -134,10 +147,18 @@ def accio(request: HttpRequest) -> HttpResponse:
                 )
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
+                    log_staff_action(
+                        request, "artista_rebutjar", target=artista,
+                        motiu=motiu, cancons_afectades=count,
+                    )
                     msgs.append(f"{count} cancons de {artista.nom}")
             else:
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
+                    log_staff_action(
+                        request, "canco_rebutjar_album", target=album,
+                        motiu=motiu, cancons_afectades=count,
+                    )
                     msgs.append(f"{count} cancons de l'album {album.nom}")
         recalcular_ml_si_cal()
         messages.success(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
@@ -182,6 +203,7 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
             canco.deezer_id = None
 
         canco.save()
+        log_staff_action(request, "canco_edit", target=canco)
         messages.success(request, f"Cançó «{canco.nom}» actualitzada.")
         return redirect("staff:canco_editar", pk=canco.pk)
 

@@ -9,7 +9,8 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from comptes.models import PropostaArtista, UserArtista
-from music.models import Artista, ArtistaDeezer, ArtistaLocalitat, HistorialRevisio, Municipi, Territori
+from music.audit import log_staff_action
+from music.models import Artista, ArtistaDeezer, ArtistaLocalitat, HistorialRevisio, Municipi, StaffAuditLog, Territori
 from ranking.models import ConfiguracioGlobal, SenyalDiari
 
 from . import apply_ordering, paginate, staff_required
@@ -159,6 +160,14 @@ def verificacio_toggle(request: HttpRequest, pk: int) -> HttpResponse:
     ua.estat = "aprovat" if ua.verificat else "pendent"
     ua.save(update_fields=["verificat", "estat"])
     estat_text = "aprovat" if ua.verificat else "desaprovat"
+    log_staff_action(
+        request,
+        "sollicitud_aprovar" if ua.verificat else "sollicitud_rebutjar",
+        target=ua,
+        nou_estat=ua.estat,
+        artista=ua.artista.nom,
+        usuari=ua.usuari.email,
+    )
     messages.success(request, f"{ua.artista.nom} ({ua.usuari.email}): {estat_text}.")
     return redirect("staff:verificacio_artistes")
 
@@ -177,6 +186,10 @@ def verificacio_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
 
     ua.estat = "rebutjat"
     ua.save(update_fields=["estat"])
+    log_staff_action(
+        request, "sollicitud_rebutjar", target=ua,
+        artista=ua.artista.nom, usuari=ua.usuari.email,
+    )
     info = f"{ua.artista.nom} ({ua.usuari.email})"
     messages.success(request, f"Sol\u00b7licitud rebutjada: {info}.")
     return redirect("staff:verificacio_artistes")
@@ -344,6 +357,13 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
         proposta.artista_creat = artista
         proposta.save(update_fields=["estat", "artista_creat"])
 
+    log_staff_action(
+        request, "proposta_aprovar", target=proposta,
+        artista_creat_id=artista.pk,
+        artista_nom=artista.nom,
+        deezer_ids=deezer_ids,
+        usuari_proposant=proposta.usuari.email,
+    )
     messages.success(request, f"Artista \u00ab{artista.nom}\u00bb creat des de la proposta.")
     return redirect("staff:propostes_artistes")
 
@@ -362,6 +382,11 @@ def proposta_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
 
     proposta.estat = PropostaArtista.ESTAT_REBUTJAT
     proposta.save(update_fields=["estat"])
+    log_staff_action(
+        request, "proposta_rebutjar", target=proposta,
+        artista_nom=proposta.nom,
+        usuari_proposant=proposta.usuari.email,
+    )
     messages.success(request, f"Proposta \u00ab{proposta.nom}\u00bb rebutjada.")
     return redirect("staff:propostes_artistes")
 
@@ -377,6 +402,10 @@ def configuracio(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         fields = [f for f in ConfiguracioGlobal._meta.get_fields()
                   if hasattr(f, "attname") and f.attname != "id"]
+
+        # Snapshot before values so we can record a field-level diff.
+        before = {f.attname: getattr(config, f.attname) for f in fields}
+
         for field in fields:
             val = request.POST.get(field.attname, "").strip()
             if val:
@@ -395,6 +424,19 @@ def configuracio(request: HttpRequest) -> HttpResponse:
                 for msg in msgs:
                     messages.error(request, f"{field_name}: {msg}")
             return redirect("staff:configuracio")
+
+        # Build the diff (only fields that actually changed).
+        after = {f.attname: getattr(config, f.attname) for f in fields}
+        diff = {
+            name: {"before": str(before[name]), "after": str(after[name])}
+            for name in before if str(before[name]) != str(after[name])
+        }
+        if diff:
+            log_staff_action(
+                request, "config_update", target=config,
+                changed_fields=list(diff.keys()),
+                diff=diff,
+            )
         messages.success(request, "Configuració actualitzada.")
         return redirect("staff:configuracio")
 
@@ -412,4 +454,36 @@ def configuracio(request: HttpRequest) -> HttpResponse:
         "staff_section": "configuracio",
         "config": config,
         "fields": fields_data,
+    })
+
+
+# ── StaffAuditLog (read-only view) ──
+
+
+@staff_required
+def auditlog(request: HttpRequest) -> HttpResponse:
+    """Read-only view of the staff action log (R9)."""
+    qs = StaffAuditLog.objects.select_related("actor").order_by("-created_at")
+
+    action = request.GET.get("action", "")
+    if action:
+        qs = qs.filter(action=action)
+
+    actor_email = request.GET.get("actor", "").strip()
+    if actor_email:
+        qs = qs.filter(actor__email__icontains=actor_email)
+
+    cerca = request.GET.get("q", "").strip()
+    if cerca:
+        qs = qs.filter(target_label__icontains=cerca)
+
+    page = paginate(request, qs, per_page=50)
+
+    return render(request, "web/staff/auditlog.html", {
+        "staff_section": "auditlog",
+        "page": page,
+        "action": action,
+        "actor_email": actor_email,
+        "cerca": cerca,
+        "action_choices": StaffAuditLog.ACTION_CHOICES,
     })

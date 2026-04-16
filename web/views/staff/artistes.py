@@ -14,6 +14,7 @@ from music.ml import recalcular_ml_si_cal
 from music.models import (
     Album, Artista, ArtistaDeezer, ArtistaLocalitat, Canco, Municipi, Territori,
 )
+from music.audit import log_staff_action
 from music.services import rebutjar_artista
 
 from . import apply_ordering, paginate, staff_required
@@ -157,6 +158,7 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
         )
         artista.save(update_fields=["deezer_id"])
 
+        log_staff_action(request, "artista_edit", target=artista)
         messages.success(request, f"Artista \u00ab{artista.nom}\u00bb actualitzat.")
         return redirect("staff:artista_editar", pk=artista.pk)
 
@@ -195,7 +197,12 @@ def accio(request: HttpRequest) -> HttpResponse:
         total_cancons = 0
         with transaction.atomic():
             for artista in queryset:
-                total_cancons += rebutjar_artista(artista, motiu)
+                count = rebutjar_artista(artista, motiu)
+                total_cancons += count
+                log_staff_action(
+                    request, "artista_marcar_sense_deezer", target=artista,
+                    motiu=motiu, cancons_afectades=count,
+                )
         recalcular_ml_si_cal()
         messages.success(
             request,
@@ -213,6 +220,7 @@ def accio(request: HttpRequest) -> HttpResponse:
                 continue
             artista.aprovat = True
             artista.save(update_fields=["aprovat"])
+            log_staff_action(request, "artista_aprovar", target=artista)
             # Territory sync happens via signal if localitats exist
             ok += 1
         if errors:
@@ -281,6 +289,11 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
         target.save()
         # Signal syncs territories from merged localitats
 
+    log_staff_action(
+        request, "artista_fusionar", target=target,
+        sources_merged=[{"pk": a.pk, "nom": a.nom} for a in sources],
+        target_artista_pk=target.pk,
+    )
     messages.success(
         request,
         f"Artistes fusionats: {', '.join(source_names)} \u2192 {target.nom}.",

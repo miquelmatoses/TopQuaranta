@@ -7,6 +7,7 @@ from django.db.models import Count, F, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
+from music.audit import log_staff_action
 from music.models import Artista, ArtistaLocalitat, Municipi
 from web.api.views import (  # noqa: F401 — re-exported for staff URL routing
     api_comarques,
@@ -106,6 +107,12 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
         artista.save(update_fields=["aprovat", "localitat", "comarca"])
         # Signal auto-syncs territories
 
+    log_staff_action(
+        request, "pendent_aprovar", target=artista,
+        territori=territori,
+        localitat=artista.localitat,
+        comarca=artista.comarca,
+    )
     return JsonResponse({"ok": True, "territori": territori})
 
 
@@ -123,7 +130,21 @@ def api_descartar(request: HttpRequest, pk: int) -> JsonResponse:
     if has_verified:
         artista.auto_descobert = False
         artista.save(update_fields=["auto_descobert"])
+        log_staff_action(
+            request, "pendent_descartar", target=artista,
+            action_taken="kept_auto_descobert_false",
+            reason="had verified tracks",
+        )
         return JsonResponse({"ok": True, "action": "kept"})
     else:
+        # Snapshot before delete so the audit row remains meaningful.
+        label = str(artista)
+        pk_val = artista.pk
         artista.delete()
+        log_staff_action(
+            request, "pendent_descartar", target=None,
+            action_taken="deleted",
+            target_id_deleted=pk_val,
+            target_label_deleted=label,
+        )
         return JsonResponse({"ok": True, "action": "deleted"})

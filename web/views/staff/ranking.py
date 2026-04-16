@@ -5,6 +5,7 @@ from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
+from music.audit import log_staff_action
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS, TERRITORI_NOMS
 from music.ml import recalcular_ml_si_cal
 from music.models import Artista
@@ -82,6 +83,10 @@ def accio(request: HttpRequest) -> HttpResponse:
         with transaction.atomic():
             for rp in entries:
                 rebutjar_canco(rp.canco, motiu)
+                log_staff_action(
+                    request, "canco_rebutjar", target=rp.canco,
+                    motiu=motiu, source="provisional_ranking",
+                )
                 rp.delete()
                 total += 1
         recalcular_ml_si_cal()
@@ -92,7 +97,13 @@ def accio(request: HttpRequest) -> HttpResponse:
         total_cancons = 0
         with transaction.atomic():
             for artista in Artista.objects.filter(pk__in=artista_ids):
-                total_cancons += rebutjar_artista(artista, motiu)
+                count = rebutjar_artista(artista, motiu)
+                total_cancons += count
+                log_staff_action(
+                    request, "artista_rebutjar", target=artista,
+                    motiu=motiu, cancons_afectades=count,
+                    source="provisional_ranking",
+                )
             RankingProvisional.objects.filter(
                 canco__artista_id__in=artista_ids
             ).delete()
