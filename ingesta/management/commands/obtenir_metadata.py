@@ -6,7 +6,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
 
 from ingesta.clients import deezer
-from music.models import Album, Artista, Canco
+from music.constants import DIES_CADUCITAT
+from music.models import Album, Artista, ArtistaDeezer, Canco
+from music.titlecase_catala import titlecase_catala
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class Command(BaseCommand):
             qs = qs[:limit]
             self.stdout.write(f"  Limited to: {limit}")
 
-        cutoff = date.today() - timedelta(days=365)
+        cutoff = date.today() - timedelta(days=DIES_CADUCITAT)
         self.stdout.write(f"Release cutoff: {cutoff}")
 
         if dry_run:
@@ -142,12 +144,12 @@ class Command(BaseCommand):
         or None if artist not found/validated on Deezer.
         """
         # Step 1: resolve deezer_id
-        if not artista.deezer_id:
-            deezer_id = self._resolve_deezer_id(artista)
-            if not deezer_id:
+        principal_dz = artista.deezer_id_principal
+        if not principal_dz:
+            principal_dz = self._resolve_deezer_id(artista)
+            if not principal_dz:
                 return None
-        else:
-            deezer_id = artista.deezer_id
+        deezer_id = principal_dz
 
         # Step 2: fetch albums
         albums_data = deezer.get_artist_albums(deezer_id, min_date=cutoff)
@@ -238,6 +240,11 @@ class Command(BaseCommand):
                     "deezer_nb_fan", "deezer_nb_album",
                     "deezer_nom", "deezer_nom_similitud",
                 ])
+                # Also create ArtistaDeezer entry
+                ArtistaDeezer.objects.get_or_create(
+                    deezer_id=candidate_id,
+                    defaults={"artista": artista, "principal": True},
+                )
         except IntegrityError:
             logger.warning(
                 "Deezer ID %d already assigned to another artist — "
@@ -317,25 +324,30 @@ class Command(BaseCommand):
         main_id = main.get("id")
         main_name = main.get("name", "")
 
-        if not main_id or main_id == artista.deezer_id:
+        if not main_id or main_id == artista.deezer_id_principal:
             return artista
 
-        try:
-            return Artista.objects.get(deezer_id=main_id)
-        except Artista.DoesNotExist:
-            new_artista = Artista.objects.create(
-                nom=main_name,
-                lastfm_nom=main_name,
-                deezer_id=main_id,
-                aprovat=False,
-                auto_descobert=True,
-                font_descoberta="deezer_contributor",
-            )
-            logger.info(
-                "Created main artist '%s' (deezer_id=%d) from track contributor",
-                main_name, main_id,
-            )
-            return new_artista
+        ad = ArtistaDeezer.objects.filter(deezer_id=main_id).select_related("artista").first()
+        if ad:
+            return ad.artista
+
+        new_artista = Artista.objects.create(
+            nom=main_name,
+            lastfm_nom=main_name,
+            deezer_id=main_id,
+            aprovat=False,
+            auto_descobert=True,
+            font_descoberta="deezer_contributor",
+        )
+        ArtistaDeezer.objects.get_or_create(
+            deezer_id=main_id,
+            defaults={"artista": new_artista, "principal": True},
+        )
+        logger.info(
+            "Created main artist '%s' (deezer_id=%d) from track contributor",
+            main_name, main_id,
+        )
+        return new_artista
 
     def _upsert_track(
         self, artista: Artista, album: Album, data: dict, force: bool
@@ -358,7 +370,7 @@ class Command(BaseCommand):
         real_artista = self._resolve_main_artist(artista, contributors)
 
         defaults = {
-            "nom": data["title"],
+            "nom": titlecase_catala(data["title"]),
             "album": album,
             "artista": real_artista,
             "durada_ms": data.get("duration", 0) * 1000 if data.get("duration") else None,
@@ -385,11 +397,12 @@ class Command(BaseCommand):
             for contributor in contributors:
                 c_id = contributor.get("id")
                 c_name = contributor.get("name", "")
-                if not c_id or c_id == real_artista.deezer_id:
+                if not c_id or c_id == real_artista.deezer_id_principal:
                     continue
-                try:
-                    collab = Artista.objects.get(deezer_id=c_id)
-                except Artista.DoesNotExist:
+                ad = ArtistaDeezer.objects.filter(deezer_id=c_id).select_related("artista").first()
+                if ad:
+                    collab = ad.artista
+                else:
                     collab = Artista.objects.create(
                         nom=c_name,
                         lastfm_nom=c_name,
@@ -397,6 +410,10 @@ class Command(BaseCommand):
                         aprovat=False,
                         auto_descobert=True,
                         font_descoberta="collaborador",
+                    )
+                    ArtistaDeezer.objects.get_or_create(
+                        deezer_id=c_id,
+                        defaults={"artista": collab, "principal": True},
                     )
                     logger.info(
                         "Created collaborator Artista '%s' (deezer_id=%d)",

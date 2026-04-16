@@ -10,8 +10,10 @@ from django.utils import timezone
 
 from ingesta.clients import deezer
 from ingesta.clients.deezer import _parse_date
+from music.constants import DIES_CADUCITAT
 from music.ml import classificar_i_guardar
-from music.models import Album, Artista, Canco
+from music.models import Album, Artista, ArtistaDeezer, Canco
+from music.titlecase_catala import titlecase_catala
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +26,12 @@ RECORD_TYPE_MAP = {
 
 
 def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
+    """Look up artist by Deezer ID (via ArtistaDeezer), or create new."""
+    ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+    if ad:
+        return ad.artista
     try:
-        return Artista.objects.get(deezer_id=deezer_id)
-    except Artista.DoesNotExist:
-        pass
-    try:
-        return Artista.objects.create(
+        artista = Artista.objects.create(
             nom=name,
             lastfm_nom=name,
             deezer_id=deezer_id,
@@ -37,8 +39,14 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
             auto_descobert=True,
             font_descoberta="deezer_contributor",
         )
+        ArtistaDeezer.objects.get_or_create(
+            deezer_id=deezer_id,
+            defaults={"artista": artista, "principal": True},
+        )
+        return artista
     except IntegrityError:
-        return Artista.objects.filter(deezer_id=deezer_id).first()
+        ad = ArtistaDeezer.objects.filter(deezer_id=deezer_id).select_related("artista").first()
+        return ad.artista if ad else Artista.objects.filter(deezer_id=deezer_id).first()
 
 
 class Command(BaseCommand):
@@ -74,7 +82,7 @@ class Command(BaseCommand):
         p1 = 0
         p2 = 0
         p3 = 0
-        cutoff = date.today() - timedelta(days=365)
+        cutoff = date.today() - timedelta(days=DIES_CADUCITAT)
         # Track seen IDs in dry-run to avoid infinite loops
         seen_p1: set[int] = set()
         seen_p2: set[int] = set()
@@ -145,9 +153,9 @@ class Command(BaseCommand):
             # --- P3: approved artists, oldest checked first ---
             p3_qs = Artista.objects.filter(
                 aprovat=True,
-                deezer_id__isnull=False,
+                deezer_ids__isnull=False,
                 deezer_no_trobat=False,
-            ).order_by(
+            ).distinct().order_by(
                 F("last_checked_deezer").asc(nulls_first=True)
             )
             if seen_p3:
@@ -159,15 +167,16 @@ class Command(BaseCommand):
 
             calls += 1
             p3 += 1
+            dz_principal = artista.deezer_id_principal
             if dry_run:
                 self.stdout.write(
-                    f"  P3 artista {artista.nom} (dz={artista.deezer_id}, "
+                    f"  P3 artista {artista.nom} (dz={dz_principal}, "
                     f"last_checked={artista.last_checked_deezer})"
                 )
                 seen_p3.add(artista.pk)
                 continue
 
-            albums_data = deezer.get_artist_albums(artista.deezer_id, min_date=cutoff)
+            albums_data = deezer.get_artist_albums(dz_principal, min_date=cutoff)
             if deezer.quota_exhausted():
                 break
             new_albums = 0
@@ -218,7 +227,7 @@ class Command(BaseCommand):
             main = contributors[0]
             main_id = main.get("id")
             main_name = main.get("name", "")
-            if main_id and main_id != canco.artista.deezer_id:
+            if main_id and main_id != canco.artista.deezer_id_principal:
                 real_artista = _get_or_create_artista(main_id, main_name)
                 if real_artista:
                     canco.artista = real_artista
@@ -227,7 +236,7 @@ class Command(BaseCommand):
             for c in contributors[1:]:
                 c_id = c.get("id")
                 c_name = c.get("name", "")
-                if c_id and c_id != canco.artista.deezer_id:
+                if c_id and c_id != canco.artista.deezer_id_principal:
                     collab = _get_or_create_artista(c_id, c_name)
                     if collab:
                         canco.artistes_col.add(collab)
@@ -264,7 +273,7 @@ class Command(BaseCommand):
                     main = contributors[0]
                     main_id = main.get("id")
                     main_name = main.get("name", "")
-                    if main_id and main_id != existing.artista.deezer_id:
+                    if main_id and main_id != existing.artista.deezer_id_principal:
                         collab = _get_or_create_artista(main_id, main_name)
                         if collab:
                             existing.artistes_col.add(collab)
@@ -281,7 +290,7 @@ class Command(BaseCommand):
             main = contributors[0]
             main_id = main.get("id")
             main_name = main.get("name", "")
-            if main_id and main_id != artista.deezer_id:
+            if main_id and main_id != artista.deezer_id_principal:
                 resolved = _get_or_create_artista(main_id, main_name)
                 if resolved:
                     artista = resolved
@@ -299,7 +308,7 @@ class Command(BaseCommand):
         try:
             canco = Canco.objects.create(
                 deezer_id=dz_id,
-                nom=track_data["title"],
+                nom=titlecase_catala(track_data["title"]),
                 album=album,
                 artista=artista,
                 durada_ms=track_data.get("duration", 0) * 1000 if track_data.get("duration") else None,
@@ -316,7 +325,7 @@ class Command(BaseCommand):
             for c in contributors[1:]:
                 c_id = c.get("id")
                 c_name = c.get("name", "")
-                if c_id and c_id != artista.deezer_id:
+                if c_id and c_id != artista.deezer_id_principal:
                     collab = _get_or_create_artista(c_id, c_name)
                     if collab:
                         canco.artistes_col.add(collab)

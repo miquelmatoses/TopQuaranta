@@ -5,11 +5,13 @@ from datetime import date
 
 import requests
 
+from music.constants import DEEZER_RATE_LIMIT, MAX_API_RETRIES
+
 logger = logging.getLogger(__name__)
 
 API_BASE = "https://api.deezer.com"
-RATE_LIMIT_SLEEP = 1.0
-MAX_RETRIES = 3
+RATE_LIMIT_SLEEP = DEEZER_RATE_LIMIT
+MAX_RETRIES = MAX_API_RETRIES
 
 # Deezer quota error: code 4, "Quota limit exceeded".
 # No rate-limit headers are returned — the only signal is the error response.
