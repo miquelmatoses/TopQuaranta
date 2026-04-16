@@ -1,6 +1,6 @@
 # CLAUDE_EXCELLENCE.md — Auditoria integral cap a l'obra eterna
 
-> Audit sense pietat cap a l'excel·lència. Data: 2026-04-16.
+> Audit sense pietat cap a l'excel·lència. Data original: 2026-04-16.
 >
 > El sistema actual *funciona correctament*. Aquest document no tracta d'això.
 > Tracta de la distància entre "correcte" i "indistingible de la perfecció".
@@ -9,6 +9,30 @@
 > Aquest fitxer és la guia estratègica de la **Fase 9 — Excellence** del
 > ROADMAP. Cada troballa té una identificació estable (S1, R1, P1, …)
 > perquè es pugui referenciar en commits i issues.
+
+## Progrés de la Phase 9
+
+**Sessió 1 — Tier 1 Foundations, security hardening (2026-04-16)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **S1** Rotar contrasenya PostgreSQL | ✅ | `48a617f` |
+| **S2** PAT GitHub → SSH deploy key | ✅ | (ops; `.git/config` net, PAT revocat) |
+| **S3** Rotar `DJANGO_SECRET_KEY` | ✅ | `48a617f` |
+| **S4** `django-axes` (brute-force protection) | ✅ | `96ec17b` |
+| **S5** Anti-enumeració al registre | ✅ | `dcb41b0` |
+| **S6** CSP estricta + X-Frame-Options + nosniff | ✅ | `f8693c0` |
+| **S7** `json_script` a `/mapa/` (XSS-safe) | ✅ | `57a225c` |
+| **S8** URL scheme allowlist (`http`/`https`) a `PropostaArtista` | ✅ | `d85e226` |
+| **S10** Argon2 password hashing | ✅ | `96ec17b` |
+| **S13** Templates 404 / 500 / 403 amb branding | ✅ | (inclòs a commits següents) |
+| **R8** Min/Max validators a `ConfiguracioGlobal` | ✅ | `b33197a` |
+
+Queda pendent de Tier 1:
+- **S11** 2FA + IP allowlist per a staff — sessió pròpia, canvi UX gran
+- **S9** Rate limit a `/api/v1/*` — sessió curta, bona candidata a la següent
+
+Tier 2 (Reliability) i Tier 3 (Architecture) queden per a sessions futures.
 
 ---
 
