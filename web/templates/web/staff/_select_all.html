@@ -1,0 +1,19 @@
+{% comment %}
+Reusable select-all checkbox script for staff table bulk actions.
+
+Contract: the page must contain
+  - a single <input type="checkbox" id="select-all">
+  - one or more <input class="row-check" type="checkbox" name="ids" value="...">
+Include this partial once after the table.
+{% endcomment %}
+<script>
+(function () {
+  var master = document.getElementById('select-all');
+  if (!master) return;
+  master.addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(function (cb) {
+      cb.checked = master.checked;
+    });
+  });
+})();
+</script>

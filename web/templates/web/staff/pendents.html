@@ -1,21 +1,22 @@
 {% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
 
 {% block staff_title %}Artistes pendents{% endblock %}
 
 {% block staff_content %}
 <section class="ranking-header">
   <h2 class="ranking-title">Artistes pendents</h2>
-  <p class="ranking-date">{{ artistes|length }} artistes auto-descoberts per revisar</p>
+  <p class="ranking-date">{{ total }} artistes auto-descoberts per revisar (pàgina {{ page.number }}/{{ page.paginator.num_pages }})</p>
 </section>
 
 <div class="staff-table-wrap">
   <table class="staff-table">
     <thead>
       <tr>
-        <th>Nom</th>
+        <th>{% sort_header "nom" "Nom" %}</th>
         <th>Deezer</th>
         <th>Viasona</th>
-        <th>Canç. verif.</th>
+        <th>{% sort_header "nb_verif" "Canç. verif." %}</th>
         <th>Territori</th>
         <th>Comarca</th>
         <th>Localitat</th>
@@ -23,11 +24,11 @@
       </tr>
     </thead>
     <tbody>
-      {% for artista in artistes %}
+      {% for artista in page %}
       <tr id="row-{{ artista.pk }}">
-        <td>{{ artista.nom }}</td>
+        <td><a href="{% url 'staff:artista_editar' pk=artista.pk %}" class="staff-edit-link">{{ artista.nom }}</a></td>
         <td class="staff-cell-links">
-          {% if artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% else %}-{% endif %}
+          {% if artista.deezer_id_principal %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id_principal }}" target="_blank" rel="noopener">Dz</a>{% else %}-{% endif %}
         </td>
         <td class="staff-cell-links">
           <a href="https://www.viasona.cat/cerca?que={{ artista.nom|urlencode }}" target="_blank" rel="noopener">Vi</a>
@@ -62,12 +63,15 @@
   </table>
 </div>
 
+{% include "web/staff/_pagination.html" %}
+
 <script>
 const CSRF = '{{ csrf_token }}';
 const API = {
   territoris: '{% url "staff:api_territoris" %}',
   comarques: '{% url "staff:api_comarques" %}',
   municipis: '{% url "staff:api_municipis" %}',
+  municipiLookup: '{% url "staff:api_municipi_lookup" %}',
   aprovar: id => `/staff/artistes/pendents/${id}/aprovar/`,
   descartar: id => `/staff/artistes/pendents/${id}/descartar/`,
 };
@@ -140,17 +144,39 @@ function updateAprovarBtn(id) {
   btn.disabled = !loc.value;
 }
 
-// Approve
+// Approve — resolve municipi PK first, then send to api_aprovar
 document.querySelectorAll('.tq-aprovar').forEach(btn => {
-  btn.addEventListener('click', function() {
+  btn.addEventListener('click', async function() {
     const id = this.dataset.id;
     const comarca = document.querySelector(`.tq-comarca[data-id="${id}"]`).value;
     const localitat = document.querySelector(`.tq-localitat[data-id="${id}"]`).value;
-    fetch(API.aprovar(id), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-      body: JSON.stringify({comarca, localitat}),
-    }).then(r => r.json()).then(data => {
+
+    // Resolve municipi PK via lookup API
+    let municipi_id = null;
+    try {
+      const lookupResp = await fetch(
+        `${API.municipiLookup}?nom=${encodeURIComponent(localitat)}&comarca=${encodeURIComponent(comarca)}`
+      );
+      const lookupData = await lookupResp.json();
+      if (lookupData.pk) {
+        municipi_id = lookupData.pk;
+      }
+    } catch(e) {
+      console.error('Municipi lookup failed', e);
+    }
+
+    // Send approval with municipi_id (or fallback to comarca+localitat)
+    const body = municipi_id
+      ? { municipi_id, comarca, localitat }
+      : { comarca, localitat };
+
+    try {
+      const resp = await fetch(API.aprovar(id), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
       if (data.ok) {
         const row = document.getElementById(`row-${id}`);
         row.style.opacity = '0.3';
@@ -158,25 +184,31 @@ document.querySelectorAll('.tq-aprovar').forEach(btn => {
       } else {
         alert(data.error || 'Error');
       }
-    });
+    } catch(e) {
+      alert('Error de connexió');
+    }
   });
 });
 
 // Discard
 document.querySelectorAll('.tq-descartar').forEach(btn => {
-  btn.addEventListener('click', function() {
+  btn.addEventListener('click', async function() {
     const id = this.dataset.id;
     if (!confirm('Descartar aquest artista?')) return;
-    fetch(API.descartar(id), {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF},
-    }).then(r => r.json()).then(data => {
+    try {
+      const resp = await fetch(API.descartar(id), {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF},
+      });
+      const data = await resp.json();
       if (data.ok) {
         const row = document.getElementById(`row-${id}`);
         row.style.opacity = '0.3';
         row.querySelectorAll('button,select').forEach(el => el.disabled = true);
       }
-    });
+    } catch(e) {
+      alert('Error de connexió');
+    }
   });
 });
 </script>

@@ -41,3 +41,49 @@ def territori_list(artista):
     """Render comma-separated territory codes."""
     codes = list(artista.territoris.values_list("codi", flat=True))
     return ", ".join(codes) if codes else "-"
+
+
+@register.filter
+def getattr_filter(obj, attr):
+    """Get an attribute from an object by name."""
+    return getattr(obj, attr, "")
+
+
+# Register with the common name 'getattr' for template usage
+register.filter("getattr", getattr_filter)
+
+
+@register.simple_tag(takes_context=True)
+def sort_header(context, field, label):
+    """Render a sortable column header link.
+
+    If the column is currently sorted, show direction arrow and link to toggle.
+    Preserves existing GET params (filters, search, etc.).
+    """
+    request = context["request"]
+    current_order = context.get("current_order", "")
+    current_dir = context.get("current_dir", "asc")
+
+    params = request.GET.copy()
+    params["order"] = field
+
+    if current_order == field:
+        # Toggle direction
+        new_dir = "desc" if current_dir == "asc" else "asc"
+        arrow = " ↑" if current_dir == "asc" else " ↓"
+    else:
+        new_dir = "asc"
+        arrow = ""
+
+    params["dir"] = new_dir
+    # Remove page when changing sort
+    params.pop("page", None)
+    url = "?" + params.urlencode()
+
+    return format_html(
+        '<a href="{}" class="staff-sort-link{}">{}{}</a>',
+        url,
+        " is-active" if current_order == field else "",
+        label,
+        arrow,
+    )

@@ -25,6 +25,12 @@
     <option value="CAT"{% if territori == "CAT" %} selected{% endif %}>CAT</option>
     <option value="VAL"{% if territori == "VAL" %} selected{% endif %}>VAL</option>
     <option value="BAL"{% if territori == "BAL" %} selected{% endif %}>BAL</option>
+    <option value="CNO"{% if territori == "CNO" %} selected{% endif %}>CNO</option>
+    <option value="AND"{% if territori == "AND" %} selected{% endif %}>AND</option>
+    <option value="FRA"{% if territori == "FRA" %} selected{% endif %}>FRA</option>
+    <option value="ALG"{% if territori == "ALG" %} selected{% endif %}>ALG</option>
+    <option value="CAR"{% if territori == "CAR" %} selected{% endif %}>CAR</option>
+    <option value="ALT"{% if territori == "ALT" %} selected{% endif %}>ALT</option>
   </select>
   <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar nom..." class="filter-search" style="max-width:200px">
   <button type="submit" class="filter-btn">Filtrar</button>
@@ -39,6 +45,7 @@
       <option value="">-- Acció --</option>
       <option value="aprovar">Aprovar</option>
       <option value="marcar_sense_deezer">Marcar sense Deezer</option>
+      <option value="fusionar">Fusionar artistes</option>
     </select>
     <button type="submit" class="filter-btn">Executar</button>
   </div>
@@ -48,33 +55,37 @@
       <thead>
         <tr>
           <th></th>
-          <th>Nom</th>
+          <th>{% sort_header "nom" "Nom" %}</th>
           <th>Territoris</th>
+          <th>Localitzacions</th>
           <th>Deezer</th>
-          <th>Localitat</th>
-          <th>Comarca</th>
+          <th>{% sort_header "genere" "Gènere" %}</th>
           <th>Aprovat</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for artista in page %}
         <tr>
           <td><input type="checkbox" name="ids" value="{{ artista.pk }}" class="row-check"></td>
-          <td>{{ artista.nom }}</td>
+          <td><a href="{% url 'staff:artista_editar' pk=artista.pk %}" class="staff-edit-link">{{ artista.nom }}</a></td>
           <td class="staff-cell-muted">{% territori_list artista %}</td>
+          <td class="staff-cell-muted">
+            {% for loc in artista.localitats.all %}
+              {% if loc.municipi %}{{ loc.municipi.nom }}{% else %}{{ loc.localitat_manual }}{% endif %}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+              -
+            {% endfor %}
+          </td>
           <td class="staff-cell-links">
             {% if artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener">{{ artista.deezer_id }}</a>
             {% elif artista.deezer_no_trobat %}<span class="staff-badge-no">No trobat</span>
             {% else %}-{% endif %}
           </td>
-          <td class="staff-cell-muted">{{ artista.localitat|default:"-" }}</td>
-          <td class="staff-cell-muted">{{ artista.comarca|default:"-" }}</td>
+          <td class="staff-cell-muted">{{ artista.genere|default:"-"|truncatewords:3 }}</td>
           <td>{% if artista.aprovat %}<span class="staff-badge-ok">V</span>{% else %}<span class="staff-badge-no">-</span>{% endif %}</td>
-          <td><a href="{% url 'staff:artista_editar' pk=artista.pk %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Editar</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="ranking-empty">Cap artista trobat.</td></tr>
+        <tr><td colspan="7" class="ranking-empty">Cap artista trobat.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -82,10 +93,5 @@
 </form>
 
 {% include "web/staff/_pagination.html" %}
-
-<script>
-document.getElementById('select-all').addEventListener('change', function() {
-  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
-});
-</script>
+{% include "web/staff/_select_all.html" %}
 {% endblock %}

@@ -1,50 +1,33 @@
 """Staff views for approved artist management."""
 
+import json
+
 from django.contrib import messages
-from django.db import connection, transaction
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from comptes.models import UserArtista
 from music.constants import MOTIUS_REBUIG
 from music.ml import recalcular_ml_si_cal
-from music.models import Artista, Canco, Territori
+from music.models import (
+    Album, Artista, ArtistaDeezer, ArtistaLocalitat, Canco, Municipi, Territori,
+)
 from music.services import rebutjar_artista
 
-from . import paginate, staff_required
+from . import apply_ordering, paginate, staff_required
 
-_MUNICIPIS_TERRITORI_MAP = {
-    "Catalunya": "CAT",
-    "País Valencià": "VAL",
-    "Illes": "BAL",
-    "Catalunya del Nord": "CNO",
-    "Andorra": "AND",
-    "Franja de Ponent": "FRA",
-    "L'Alguer": "ALG",
-    "El Carxe": "CAR",
+ARTISTES_ORDER_FIELDS = {
+    "nom": "nom",
+    "genere": "genere",
 }
-
-_COMARCA_MAP: dict[str, str] | None = None
-
-
-def _get_comarca_map() -> dict[str, str]:
-    """Build comarca→territory code map from municipis table (cached)."""
-    global _COMARCA_MAP
-    if _COMARCA_MAP is None:
-        _COMARCA_MAP = {}
-        with connection.cursor() as cursor:
-            cursor.execute('SELECT DISTINCT "Comarca", "Territori" FROM municipis')
-            for comarca, territori in cursor.fetchall():
-                codi = _MUNICIPIS_TERRITORI_MAP.get(territori)
-                if codi and comarca:
-                    _COMARCA_MAP[comarca.strip()] = codi
-    return _COMARCA_MAP
 
 
 @staff_required
 def llista(request: HttpRequest) -> HttpResponse:
     """List approved artists with filters and search."""
-    qs = Artista.objects.prefetch_related("territoris")
+    qs = Artista.objects.prefetch_related("territoris", "localitats__municipi")
 
     # Filters
     aprovat = request.GET.get("aprovat", "1")
@@ -55,7 +38,7 @@ def llista(request: HttpRequest) -> HttpResponse:
 
     deezer = request.GET.get("deezer", "")
     if deezer == "si":
-        qs = qs.filter(deezer_id__isnull=False)
+        qs = qs.filter(deezer_ids__isnull=False)
     elif deezer == "no":
         qs = qs.filter(deezer_no_trobat=True)
 
@@ -67,7 +50,10 @@ def llista(request: HttpRequest) -> HttpResponse:
     if cerca:
         qs = qs.filter(nom__icontains=cerca)
 
-    qs = qs.distinct().order_by("nom")
+    qs = qs.distinct()
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, ARTISTES_ORDER_FIELDS, default="nom"
+    )
     page = paginate(request, qs)
 
     return render(request, "web/staff/artistes.html", {
@@ -77,67 +63,115 @@ def llista(request: HttpRequest) -> HttpResponse:
         "deezer": deezer,
         "territori": territori,
         "cerca": cerca,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
 @staff_required
 def editar(request: HttpRequest, pk: int) -> HttpResponse:
-    """Edit a single artist."""
+    """Edit a single artist with multiple locations, social links, multiple Deezer IDs."""
     artista = get_object_or_404(Artista, pk=pk)
-    territoris_actuals = list(artista.territoris.values_list("codi", flat=True))
-    tots_territoris = Territori.objects.all().order_by("codi")
+    deezer_ids_actuals = list(artista.deezer_ids.values_list("deezer_id", flat=True))
 
     if request.method == "POST":
         artista.nom = request.POST.get("nom", artista.nom).strip()
         artista.lastfm_nom = request.POST.get("lastfm_nom", artista.lastfm_nom).strip()
-        artista.localitat = request.POST.get("localitat", "").strip()
-        artista.comarca = request.POST.get("comarca", "").strip()
+        artista.genere = request.POST.get("genere", "").strip()
+        artista.percentatge_femeni = request.POST.get("percentatge_femeni", "").strip()
 
-        deezer_id_str = request.POST.get("deezer_id", "").strip()
-        old_deezer_id = artista.deezer_id
-        if deezer_id_str:
-            try:
-                artista.deezer_id = int(deezer_id_str)
-            except ValueError:
-                pass
-        else:
-            artista.deezer_id = None
+        # Social links
+        for field_name, _ in Artista.SOCIAL_LINK_FIELDS:
+            setattr(artista, field_name, request.POST.get(field_name, "").strip())
 
         artista.aprovat = "aprovat" in request.POST
         artista.save()
 
-        # Update territories
-        terr_codis = request.POST.getlist("territoris")
-        if terr_codis:
-            artista.territoris.set(Territori.objects.filter(codi__in=terr_codis))
+        # ── Handle multiple locations ──
+        # Each location is submitted as localitat_ids[] (municipi PKs) or
+        # localitat_manual[] for free-text non-PPCC locations.
+        # Empty entries are skipped; existing ArtistaLocalitat are replaced.
+        loc_municipi_ids = request.POST.getlist("loc_municipi_id")
+        loc_manuals = request.POST.getlist("loc_manual")
 
-        # Auto-assign territory from comarca if territories were empty
-        if not terr_codis and artista.comarca:
-            comarca_map = _get_comarca_map()
-            codi = comarca_map.get(artista.comarca.strip())
-            if codi:
-                t = Territori.objects.filter(codi=codi).first()
-                if t:
-                    artista.territoris.set([t])
+        # Clear existing and rebuild
+        artista.localitats.all().delete()
+        for i, mid in enumerate(loc_municipi_ids):
+            mid = mid.strip()
+            manual = loc_manuals[i].strip() if i < len(loc_manuals) else ""
+            if mid:
+                try:
+                    municipi = Municipi.objects.get(pk=int(mid))
+                    ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
+                except (ValueError, Municipi.DoesNotExist):
+                    messages.warning(request, f"Municipi ID {mid} no trobat.")
+            elif manual:
+                ArtistaLocalitat.objects.create(
+                    artista=artista, municipi=None, localitat_manual=manual,
+                )
+        # Signal auto-syncs territories
 
-        # If deezer_id changed, clean up old unverified tracks
-        if old_deezer_id != artista.deezer_id and artista.deezer_id is not None:
-            deleted, _ = Canco.objects.filter(
-                artista=artista, verificada=False
-            ).delete()
-            artista.deezer_no_trobat = False
-            artista.save(update_fields=["deezer_no_trobat"])
-            if deleted:
-                messages.info(request, f"{deleted} cançons antigues (no verificades) esborrades.")
+        # Also update legacy fields for backwards compat
+        first_loc = artista.localitats.select_related("municipi").first()
+        if first_loc and first_loc.municipi:
+            artista.localitat = first_loc.municipi.nom
+            artista.comarca = first_loc.municipi.comarca
+        elif first_loc:
+            artista.localitat = first_loc.localitat_manual
+            artista.comarca = "Altres"
+        else:
+            artista.localitat = ""
+            artista.comarca = ""
+        artista.save(update_fields=["localitat", "comarca"])
 
-        messages.success(request, f"Artista «{artista.nom}» actualitzat.")
+        # ── Handle multiple Deezer IDs ──
+        new_deezer_ids_raw = request.POST.getlist("deezer_ids")
+        new_deezer_ids: list[int] = []
+        for raw in new_deezer_ids_raw:
+            raw = raw.strip()
+            if raw:
+                try:
+                    new_deezer_ids.append(int(raw))
+                except ValueError:
+                    pass
+
+        # Sync ArtistaDeezer entries
+        existing_dz = set(artista.deezer_ids.values_list("deezer_id", flat=True))
+        new_dz_set = set(new_deezer_ids)
+        to_remove = existing_dz - new_dz_set
+        if to_remove:
+            artista.deezer_ids.filter(deezer_id__in=to_remove).delete()
+        for i, dz_id in enumerate(new_deezer_ids):
+            if dz_id not in existing_dz:
+                try:
+                    ArtistaDeezer.objects.create(
+                        artista=artista, deezer_id=dz_id, principal=(i == 0),
+                    )
+                except Exception:
+                    messages.warning(request, f"Deezer ID {dz_id} ja existeix.")
+
+        # Update legacy deezer_id field
+        principal_ad = artista.deezer_ids.filter(principal=True).first()
+        artista.deezer_id = principal_ad.deezer_id if principal_ad else (
+            artista.deezer_ids.first().deezer_id if artista.deezer_ids.exists() else None
+        )
+        artista.save(update_fields=["deezer_id"])
+
+        messages.success(request, f"Artista \u00ab{artista.nom}\u00bb actualitzat.")
         return redirect("staff:artista_editar", pk=artista.pk)
+
+    # GET — build context
+    localitats = list(
+        artista.localitats.select_related("municipi", "municipi__territori").all()
+    )
 
     return render(request, "web/staff/artista_edit.html", {
         "staff_section": "artistes",
         "artista": artista,
-        "territoris_actuals": territoris_actuals,
-        "tots_territoris": tots_territoris,
+        "localitats": localitats,
+        "deezer_ids_actuals": deezer_ids_actuals,
+        "social_fields": Artista.SOCIAL_LINK_FIELDS,
+        "percentatge_choices": Artista.PERCENTATGE_FEMENI_CHOICES,
     })
 
 
@@ -172,25 +206,82 @@ def accio(request: HttpRequest) -> HttpResponse:
     elif action == "aprovar":
         ok = 0
         errors = []
-        comarca_map = _get_comarca_map()
-        for artista in queryset:
-            if not artista.localitat or not artista.comarca:
-                errors.append(f"{artista.nom}: falta localitat o comarca")
+        for artista in queryset.prefetch_related("localitats"):
+            has_loc = artista.localitats.exists() or (artista.localitat and artista.comarca)
+            if not has_loc:
+                errors.append(f"{artista.nom}: falta localitat")
                 continue
             artista.aprovat = True
             artista.save(update_fields=["aprovat"])
-            codi = comarca_map.get(artista.comarca.strip())
-            if codi:
-                t = Territori.objects.filter(codi=codi).first()
-                if t:
-                    artista.territoris.set([t])
+            # Territory sync happens via signal if localitats exist
             ok += 1
         if errors:
             messages.error(request, "; ".join(errors))
         if ok:
             messages.success(request, f"{ok} artistes aprovats.")
 
+    elif action == "fusionar":
+        if len(ids) < 2:
+            messages.error(request, "Cal seleccionar almenys 2 artistes per fusionar.")
+            return redirect("staff:artistes")
+        _fusionar_artistes(request, ids)
+
     else:
         messages.error(request, "Acció desconeguda.")
 
     return redirect("staff:artistes")
+
+
+def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
+    """Merge multiple artists into one (the first by PK keeps all data)."""
+    artistes = list(Artista.objects.filter(pk__in=ids).order_by("pk"))
+    if len(artistes) < 2:
+        messages.error(request, "No s'han trobat prou artistes.")
+        return
+
+    target = artistes[0]
+    sources = artistes[1:]
+    source_names = [a.nom for a in sources]
+
+    with transaction.atomic():
+        for source in sources:
+            # Move cancons (main artist)
+            Canco.objects.filter(artista=source).update(artista=target)
+            # Move cancons (collaborator)
+            for canco in Canco.objects.filter(artistes_col=source):
+                canco.artistes_col.remove(source)
+                canco.artistes_col.add(target)
+            # Move albums
+            Album.objects.filter(artista=source).update(artista=target)
+            # Move Deezer IDs
+            ArtistaDeezer.objects.filter(artista=source).update(
+                artista=target, principal=False,
+            )
+            # Move UserArtista links
+            UserArtista.objects.filter(artista=source).update(artista=target)
+            # Move ArtistaLocalitat entries (avoid duplicate municipis)
+            target_municipis = set(
+                target.localitats.filter(municipi__isnull=False)
+                .values_list("municipi_id", flat=True)
+            )
+            for al in source.localitats.all():
+                if al.municipi_id and al.municipi_id in target_municipis:
+                    al.delete()  # Duplicate
+                else:
+                    al.artista = target
+                    al.save()
+                    if al.municipi_id:
+                        target_municipis.add(al.municipi_id)
+            # Copy genre if target lacks it
+            if not target.genere and source.genere:
+                target.genere = source.genere
+            # Delete source artist (cascade deletes remaining relations)
+            source.delete()
+
+        target.save()
+        # Signal syncs territories from merged localitats
+
+    messages.success(
+        request,
+        f"Artistes fusionats: {', '.join(source_names)} \u2192 {target.nom}.",
+    )

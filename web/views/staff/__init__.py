@@ -25,3 +25,26 @@ def paginate(request: HttpRequest, queryset, per_page: int = 50):
     """Paginate a queryset and return the current page object."""
     paginator = Paginator(queryset, per_page)
     return paginator.get_page(request.GET.get("page"))
+
+
+def apply_ordering(request: HttpRequest, queryset, allowed_fields: dict[str, str], default: str = ""):
+    """Apply column ordering from GET params.
+
+    allowed_fields maps URL param names to ORM field paths,
+    e.g. {"nom": "nom", "data": "data_llancament"}.
+
+    Returns (ordered_queryset, current_order, current_dir).
+    """
+    order = request.GET.get("order", "")
+    direction = request.GET.get("dir", "asc")
+
+    if order not in allowed_fields:
+        if default:
+            return queryset.order_by(default), "", ""
+        return queryset, "", ""
+
+    field = allowed_fields[order]
+    if direction == "desc":
+        field = f"-{field}"
+
+    return queryset.order_by(field), order, direction

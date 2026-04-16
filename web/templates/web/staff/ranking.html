@@ -22,8 +22,8 @@
   <div class="staff-actions-bar">
     <label><input type="checkbox" id="select-all"> Tot</label>
     <select name="action" class="staff-action-select">
-      <option value="">-- Acció --</option>
-      <option value="rebutjar_canco">Rebutjar cançó</option>
+      <option value="">-- Acci&oacute; --</option>
+      <option value="rebutjar_canco">Rebutjar can&ccedil;&oacute;</option>
       <option value="rebutjar_artista">Rebutjar artista</option>
     </select>
     <select name="motiu" class="staff-action-select">
@@ -40,11 +40,11 @@
       <thead>
         <tr>
           <th></th>
-          <th>Pos.</th>
-          <th>Artista</th>
-          <th>Cançó</th>
-          <th>Playcount</th>
-          <th>Dies top</th>
+          <th>{% sort_header "posicio" "Pos." %}</th>
+          <th>{% sort_header "artista" "Artista" %}</th>
+          <th>{% sort_header "canco" "Cançó" %}</th>
+          <th>{% sort_header "playcount" "Playcount" %}</th>
+          <th>{% sort_header "dies" "Dies top" %}</th>
           <th>Links</th>
         </tr>
       </thead>
@@ -53,12 +53,13 @@
         <tr>
           <td><input type="checkbox" name="ids" value="{{ entry.pk }}" class="row-check"></td>
           <td class="rank-position">{{ entry.posicio }}</td>
-          <td>{{ entry.canco.artista.nom }}</td>
-          <td>{{ entry.canco.nom }}</td>
+          <td><a href="{% url 'staff:artista_editar' pk=entry.canco.artista.pk %}" class="staff-edit-link">{{ entry.canco.artista.nom }}</a></td>
+          <td><a href="{% url 'staff:canco_editar' pk=entry.canco.pk %}" class="staff-edit-link">{{ entry.canco.nom }}</a></td>
           <td class="staff-cell-mono">{{ entry.lastfm_playcount|default:"-" }}</td>
           <td class="staff-cell-mono">{{ entry.dies_en_top|default:"-" }}</td>
           <td class="staff-cell-links">
             {% if entry.canco.deezer_id %}<a href="https://www.deezer.com/track/{{ entry.canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
+            {% if entry.canco.artista.deezer_id %}<a href="https://www.deezer.com/artist/{{ entry.canco.artista.deezer_id }}" target="_blank" rel="noopener">DzA</a>{% endif %}
             <a href="https://www.last.fm/music/{{ entry.canco.artista.nom|lastfm_encode }}/{{ entry.canco.nom|lastfm_encode }}" target="_blank" rel="noopener">Lf</a>
           </td>
         </tr>
@@ -70,9 +71,5 @@
   </div>
 </form>
 
-<script>
-document.getElementById('select-all').addEventListener('change', function() {
-  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
-});
-</script>
+{% include "web/staff/_select_all.html" %}
 {% endblock %}

@@ -1,24 +1,35 @@
-"""Staff views for remaining tools: historial, senyal, UserArtista, configuració."""
+"""Staff views for remaining tools: historial, senyal, UserArtista, propostes, configuracio."""
+
+import json
 
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
-from comptes.models import UserArtista
-from music.models import HistorialRevisio
+from comptes.models import PropostaArtista, UserArtista
+from music.models import Artista, ArtistaDeezer, ArtistaLocalitat, HistorialRevisio, Municipi, Territori
 from ranking.models import ConfiguracioGlobal, SenyalDiari
 
-from . import paginate, staff_required
+from . import apply_ordering, paginate, staff_required
 
 
 # ── HistorialRevisio ──
+
+HISTORIAL_ORDER_FIELDS = {
+    "canco": "canco_nom",
+    "artista": "artista_nom",
+    "decisio": "decisio",
+    "motiu": "motiu",
+    "data": "created_at",
+}
 
 
 @staff_required
 def historial(request: HttpRequest) -> HttpResponse:
     """Read-only log of approval/rejection decisions."""
-    qs = HistorialRevisio.objects.all().order_by("-created_at")
+    qs = HistorialRevisio.objects.all()
 
     decisio = request.GET.get("decisio", "")
     if decisio in ("aprovada", "rebutjada"):
@@ -34,6 +45,9 @@ def historial(request: HttpRequest) -> HttpResponse:
             Q(canco_nom__icontains=cerca) | Q(artista_nom__icontains=cerca)
         )
 
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, HISTORIAL_ORDER_FIELDS, default="-created_at"
+    )
     page = paginate(request, qs)
 
     return render(request, "web/staff/historial.html", {
@@ -42,18 +56,27 @@ def historial(request: HttpRequest) -> HttpResponse:
         "decisio": decisio,
         "motiu": motiu,
         "cerca": cerca,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
 # ── SenyalDiari ──
 
+SENYAL_ORDER_FIELDS = {
+    "canco": "canco__nom",
+    "artista": "canco__artista__nom",
+    "data": "data",
+    "playcount": "lastfm_playcount",
+    "listeners": "lastfm_listeners",
+    "score": "score_entrada",
+}
+
 
 @staff_required
 def senyal(request: HttpRequest) -> HttpResponse:
     """Daily Last.fm signal data."""
-    qs = SenyalDiari.objects.select_related("canco", "canco__artista").order_by(
-        "-data", "-lastfm_playcount"
-    )
+    qs = SenyalDiari.objects.select_related("canco", "canco__artista")
 
     data_filtre = request.GET.get("data", "")
     if data_filtre:
@@ -69,6 +92,9 @@ def senyal(request: HttpRequest) -> HttpResponse:
             Q(canco__nom__icontains=cerca) | Q(canco__artista__nom__icontains=cerca)
         )
 
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, SENYAL_ORDER_FIELDS, default="-data"
+    )
     page = paginate(request, qs)
 
     return render(request, "web/staff/senyal.html", {
@@ -77,16 +103,25 @@ def senyal(request: HttpRequest) -> HttpResponse:
         "data_filtre": data_filtre,
         "errors_only": errors_only,
         "cerca": cerca,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
 # ── UserArtista (verification requests) ──
 
+VERIFICACIO_ORDER_FIELDS = {
+    "usuari": "usuari__email",
+    "artista": "artista__nom",
+    "data": "created_at",
+    "verificat": "verificat",
+}
+
 
 @staff_required
 def verificacio_artistes(request: HttpRequest) -> HttpResponse:
     """Manage artist verification requests."""
-    qs = UserArtista.objects.select_related("usuari", "artista").order_by("-created_at")
+    qs = UserArtista.objects.select_related("usuari", "artista")
 
     verificat = request.GET.get("verificat", "")
     if verificat == "0":
@@ -94,12 +129,17 @@ def verificacio_artistes(request: HttpRequest) -> HttpResponse:
     elif verificat == "1":
         qs = qs.filter(verificat=True)
 
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, VERIFICACIO_ORDER_FIELDS, default="-created_at"
+    )
     page = paginate(request, qs, per_page=25)
 
     return render(request, "web/staff/verificacio.html", {
         "staff_section": "verificacio",
         "page": page,
         "verificat": verificat,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
@@ -112,14 +152,218 @@ def verificacio_toggle(request: HttpRequest, pk: int) -> HttpResponse:
     try:
         ua = UserArtista.objects.get(pk=pk)
     except UserArtista.DoesNotExist:
-        messages.error(request, "Sol·licitud no trobada.")
+        messages.error(request, "Sol\u00b7licitud no trobada.")
         return redirect("staff:verificacio_artistes")
 
     ua.verificat = not ua.verificat
-    ua.save(update_fields=["verificat"])
-    estat = "verificat" if ua.verificat else "desverificat"
-    messages.success(request, f"{ua.artista.nom} ({ua.usuari.email}): {estat}.")
+    ua.estat = "aprovat" if ua.verificat else "pendent"
+    ua.save(update_fields=["verificat", "estat"])
+    estat_text = "aprovat" if ua.verificat else "desaprovat"
+    messages.success(request, f"{ua.artista.nom} ({ua.usuari.email}): {estat_text}.")
     return redirect("staff:verificacio_artistes")
+
+
+@staff_required
+def verificacio_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
+    """Reject a UserArtista request (marks as rejected, keeps record)."""
+    if request.method != "POST":
+        return redirect("staff:verificacio_artistes")
+
+    try:
+        ua = UserArtista.objects.select_related("usuari", "artista").get(pk=pk)
+    except UserArtista.DoesNotExist:
+        messages.error(request, "Sol\u00b7licitud no trobada.")
+        return redirect("staff:verificacio_artistes")
+
+    ua.estat = "rebutjat"
+    ua.save(update_fields=["estat"])
+    info = f"{ua.artista.nom} ({ua.usuari.email})"
+    messages.success(request, f"Sol\u00b7licitud rebutjada: {info}.")
+    return redirect("staff:verificacio_artistes")
+
+
+# ── PropostaArtista (new artist proposals from users) ──
+
+PROPOSTES_ORDER_FIELDS = {
+    "nom": "nom",
+    "usuari": "usuari__email",
+    "data": "created_at",
+    "estat": "estat",
+}
+
+
+@staff_required
+def propostes_artistes(request: HttpRequest) -> HttpResponse:
+    """Manage new artist proposals from users."""
+    qs = PropostaArtista.objects.select_related("usuari", "artista_creat")
+
+    estat = request.GET.get("estat", "")
+    if estat in ("pendent", "aprovat", "rebutjat"):
+        qs = qs.filter(estat=estat)
+
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, PROPOSTES_ORDER_FIELDS, default="-created_at"
+    )
+    page = paginate(request, qs, per_page=25)
+
+    return render(request, "web/staff/propostes.html", {
+        "staff_section": "propostes",
+        "page": page,
+        "estat": estat,
+        "current_order": current_order,
+        "current_dir": current_dir,
+    })
+
+
+@staff_required
+def proposta_detall(request: HttpRequest, pk: int) -> HttpResponse:
+    """View details of a new artist proposal."""
+    try:
+        proposta = PropostaArtista.objects.select_related("usuari", "artista_creat").get(pk=pk)
+    except PropostaArtista.DoesNotExist:
+        messages.error(request, "Proposta no trobada.")
+        return redirect("staff:propostes_artistes")
+
+    # Parse locations
+    localitzacions = []
+    if proposta.localitzacions_json:
+        try:
+            locs = json.loads(proposta.localitzacions_json)
+            for loc in locs:
+                if "municipi_id" in loc:
+                    try:
+                        m = Municipi.objects.get(pk=loc["municipi_id"])
+                        localitzacions.append(f"{m.nom}, {m.comarca} ({m.territori_id})")
+                    except Municipi.DoesNotExist:
+                        localitzacions.append(f"Municipi ID {loc['municipi_id']} (no trobat)")
+                elif "manual" in loc:
+                    localitzacions.append(f"{loc['manual']} (manual)")
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Parse Deezer IDs
+    deezer_ids = proposta.get_deezer_id_list()
+
+    # Social links
+    social_links = []
+    for field_name, label in Artista.SOCIAL_LINK_FIELDS:
+        val = getattr(proposta, field_name, "")
+        if val:
+            social_links.append({"label": label, "url": val})
+
+    return render(request, "web/staff/proposta_detall.html", {
+        "staff_section": "propostes",
+        "proposta": proposta,
+        "localitzacions": localitzacions,
+        "deezer_ids": deezer_ids,
+        "social_links": social_links,
+    })
+
+
+@staff_required
+def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
+    """Approve a proposal: create the artist and link it."""
+    if request.method != "POST":
+        return redirect("staff:propostes_artistes")
+
+    try:
+        proposta = PropostaArtista.objects.select_related("usuari").get(pk=pk)
+    except PropostaArtista.DoesNotExist:
+        messages.error(request, "Proposta no trobada.")
+        return redirect("staff:propostes_artistes")
+
+    if proposta.estat != PropostaArtista.ESTAT_PENDENT:
+        messages.info(request, "Aquesta proposta ja ha estat processada.")
+        return redirect("staff:propostes_artistes")
+
+    with transaction.atomic():
+        # Create the artist
+        artista = Artista.objects.create(
+            nom=proposta.nom,
+            lastfm_nom=proposta.nom,
+            aprovat=True,
+            auto_descobert=False,
+            font_descoberta="proposta_usuari",
+        )
+
+        # Copy social links
+        for field_name, _ in Artista.SOCIAL_LINK_FIELDS:
+            val = getattr(proposta, field_name, "")
+            if val:
+                setattr(artista, field_name, val)
+        artista.save()
+
+        # Create Deezer IDs
+        deezer_ids = proposta.get_deezer_id_list()
+        for i, dz_id in enumerate(deezer_ids):
+            try:
+                ArtistaDeezer.objects.create(
+                    artista=artista, deezer_id=dz_id, principal=(i == 0),
+                )
+            except Exception:
+                pass
+        if deezer_ids:
+            artista.deezer_id = deezer_ids[0]
+            artista.save(update_fields=["deezer_id"])
+
+        # Create locations
+        if proposta.localitzacions_json:
+            try:
+                locs = json.loads(proposta.localitzacions_json)
+                first_loc = None
+                for loc in locs:
+                    if "municipi_id" in loc:
+                        try:
+                            m = Municipi.objects.get(pk=loc["municipi_id"])
+                            al = ArtistaLocalitat.objects.create(artista=artista, municipi=m)
+                            if not first_loc:
+                                first_loc = al
+                        except Municipi.DoesNotExist:
+                            pass
+                    elif "manual" in loc:
+                        al = ArtistaLocalitat.objects.create(
+                            artista=artista, municipi=None,
+                            localitat_manual=loc["manual"],
+                        )
+                        if not first_loc:
+                            first_loc = al
+
+                # Update legacy fields
+                if first_loc and first_loc.municipi:
+                    artista.localitat = first_loc.municipi.nom
+                    artista.comarca = first_loc.municipi.comarca
+                elif first_loc:
+                    artista.localitat = first_loc.localitat_manual
+                    artista.comarca = "Altres"
+                artista.save(update_fields=["localitat", "comarca"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Update proposal
+        proposta.estat = PropostaArtista.ESTAT_APROVAT
+        proposta.artista_creat = artista
+        proposta.save(update_fields=["estat", "artista_creat"])
+
+    messages.success(request, f"Artista \u00ab{artista.nom}\u00bb creat des de la proposta.")
+    return redirect("staff:propostes_artistes")
+
+
+@staff_required
+def proposta_rebutjar(request: HttpRequest, pk: int) -> HttpResponse:
+    """Reject a proposal."""
+    if request.method != "POST":
+        return redirect("staff:propostes_artistes")
+
+    try:
+        proposta = PropostaArtista.objects.get(pk=pk)
+    except PropostaArtista.DoesNotExist:
+        messages.error(request, "Proposta no trobada.")
+        return redirect("staff:propostes_artistes")
+
+    proposta.estat = PropostaArtista.ESTAT_REBUTJAT
+    proposta.save(update_fields=["estat"])
+    messages.success(request, f"Proposta \u00ab{proposta.nom}\u00bb rebutjada.")
+    return redirect("staff:propostes_artistes")
 
 
 # ── ConfiguracioGlobal ──

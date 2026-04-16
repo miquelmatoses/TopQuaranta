@@ -1,17 +1,26 @@
-"""Staff views for track (cançó) management."""
+"""Staff views for track (canco) management."""
 
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS
 from music.ml import recalcular_ml_si_cal
 from music.models import Album, Artista, Canco
 from music.services import aprovar_canco, rebutjar_album, rebutjar_artista, rebutjar_canco
 
-from . import paginate, staff_required
+from . import apply_ordering, paginate, staff_required
+
+CANCONS_ORDER_FIELDS = {
+    "nom": "nom",
+    "artista": "artista__nom",
+    "album": "album__nom",
+    "data": "data_llancament",
+    "ml": "ml_confianca",
+    "isrc": "isrc",
+}
 
 
 @staff_required
@@ -24,26 +33,32 @@ def llista(request: HttpRequest) -> HttpResponse:
     # Filter: verificada (defaults to non-verified)
     verificada = request.GET.get("verificada", "0")
     if verificada == "0":
-        qs = qs.filter(verificada=False)
+        qs = qs.filter(verificada=False, activa=True)
     elif verificada == "1":
         qs = qs.filter(verificada=True)
+    # When "Totes" is selected, include inactive too (for debugging)
 
     # Filter: ml_classe
     ml_classe = request.GET.get("ml_classe", "")
     if ml_classe in ("A", "B", "C"):
         qs = qs.filter(ml_classe=ml_classe)
 
-    # Filter: data_llancament year
-    any_filtre = request.GET.get("any", "")
-    if any_filtre.isdigit():
-        qs = qs.filter(data_llancament__year=int(any_filtre))
+    # Filter: date range
+    data_des = request.GET.get("data_des", "")
+    data_fins = request.GET.get("data_fins", "")
+    if data_des:
+        qs = qs.filter(data_llancament__gte=data_des)
+    if data_fins:
+        qs = qs.filter(data_llancament__lte=data_fins)
 
     # Search
     cerca = request.GET.get("q", "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
 
-    qs = qs.order_by("-ml_confianca")
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, CANCONS_ORDER_FIELDS, default="-ml_confianca"
+    )
     page = paginate(request, qs)
 
     return render(request, "web/staff/cancons.html", {
@@ -51,9 +66,12 @@ def llista(request: HttpRequest) -> HttpResponse:
         "page": page,
         "verificada": verificada,
         "ml_classe": ml_classe,
-        "any_filtre": any_filtre,
+        "data_des": data_des,
+        "data_fins": data_fins,
         "cerca": cerca,
         "motius": MOTIUS_REBUIG,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
@@ -76,7 +94,7 @@ def accio(request: HttpRequest) -> HttpResponse:
             for canco in cancons_qs:
                 aprovar_canco(canco)
         recalcular_ml_si_cal()
-        messages.success(request, f"{cancons_qs.count()} cançons aprovades.")
+        messages.success(request, f"{cancons_qs.count()} cancons aprovades.")
         return redirect("staff:cancons")
 
     # All rejection actions require motiu
@@ -92,16 +110,16 @@ def accio(request: HttpRequest) -> HttpResponse:
                 artista_ids = set(cancons_qs.values_list("artista_id", flat=True))
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
-                    msgs.append(f"{count} cançons de {artista.nom}")
+                    msgs.append(f"{count} cancons de {artista.nom}")
             elif motiu == "album_incorrecte":
                 album_ids = set(cancons_qs.values_list("album_id", flat=True))
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
-                    msgs.append(f"{count} cançons de l'àlbum {album.nom}")
+                    msgs.append(f"{count} cancons de l'album {album.nom}")
             else:
                 for canco in cancons_qs:
                     rebutjar_canco(canco, motiu)
-                msgs.append(f"{cancons_qs.count()} cançons rebutjades")
+                msgs.append(f"{cancons_qs.count()} cancons rebutjades")
         recalcular_ml_si_cal()
         messages.success(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
 
@@ -116,11 +134,11 @@ def accio(request: HttpRequest) -> HttpResponse:
                 )
                 for artista in Artista.objects.filter(pk__in=artista_ids):
                     count = rebutjar_artista(artista, motiu)
-                    msgs.append(f"{count} cançons de {artista.nom}")
+                    msgs.append(f"{count} cancons de {artista.nom}")
             else:
                 for album in Album.objects.filter(pk__in=album_ids):
                     count = rebutjar_album(album, motiu)
-                    msgs.append(f"{count} cançons de l'àlbum {album.nom}")
+                    msgs.append(f"{count} cancons de l'album {album.nom}")
         recalcular_ml_si_cal()
         messages.success(request, f"Motiu: {motiu}. " + "; ".join(msgs) + ".")
 
@@ -128,3 +146,46 @@ def accio(request: HttpRequest) -> HttpResponse:
         messages.error(request, "Acció desconeguda.")
 
     return redirect("staff:cancons")
+
+
+@staff_required
+def editar(request: HttpRequest, pk: int) -> HttpResponse:
+    """Edit a single track."""
+    canco = get_object_or_404(
+        Canco.objects.select_related("artista", "album").prefetch_related("artistes_col"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        canco.nom = request.POST.get("nom", canco.nom).strip()
+        canco.isrc = request.POST.get("isrc", canco.isrc).strip()
+        canco.lastfm_nom = request.POST.get("lastfm_nom", "").strip()
+        canco.lastfm_mbid = request.POST.get("lastfm_mbid", "").strip()
+        canco.lastfm_verificat = "lastfm_verificat" in request.POST
+        canco.verificada = "verificada" in request.POST
+        canco.activa = "activa" in request.POST
+
+        data_raw = request.POST.get("data_llancament", "").strip()
+        if data_raw:
+            canco.data_llancament = data_raw
+        else:
+            canco.data_llancament = None
+
+        deezer_raw = request.POST.get("deezer_id", "").strip()
+        if deezer_raw:
+            try:
+                canco.deezer_id = int(deezer_raw)
+            except ValueError:
+                messages.error(request, "Deezer ID ha de ser un nombre enter.")
+                return redirect("staff:canco_editar", pk=canco.pk)
+        else:
+            canco.deezer_id = None
+
+        canco.save()
+        messages.success(request, f"Cançó «{canco.nom}» actualitzada.")
+        return redirect("staff:canco_editar", pk=canco.pk)
+
+    return render(request, "web/staff/canco_edit.html", {
+        "staff_section": "cancons",
+        "canco": canco,
+    })

@@ -1,0 +1,70 @@
+{% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
+
+{% block staff_title %}Propostes d'artistes nous{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Propostes d'artistes nous</h2>
+  <p class="ranking-date">Propostes d'usuaris per afegir artistes nous al sistema</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="estat" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Tots</option>
+    <option value="pendent"{% if estat == "pendent" %} selected{% endif %}>Pendents</option>
+    <option value="aprovat"{% if estat == "aprovat" %} selected{% endif %}>Aprovats</option>
+    <option value="rebutjat"{% if estat == "rebutjat" %} selected{% endif %}>Rebutjats</option>
+  </select>
+</form>
+
+<div class="staff-table-wrap">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>{% sort_header "nom" "Artista proposat" %}</th>
+        <th>{% sort_header "usuari" "Usuari" %}</th>
+        <th>Justificació</th>
+        <th>Deezer</th>
+        <th>{% sort_header "estat" "Estat" %}</th>
+        <th>{% sort_header "data" "Data" %}</th>
+        <th>Accions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in page %}
+      <tr>
+        <td><a href="{% url 'staff:proposta_detall' pk=p.pk %}" class="staff-edit-link">{{ p.nom }}</a></td>
+        <td class="staff-cell-muted">{{ p.usuari.email }}</td>
+        <td class="staff-cell-muted">{{ p.justificacio|truncatewords:10 }}</td>
+        <td class="staff-cell-muted">{% if p.deezer_ids %}{{ p.deezer_ids }}{% else %}-{% endif %}</td>
+        <td>
+          {% if p.estat == "aprovat" %}<span class="staff-badge-ok">Aprovat</span>
+          {% elif p.estat == "rebutjat" %}<span class="staff-badge-no">Rebutjat</span>
+          {% else %}<span class="provisional-badge">Pendent</span>{% endif %}
+        </td>
+        <td class="staff-cell-muted">{{ p.created_at|date:"d/m/Y" }}</td>
+        <td style="white-space:nowrap">
+          {% if p.estat == "pendent" %}
+          <form method="post" action="{% url 'staff:proposta_aprovar' pk=p.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Aprovar</button>
+          </form>
+          <form method="post" action="{% url 'staff:proposta_rebutjar' pk=p.pk %}" style="display:inline" onsubmit="return confirm('Rebutjar aquesta proposta?')">
+            {% csrf_token %}
+            <button type="submit" class="filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2)">Rebutjar</button>
+          </form>
+          {% elif p.estat == "aprovat" and p.artista_creat %}
+          <a href="{% url 'staff:artista_editar' pk=p.artista_creat.pk %}" class="filter-btn" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-2);text-decoration:none">Editar artista</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="ranking-empty">Cap proposta trobada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "web/staff/_pagination.html" %}
+{% endblock %}

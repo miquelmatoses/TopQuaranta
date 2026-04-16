@@ -13,7 +13,7 @@
   <input type="date" name="data" value="{{ data_filtre }}" class="filter-search" style="max-width:160px">
   <select name="errors" class="staff-action-select" onchange="this.form.submit()">
     <option value="">Tots</option>
-    <option value="1"{% if errors_only == "1" %} selected{% endif %}>Només errors</option>
+    <option value="1"{% if errors_only == "1" %} selected{% endif %}>Nom&eacute;s errors</option>
   </select>
   <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar..." class="filter-search" style="max-width:200px">
   <button type="submit" class="filter-btn">Filtrar</button>
@@ -23,20 +23,20 @@
   <table class="staff-table">
     <thead>
       <tr>
-        <th>Cançó</th>
-        <th>Artista</th>
-        <th>Data</th>
-        <th>Playcount</th>
-        <th>Listeners</th>
-        <th>Score</th>
+        <th>{% sort_header "canco" "Cançó" %}</th>
+        <th>{% sort_header "artista" "Artista" %}</th>
+        <th>{% sort_header "data" "Data" %}</th>
+        <th>{% sort_header "playcount" "Playcount" %}</th>
+        <th>{% sort_header "listeners" "Listeners" %}</th>
+        <th>{% sort_header "score" "Score" %}</th>
         <th>Error</th>
       </tr>
     </thead>
     <tbody>
       {% for s in page %}
       <tr>
-        <td>{{ s.canco.nom }}</td>
-        <td class="staff-cell-muted">{{ s.canco.artista.nom }}</td>
+        <td><a href="{% url 'staff:canco_editar' pk=s.canco.pk %}" class="staff-edit-link">{{ s.canco.nom }}</a></td>
+        <td class="staff-cell-muted"><a href="{% url 'staff:artista_editar' pk=s.canco.artista.pk %}" class="staff-edit-link">{{ s.canco.artista.nom }}</a></td>
         <td class="staff-cell-muted">{{ s.data|date:"d/m/Y" }}</td>
         <td class="staff-cell-mono">{{ s.lastfm_playcount|default:"-" }}</td>
         <td class="staff-cell-mono">{{ s.lastfm_listeners|default:"-" }}</td>

@@ -1,14 +1,15 @@
 {% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
 
 {% block staff_title %}Editar {{ artista.nom }}{% endblock %}
 
 {% block staff_content %}
 <section class="ranking-header">
   <h2 class="ranking-title">Editar artista</h2>
-  <p class="ranking-date">{{ artista.nom }}</p>
+  <p class="ranking-date">{{ artista.nom }} (PK: {{ artista.pk }})</p>
 </section>
 
-<form method="post" class="auth-form">
+<form method="post" class="auth-form" id="artista-form">
   {% csrf_token %}
 
   <div class="form-field">
@@ -22,30 +23,105 @@
   </div>
 
   <div class="form-field">
-    <label class="form-label" for="deezer_id">Deezer ID</label>
-    <input type="text" name="deezer_id" id="deezer_id" value="{{ artista.deezer_id|default_if_none:'' }}">
-    {% if artista.deezer_id %}
-    <a href="https://www.deezer.com/artist/{{ artista.deezer_id }}" target="_blank" rel="noopener" style="font-size:var(--mm-text-sm)">Obrir a Deezer</a>
-    {% endif %}
+    <label class="form-label" for="genere">Gènere musical</label>
+    <input type="text" name="genere" id="genere" value="{{ artista.genere|default:'' }}" placeholder="Pop, Rock, Hip-hop...">
   </div>
 
   <div class="form-field">
-    <label class="form-label" for="localitat">Localitat</label>
-    <input type="text" name="localitat" id="localitat" value="{{ artista.localitat|default:'' }}">
+    <label class="form-label" for="percentatge_femeni">Percentatge femení</label>
+    <select name="percentatge_femeni" id="percentatge_femeni" class="staff-action-select">
+      <option value="">-- No especificat --</option>
+      {% for val, label in percentatge_choices %}
+      <option value="{{ val }}"{% if artista.percentatge_femeni == val %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
 
+  <!-- ═══ Deezer IDs (multiple) ═══ -->
   <div class="form-field">
-    <label class="form-label" for="comarca">Comarca</label>
-    <input type="text" name="comarca" id="comarca" value="{{ artista.comarca|default:'' }}">
+    <label class="form-label">Deezer IDs</label>
+    <div id="deezer-list">
+      {% for dz in deezer_ids_actuals %}
+      <div class="deezer-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)">
+        <input type="text" name="deezer_ids" value="{{ dz }}" style="max-width:180px">
+        <a href="https://www.deezer.com/artist/{{ dz }}" target="_blank" rel="noopener" style="font-size:var(--mm-text-sm)">Obrir</a>
+        <button type="button" class="deezer-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+      {% empty %}
+      <div class="deezer-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)">
+        <input type="text" name="deezer_ids" placeholder="Deezer artist ID" style="max-width:180px">
+        <button type="button" class="deezer-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" id="add-deezer" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Afegir Deezer ID</button>
   </div>
 
+  <!-- ═══ Localitzacions (múltiples) ═══ -->
   <div class="form-field">
-    <label class="form-label">Territoris</label>
-    {% for t in tots_territoris %}
-    <label style="display:inline-block;margin-right:var(--mm-space-3);font-size:var(--mm-text-sm)">
-      <input type="checkbox" name="territoris" value="{{ t.codi }}"{% if t.codi in territoris_actuals %} checked{% endif %}> {{ t.codi }}
-    </label>
-    {% endfor %}
+    <label class="form-label">Localitzacions</label>
+    <p class="form-hint" style="margin-bottom:var(--mm-space-2)">
+      Cada línia defineix una localització. Els territoris es deriven automàticament.
+    </p>
+    <div id="loc-list">
+      {% for loc in localitats %}
+      <div class="loc-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-2);flex-wrap:wrap">
+        <select class="loc-territori staff-action-select" style="min-width:140px">
+          <option value="">-- Territori --</option>
+          <option value="ALT">Altres (fora PPCC)</option>
+        </select>
+        <select class="loc-comarca staff-action-select" style="min-width:150px" disabled>
+          <option value="">-- Comarca --</option>
+        </select>
+        <select class="loc-municipi staff-action-select" style="min-width:150px" disabled>
+          <option value="">-- Localitat --</option>
+        </select>
+        <input type="hidden" class="loc-municipi-id" name="loc_municipi_id" value="{% if loc.municipi %}{{ loc.municipi.pk }}{% endif %}">
+        <input type="hidden" class="loc-manual" name="loc_manual" value="{{ loc.localitat_manual|default:'' }}">
+        <span class="loc-display" style="font-size:var(--mm-text-sm);color:var(--mm-color-text-secondary)">
+          {% if loc.municipi %}{{ loc.municipi.nom }}, {{ loc.municipi.comarca }} ({{ loc.municipi.territori_id }}){% elif loc.localitat_manual %}{{ loc.localitat_manual }} (manual){% endif %}
+        </span>
+        <button type="button" class="loc-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+      {% empty %}
+      <div class="loc-row" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-2);flex-wrap:wrap">
+        <select class="loc-territori staff-action-select" style="min-width:140px">
+          <option value="">-- Territori --</option>
+          <option value="ALT">Altres (fora PPCC)</option>
+        </select>
+        <select class="loc-comarca staff-action-select" style="min-width:150px" disabled>
+          <option value="">-- Comarca --</option>
+        </select>
+        <select class="loc-municipi staff-action-select" style="min-width:150px" disabled>
+          <option value="">-- Localitat --</option>
+        </select>
+        <input type="hidden" class="loc-municipi-id" name="loc_municipi_id" value="">
+        <input type="hidden" class="loc-manual" name="loc_manual" value="">
+        <span class="loc-display" style="font-size:var(--mm-text-sm);color:var(--mm-color-text-secondary)"></span>
+        <button type="button" class="loc-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" id="add-loc" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Afegir localització</button>
+    <p class="form-hint" style="margin-top:var(--mm-space-1)">
+      Territoris actuals (auto-sync): {% territori_list artista %}
+    </p>
+  </div>
+
+  <!-- ═══ Xarxes socials ═══ -->
+  <div class="form-field">
+    <label class="form-label">Xarxes socials</label>
+    <div id="social-links">
+      {% for field_name, label in social_fields %}
+      {% with val=artista|getattr:field_name %}
+      <div class="social-row{% if not val %} social-hidden{% endif %}" data-field="{{ field_name }}" style="display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)">
+        <span style="min-width:100px;font-size:var(--mm-text-sm)">{{ label }}</span>
+        <input type="url" name="{{ field_name }}" value="{{ val|default:'' }}" placeholder="https://..." style="flex:1">
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+    <button type="button" id="show-all-social" class="filter-btn" style="font-size:var(--mm-text-xs);margin-top:var(--mm-space-1)">+ Mostrar tots els camps</button>
   </div>
 
   <div class="form-field">
@@ -57,6 +133,263 @@
   <div class="staff-confirm-actions">
     <button type="submit" class="filter-btn">Desar</button>
     <a href="{% url 'staff:artistes' %}" class="filter-btn staff-btn--cancel">Tornar</a>
+    <a href="{% url 'web:artista' slug=artista.slug %}" class="filter-btn" style="margin-left:auto" target="_blank">Veure perfil públic</a>
   </div>
 </form>
+
+<script>
+// ── API URLs ──
+const API_TERRITORIS = '{% url "staff:api_territoris" %}';
+const API_COMARQUES = '{% url "staff:api_comarques" %}';
+const API_MUNICIPIS = '{% url "staff:api_municipis" %}';
+const API_MUNICIPI_LOOKUP = '{% url "staff:api_municipi_lookup" %}';
+
+// Cache for API responses
+const cache = { territoris: null, comarques: {}, municipis: {} };
+
+// ── Existing location data (for pre-populating selects) ──
+const existingLocs = [
+  {% for loc in localitats %}
+  {
+    municipi_id: {% if loc.municipi %}{{ loc.municipi.pk }}{% else %}null{% endif %},
+    municipi_nom: '{{ loc.municipi.nom|default:""|escapejs }}',
+    comarca: '{{ loc.municipi.comarca|default:""|escapejs }}',
+    territori: '{{ loc.municipi.territori_id|default:""|escapejs }}',
+    manual: '{{ loc.localitat_manual|default:""|escapejs }}',
+  },
+  {% endfor %}
+];
+
+// ── Load territories (once, then populate all rows) ──
+async function loadTerritoris() {
+  if (cache.territoris) return cache.territoris;
+  const resp = await fetch(API_TERRITORIS);
+  cache.territoris = await resp.json();
+  return cache.territoris;
+}
+
+async function loadComarques(territori) {
+  const key = territori;
+  if (cache.comarques[key]) return cache.comarques[key];
+  const resp = await fetch(`${API_COMARQUES}?territori=${territori}`);
+  cache.comarques[key] = await resp.json();
+  return cache.comarques[key];
+}
+
+async function loadMunicipis(comarca) {
+  const key = comarca;
+  if (cache.municipis[key]) return cache.municipis[key];
+  const resp = await fetch(`${API_MUNICIPIS}?comarca=${encodeURIComponent(comarca)}`);
+  cache.municipis[key] = await resp.json();
+  return cache.municipis[key];
+}
+
+// ── Populate a territori select with options ──
+function populateTerritoris(sel, selected) {
+  // Keep existing first two options (blank + ALT)
+  const opts = sel.querySelectorAll('option');
+  // Remove all except first two
+  while (sel.options.length > 2) sel.remove(2);
+  const altOpt = sel.querySelector('option[value="ALT"]');
+  if (cache.territoris) {
+    cache.territoris.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.codi;
+      opt.textContent = t.nom;
+      if (t.codi === selected) opt.selected = true;
+      sel.insertBefore(opt, altOpt);
+    });
+  }
+  if (selected === 'ALT') altOpt.selected = true;
+}
+
+// ── Initialize a single row with cascading selects ──
+async function initLocRow(row, data) {
+  const tSel = row.querySelector('.loc-territori');
+  const cSel = row.querySelector('.loc-comarca');
+  const mSel = row.querySelector('.loc-municipi');
+  const hiddenId = row.querySelector('.loc-municipi-id');
+  const hiddenManual = row.querySelector('.loc-manual');
+  const display = row.querySelector('.loc-display');
+
+  await loadTerritoris();
+  populateTerritoris(tSel, data ? data.territori : '');
+
+  // Territori change → load comarques
+  tSel.addEventListener('change', async function() {
+    cSel.innerHTML = '<option value="">-- Comarca --</option>';
+    mSel.innerHTML = '<option value="">-- Localitat --</option>';
+    hiddenId.value = '';
+    if (this.value === 'ALT') {
+      cSel.disabled = true;
+      mSel.disabled = true;
+      hiddenManual.value = 'Fora PPCC';
+      display.textContent = 'Fora PPCC (manual)';
+      return;
+    }
+    hiddenManual.value = '';
+    cSel.disabled = !this.value;
+    mSel.disabled = true;
+    display.textContent = '';
+    if (this.value) {
+      const comarques = await loadComarques(this.value);
+      comarques.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        cSel.appendChild(opt);
+      });
+    }
+  });
+
+  // Comarca change → load municipis
+  cSel.addEventListener('change', async function() {
+    mSel.innerHTML = '<option value="">-- Localitat --</option>';
+    mSel.disabled = !this.value;
+    hiddenId.value = '';
+    display.textContent = '';
+    if (this.value) {
+      const municipis = await loadMunicipis(this.value);
+      municipis.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        mSel.appendChild(opt);
+      });
+    }
+  });
+
+  // Municipi change → lookup PK
+  mSel.addEventListener('change', async function() {
+    if (!this.value) {
+      hiddenId.value = '';
+      display.textContent = '';
+      return;
+    }
+    const comarca = cSel.value;
+    const nom = this.value;
+    try {
+      const resp = await fetch(`${API_MUNICIPI_LOOKUP}?nom=${encodeURIComponent(nom)}&comarca=${encodeURIComponent(comarca)}`);
+      const result = await resp.json();
+      if (result.pk) {
+        hiddenId.value = result.pk;
+        hiddenManual.value = '';
+        display.textContent = `${result.nom}, ${result.comarca} (${result.territori})`;
+      }
+    } catch(e) {
+      console.error('Municipi lookup failed', e);
+    }
+  });
+
+  // Pre-populate if we have existing data
+  if (data && data.territori && data.municipi_id) {
+    // Load comarques for this territory
+    const comarques = await loadComarques(data.territori);
+    cSel.disabled = false;
+    comarques.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      if (c === data.comarca) opt.selected = true;
+      cSel.appendChild(opt);
+    });
+
+    // Load municipis for this comarca
+    if (data.comarca) {
+      const municipis = await loadMunicipis(data.comarca);
+      mSel.disabled = false;
+      municipis.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === data.municipi_nom) opt.selected = true;
+        mSel.appendChild(opt);
+      });
+    }
+  } else if (data && data.manual) {
+    // Manual entry — select ALT
+    tSel.value = 'ALT';
+    cSel.disabled = true;
+    mSel.disabled = true;
+  }
+}
+
+// ── Initialize all existing rows ──
+async function initAllRows() {
+  const rows = document.querySelectorAll('#loc-list .loc-row');
+  for (let i = 0; i < rows.length; i++) {
+    await initLocRow(rows[i], existingLocs[i] || null);
+  }
+}
+initAllRows();
+
+// ── Add new location row ──
+document.getElementById('add-loc').addEventListener('click', async function() {
+  const row = document.createElement('div');
+  row.className = 'loc-row';
+  row.style.cssText = 'display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-2);flex-wrap:wrap';
+  row.innerHTML = `
+    <select class="loc-territori staff-action-select" style="min-width:140px">
+      <option value="">-- Territori --</option>
+      <option value="ALT">Altres (fora PPCC)</option>
+    </select>
+    <select class="loc-comarca staff-action-select" style="min-width:150px" disabled>
+      <option value="">-- Comarca --</option>
+    </select>
+    <select class="loc-municipi staff-action-select" style="min-width:150px" disabled>
+      <option value="">-- Localitat --</option>
+    </select>
+    <input type="hidden" class="loc-municipi-id" name="loc_municipi_id" value="">
+    <input type="hidden" class="loc-manual" name="loc_manual" value="">
+    <span class="loc-display" style="font-size:var(--mm-text-sm);color:var(--mm-color-text-secondary)"></span>
+    <button type="button" class="loc-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>
+  `;
+  document.getElementById('loc-list').appendChild(row);
+  await initLocRow(row, null);
+});
+
+// ── Remove location row ──
+document.getElementById('loc-list').addEventListener('click', function(e) {
+  if (e.target.classList.contains('loc-remove')) {
+    const rows = document.querySelectorAll('#loc-list .loc-row');
+    if (rows.length > 1) {
+      e.target.closest('.loc-row').remove();
+    } else {
+      // Last row — clear it instead of removing
+      const row = e.target.closest('.loc-row');
+      row.querySelector('.loc-territori').value = '';
+      row.querySelector('.loc-comarca').innerHTML = '<option value="">-- Comarca --</option>';
+      row.querySelector('.loc-comarca').disabled = true;
+      row.querySelector('.loc-municipi').innerHTML = '<option value="">-- Localitat --</option>';
+      row.querySelector('.loc-municipi').disabled = true;
+      row.querySelector('.loc-municipi-id').value = '';
+      row.querySelector('.loc-manual').value = '';
+      row.querySelector('.loc-display').textContent = '';
+    }
+  }
+});
+
+// ── Deezer ID dynamic add/remove ──
+document.getElementById('add-deezer').addEventListener('click', function() {
+  var row = document.createElement('div');
+  row.className = 'deezer-row';
+  row.style.cssText = 'display:flex;gap:var(--mm-space-2);align-items:center;margin-bottom:var(--mm-space-1)';
+  row.innerHTML = '<input type="text" name="deezer_ids" placeholder="Deezer artist ID" style="max-width:180px">'
+    + '<button type="button" class="deezer-remove filter-btn staff-btn--danger" style="font-size:var(--mm-text-xs);padding:var(--mm-space-0_5) var(--mm-space-1)">&times;</button>';
+  document.getElementById('deezer-list').appendChild(row);
+});
+document.getElementById('deezer-list').addEventListener('click', function(e) {
+  if (e.target.classList.contains('deezer-remove')) {
+    e.target.closest('.deezer-row').remove();
+  }
+});
+
+// ── Show all social link fields ──
+document.getElementById('show-all-social').addEventListener('click', function() {
+  document.querySelectorAll('.social-hidden').forEach(function(el) {
+    el.classList.remove('social-hidden');
+  });
+  this.style.display = 'none';
+});
+</script>
 {% endblock %}

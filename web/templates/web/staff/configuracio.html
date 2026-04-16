@@ -1,24 +1,26 @@
 {% extends "web/staff/base_staff.html" %}
 
-{% block staff_title %}Configuració{% endblock %}
+{% block staff_title %}Configuraci&oacute;{% endblock %}
 
 {% block staff_content %}
 <section class="ranking-header">
-  <h2 class="ranking-title">Configuració global</h2>
+  <h2 class="ranking-title">Configuraci&oacute; global</h2>
   <p class="ranking-date">Coeficients de l'algorisme de ranking</p>
 </section>
 
 <form method="post" class="auth-form">
   {% csrf_token %}
 
-  {% for f in fields %}
-  <div class="form-field">
-    <label class="form-label" for="{{ f.name }}">{{ f.label }}</label>
-    <input type="text" name="{{ f.name }}" id="{{ f.name }}" value="{{ f.value }}"
-      style="max-width:200px">
-    {% if f.help %}<span class="staff-cell-muted">{{ f.help }}</span>{% endif %}
+  <div class="config-grid">
+    {% for f in fields %}
+    <div class="form-field">
+      <label class="form-label" for="{{ f.name }}">{{ f.label }}</label>
+      <input type="text" name="{{ f.name }}" id="{{ f.name }}" value="{{ f.value }}"
+        style="max-width:200px">
+      {% if f.help %}<span class="form-hint">{{ f.help }}</span>{% endif %}
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
 
   <div class="staff-confirm-actions">
     <button type="submit" class="filter-btn">Desar</button>

@@ -2,40 +2,25 @@
 
 import json
 
-from django.db import connection, transaction
-from django.db.models import Count, Q
+from django.db import transaction
+from django.db.models import Count, F, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from music.models import Artista, Territori
+from music.models import Artista, ArtistaLocalitat, Municipi
+from web.api.views import (  # noqa: F401 — re-exported for staff URL routing
+    api_comarques,
+    api_municipi_lookup,
+    api_municipis,
+    api_territoris,
+)
 
-from . import staff_required
+from . import apply_ordering, paginate, staff_required
 
-_MUNICIPIS_TERRITORI_MAP = {
-    "Catalunya": "CAT",
-    "País Valencià": "VAL",
-    "Illes": "BAL",
-    "Catalunya del Nord": "CNO",
-    "Andorra": "AND",
-    "Franja de Ponent": "FRA",
-    "L'Alguer": "ALG",
-    "El Carxe": "CAR",
+PENDENTS_ORDER_FIELDS = {
+    "nom": "nom",
+    "nb_verif": "nb_verif",
 }
-
-_COMARCA_MAP: dict[str, str] | None = None
-
-
-def _get_comarca_map() -> dict[str, str]:
-    global _COMARCA_MAP
-    if _COMARCA_MAP is None:
-        _COMARCA_MAP = {}
-        with connection.cursor() as cursor:
-            cursor.execute('SELECT DISTINCT "Comarca", "Territori" FROM municipis')
-            for comarca, territori in cursor.fetchall():
-                codi = _MUNICIPIS_TERRITORI_MAP.get(territori)
-                if codi and comarca:
-                    _COMARCA_MAP[comarca.strip()] = codi
-    return _COMARCA_MAP
 
 
 @staff_required
@@ -43,66 +28,32 @@ def llista(request: HttpRequest) -> HttpResponse:
     """List pending auto-discovered artists."""
     qs = (
         Artista.objects.filter(aprovat=False, auto_descobert=True)
-        .annotate(nb_verif=Count("cancons", filter=Q(cancons__verificada=True)))
-        .order_by("-nb_verif")
+        .select_related()
+        .prefetch_related("territoris", "deezer_ids", "localitats__municipi")
+        .annotate(
+            nb_verif_main=Count("cancons", filter=Q(cancons__verificada=True)),
+            nb_verif_col=Count("participacions", filter=Q(participacions__verificada=True)),
+        )
+        .annotate(nb_verif=F("nb_verif_main") + F("nb_verif_col"))
     )
+
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, PENDENTS_ORDER_FIELDS, default="nom"
+    )
+    page = paginate(request, qs, per_page=50)
 
     return render(request, "web/staff/pendents.html", {
         "staff_section": "pendents",
-        "artistes": qs,
+        "page": page,
+        "total": qs.count(),
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
 @staff_required
-def api_territoris(request: HttpRequest) -> JsonResponse:
-    """JSON API: list territories from municipis table."""
-    result = []
-    seen = set()
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT DISTINCT "Territori" FROM municipis ORDER BY 1')
-        for (territori,) in cursor.fetchall():
-            codi = _MUNICIPIS_TERRITORI_MAP.get(territori)
-            if codi and codi not in seen:
-                result.append({"codi": codi, "nom": territori})
-                seen.add(codi)
-    return JsonResponse(result, safe=False)
-
-
-@staff_required
-def api_comarques(request: HttpRequest) -> JsonResponse:
-    """JSON API: list comarques for a territory."""
-    territori_codi = request.GET.get("territori", "")
-    reverse_map = {v: k for k, v in _MUNICIPIS_TERRITORI_MAP.items()}
-    territori_nom = reverse_map.get(territori_codi, "")
-    if not territori_nom:
-        return JsonResponse([], safe=False)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            'SELECT DISTINCT "Comarca" FROM municipis WHERE "Territori" = %s ORDER BY 1',
-            [territori_nom],
-        )
-        result = [row[0] for row in cursor.fetchall()]
-    return JsonResponse(result, safe=False)
-
-
-@staff_required
-def api_municipis(request: HttpRequest) -> JsonResponse:
-    """JSON API: list municipis for a comarca."""
-    comarca = request.GET.get("comarca", "")
-    if not comarca:
-        return JsonResponse([], safe=False)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            'SELECT "Municipi" FROM municipis WHERE "Comarca" = %s ORDER BY 1',
-            [comarca],
-        )
-        result = [row[0] for row in cursor.fetchall()]
-    return JsonResponse(result, safe=False)
-
-
-@staff_required
 def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
-    """AJAX: approve a pending artist."""
+    """AJAX: approve a pending artist with location."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -115,24 +66,46 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
     except (json.JSONDecodeError, ValueError):
         data = {}
 
+    municipi_id = data.get("municipi_id")
     comarca = data.get("comarca", "").strip()
     localitat = data.get("localitat", "").strip()
-    if not comarca or not localitat:
-        return JsonResponse({"error": "Cal comarca i localitat"}, status=400)
 
-    artista.comarca = comarca
-    artista.localitat = localitat
-    artista.aprovat = True
-    artista.save(update_fields=["aprovat", "localitat", "comarca"])
+    if not municipi_id and (not comarca or not localitat):
+        return JsonResponse({"error": "Cal seleccionar un municipi"}, status=400)
 
-    comarca_map = _get_comarca_map()
-    codi = comarca_map.get(comarca)
-    territori = ""
-    if codi:
-        t = Territori.objects.filter(codi=codi).first()
-        if t:
-            artista.territoris.set([t])
-            territori = codi
+    with transaction.atomic():
+        # Create ArtistaLocalitat
+        if municipi_id:
+            try:
+                municipi = Municipi.objects.get(pk=int(municipi_id))
+                ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
+                # Update legacy fields
+                artista.localitat = municipi.nom
+                artista.comarca = municipi.comarca
+                territori = municipi.territori_id
+            except Municipi.DoesNotExist:
+                return JsonResponse({"error": "Municipi no trobat"}, status=404)
+        else:
+            # Fallback: try to match by name
+            try:
+                municipi = Municipi.objects.get(nom=localitat, comarca=comarca)
+                ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
+                artista.localitat = municipi.nom
+                artista.comarca = municipi.comarca
+                territori = municipi.territori_id
+            except Municipi.DoesNotExist:
+                # Manual entry
+                ArtistaLocalitat.objects.create(
+                    artista=artista, municipi=None, localitat_manual=f"{localitat}, {comarca}",
+                )
+                artista.localitat = localitat
+                artista.comarca = comarca
+                territori = "ALT"
+
+        artista.aprovat = True
+        artista.save(update_fields=["aprovat", "localitat", "comarca"])
+        # Signal auto-syncs territories
+
     return JsonResponse({"ok": True, "territori": territori})
 
 

@@ -1,32 +1,31 @@
 """Staff views for provisional ranking review."""
 
-from urllib.parse import quote
-
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
-from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS
+from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS, TERRITORI_NOMS
 from music.ml import recalcular_ml_si_cal
-from music.models import Artista, Canco
+from music.models import Artista
 from music.services import rebutjar_artista, rebutjar_canco
 from ranking.models import RankingProvisional
 
-from . import paginate, staff_required
+from . import apply_ordering, paginate, staff_required
 
+# Display order: fixed territories first, then aggregates and optional.
 TERRITORIS = [
-    ("CAT", "Catalunya"),
-    ("VAL", "País Valencià"),
-    ("BAL", "Illes Balears"),
-    ("CNO", "Catalunya del Nord"),
-    ("AND", "Andorra"),
-    ("FRA", "Franja de Ponent"),
-    ("ALG", "L'Alguer"),
-    ("CAR", "El Carxe"),
-    ("ALT", "Altres"),
-    ("PPCC", "Països Catalans"),
+    (codi, TERRITORI_NOMS[codi])
+    for codi in ("CAT", "VAL", "BAL", "CNO", "AND", "FRA", "ALG", "CAR", "ALT", "PPCC")
 ]
+
+RANKING_ORDER_FIELDS = {
+    "posicio": "posicio",
+    "artista": "canco__artista__nom",
+    "canco": "canco__nom",
+    "playcount": "lastfm_playcount",
+    "dies": "dies_en_top",
+}
 
 
 @staff_required
@@ -39,7 +38,10 @@ def llista(request: HttpRequest) -> HttpResponse:
     qs = (
         RankingProvisional.objects.filter(territori=territori)
         .select_related("canco", "canco__artista")
-        .order_by("posicio")
+    )
+
+    qs, current_order, current_dir = apply_ordering(
+        request, qs, RANKING_ORDER_FIELDS, default="posicio"
     )
 
     return render(request, "web/staff/ranking.html", {
@@ -48,6 +50,8 @@ def llista(request: HttpRequest) -> HttpResponse:
         "territori": territori,
         "territoris": TERRITORIS,
         "motius": MOTIUS_REBUIG,
+        "current_order": current_order,
+        "current_dir": current_dir,
     })
 
 
@@ -81,7 +85,7 @@ def accio(request: HttpRequest) -> HttpResponse:
                 rp.delete()
                 total += 1
         recalcular_ml_si_cal()
-        messages.success(request, f"{total} cançons rebutjades (verificada=False).")
+        messages.success(request, f"{total} cancons rebutjades (verificada=False).")
 
     elif action == "rebutjar_artista":
         artista_ids = set(entries.values_list("canco__artista_id", flat=True))
@@ -95,7 +99,7 @@ def accio(request: HttpRequest) -> HttpResponse:
         recalcular_ml_si_cal()
         messages.success(
             request,
-            f"{len(artista_ids)} artistes rebutjats, {total_cancons} cançons esborrades.",
+            f"{len(artista_ids)} artistes rebutjats, {total_cancons} cancons esborrades.",
         )
     else:
         messages.error(request, "Acció desconeguda.")

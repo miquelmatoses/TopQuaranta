@@ -1,11 +1,11 @@
 {% extends "web/staff/base_staff.html" %}
 {% load staff_tags %}
 
-{% block staff_title %}Cançons{% endblock %}
+{% block staff_title %}Can&ccedil;ons{% endblock %}
 
 {% block staff_content %}
 <section class="ranking-header">
-  <h2 class="ranking-title">Cançons</h2>
+  <h2 class="ranking-title">Can&ccedil;ons</h2>
   <p class="ranking-date">{{ page.paginator.count }} resultats</p>
 </section>
 
@@ -22,7 +22,12 @@
     <option value="C"{% if ml_classe == "C" %} selected{% endif %}>C</option>
   </select>
   <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar nom o artista..." class="filter-search" style="max-width:240px">
-  <input type="text" name="any" value="{{ any_filtre }}" placeholder="Any" class="filter-search" style="max-width:80px">
+  <label style="font-size:var(--mm-text-sm);white-space:nowrap">Des de
+    <input type="date" name="data_des" value="{{ data_des }}" class="filter-search" style="max-width:150px">
+  </label>
+  <label style="font-size:var(--mm-text-sm);white-space:nowrap">Fins a
+    <input type="date" name="data_fins" value="{{ data_fins }}" class="filter-search" style="max-width:150px">
+  </label>
   <button type="submit" class="filter-btn">Filtrar</button>
 </form>
 
@@ -31,13 +36,13 @@
 
   <div class="staff-actions-bar">
     <label><input type="checkbox" id="select-all"> Tot</label>
-    <select name="action" class="staff-action-select">
-      <option value="">-- Acció --</option>
+    <select name="action" id="action-select" class="staff-action-select">
+      <option value="">-- Acci&oacute; --</option>
       <option value="aprovar">Aprovar</option>
       <option value="rebutjar">Rebutjar</option>
-      <option value="rebutjar_album">Rebutjar àlbum sencer</option>
+      <option value="rebutjar_album">Rebutjar album sencer</option>
     </select>
-    <select name="motiu" class="staff-action-select">
+    <select name="motiu" id="motiu-select" class="staff-action-select" style="display:none">
       <option value="">-- Motiu --</option>
       {% for value, label in motius %}
       <option value="{{ value }}">{{ label }}</option>
@@ -51,13 +56,13 @@
       <thead>
         <tr>
           <th></th>
-          <th>ML</th>
-          <th>Cançó</th>
-          <th>Artista</th>
-          <th>Àlbum</th>
-          <th>Data</th>
+          <th>{% sort_header "ml" "ML" %}</th>
+          <th>{% sort_header "nom" "Cançó" %}</th>
+          <th>{% sort_header "artista" "Artista" %}</th>
+          <th>{% sort_header "album" "Album" %}</th>
+          <th>{% sort_header "data" "Data" %}</th>
           <th>Links</th>
-          <th>ISRC</th>
+          <th>{% sort_header "isrc" "ISRC" %}</th>
           <th>Verif.</th>
           <th>Territoris</th>
         </tr>
@@ -67,9 +72,9 @@
         <tr>
           <td><input type="checkbox" name="ids" value="{{ canco.pk }}" class="row-check"></td>
           <td>{% ml_badge canco %}</td>
-          <td>{{ canco.nom }}</td>
-          <td>{{ canco.artista.nom }}</td>
-          <td class="staff-cell-muted">{{ canco.album.nom }}</td>
+          <td><a href="{% url 'staff:canco_editar' pk=canco.pk %}" class="staff-edit-link">{{ canco.nom }}</a></td>
+          <td><a href="{% url 'staff:artista_editar' pk=canco.artista.pk %}" class="staff-edit-link">{{ canco.artista.nom }}</a></td>
+          <td class="staff-cell-muted"><a href="{% url 'staff:album_editar' pk=canco.album.pk %}" class="staff-edit-link">{{ canco.album.nom }}</a></td>
           <td class="staff-cell-muted">{{ canco.data_llancament|date:"Y-m-d" }}</td>
           <td class="staff-cell-links">
             {% if canco.deezer_id %}<a href="https://www.deezer.com/track/{{ canco.deezer_id }}" target="_blank" rel="noopener">Dz</a>{% endif %}
@@ -81,7 +86,7 @@
           <td class="staff-cell-muted">{% territori_list canco.artista %}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="ranking-empty">Cap cançó trobada.</td></tr>
+        <tr><td colspan="10" class="ranking-empty">Cap can&ccedil;&oacute; trobada.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -89,10 +94,27 @@
 </form>
 
 {% include "web/staff/_pagination.html" %}
+{% include "web/staff/_select_all.html" %}
 
 <script>
-document.getElementById('select-all').addEventListener('change', function() {
-  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
-});
+// Show/hide motiu based on action selection (rebutjar requires motiu).
+(function () {
+  var actionSel = document.getElementById('action-select');
+  var motiuSel = document.getElementById('motiu-select');
+  var form = document.getElementById('cancons-form');
+  if (!actionSel || !motiuSel || !form) return;
+
+  actionSel.addEventListener('change', function () {
+    motiuSel.style.display = (this.value === 'aprovar' || this.value === '') ? 'none' : '';
+  });
+
+  form.addEventListener('submit', function (e) {
+    var action = actionSel.value;
+    if ((action === 'rebutjar' || action === 'rebutjar_album') && !motiuSel.value) {
+      e.preventDefault();
+      alert('Has de seleccionar un motiu de rebuig.');
+    }
+  });
+})();
 </script>
 {% endblock %}
