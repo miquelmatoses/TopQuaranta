@@ -11,6 +11,6 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_HSTS_SECONDS = 0
 
-ALLOWED_HOSTS = ["www.topquaranta.cat", "topquaranta.cat", "legacy.topquaranta.cat", "127.0.0.1"]
+ALLOWED_HOSTS = ["www.topquaranta.cat", "topquaranta.cat", "127.0.0.1"]
 
 STATIC_URL = "/static/"

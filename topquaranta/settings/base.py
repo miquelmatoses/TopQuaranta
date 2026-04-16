@@ -15,7 +15,6 @@ INSTALLED_APPS = [
     "music",
     "ingesta",
     "ranking",
-    "legacy",
     "web",
     "comptes",
 ]
@@ -45,6 +44,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "web.context_processors.current_year",
+                "web.context_processors.user_header_info",
             ],
         },
     },
