@@ -1,0 +1,124 @@
+#!/bin/bash
+# Test that the latest TopQuaranta backup is restorable.
+#
+# R14: a backup that has never been restored isn't a backup. This script
+# takes the most recent daily dump, restores it to a throwaway database
+# named `topquaranta_restore_test`, runs a small set of sanity queries
+# against it, then drops the test DB.
+#
+# Must run as user `postgres` (pg_dump / psql peer auth).
+#
+# Writes the result to /var/log/topquaranta/status/tq-restore-test.status
+# in the same key=value format as tq-run, so tq-health surfaces failures.
+#
+# Intended cadence: monthly via cron (1st of the month at 04:30, after
+# the daily backup at 03:00 has settled).
+
+set -euo pipefail
+
+BACKUP_DIR=/home/topquaranta/backups/daily
+STATUS_DIR=/var/log/topquaranta/status
+TEST_DB=topquaranta_restore_test
+SOURCE_DB=topquaranta
+
+ts=$(date -Iseconds)
+status_file="$STATUS_DIR/tq-restore-test.status"
+mkdir -p "$STATUS_DIR"
+
+write_status() {
+    local rc="$1"
+    local extra="$2"
+    local tmp
+    tmp=$(mktemp)
+    {
+        echo "command=tq-restore-test"
+        echo "args="
+        echo "last_run=$ts"
+        echo "exit_code=$rc"
+        if [[ "$rc" -eq 0 ]]; then echo "status=OK"; else echo "status=FAIL"; fi
+        echo "last_output<<EOF"
+        echo "$extra"
+        echo "EOF"
+    } > "$tmp"
+    # mktemp creates 600 by default; loosen so tq-health (runs as topquaranta)
+    # can read it without breaking the postgres-only write path.
+    chmod 644 "$tmp"
+    mv "$tmp" "$status_file"
+}
+
+cleanup() {
+    psql -d postgres -c "DROP DATABASE IF EXISTS $TEST_DB;" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+# Find newest daily dump
+latest=$(ls -t "$BACKUP_DIR"/tq-*.sql.gz 2>/dev/null | head -1 || true)
+if [[ -z "$latest" ]]; then
+    msg="no daily backup found in $BACKUP_DIR"
+    echo "$msg" >&2
+    write_status 1 "$msg"
+    exit 1
+fi
+
+# Sanity: dump file must not be empty
+size=$(stat -c %s "$latest")
+if [[ "$size" -lt 1024 ]]; then
+    msg="latest backup $latest is suspiciously small ($size bytes)"
+    echo "$msg" >&2
+    write_status 1 "$msg"
+    exit 1
+fi
+
+# Drop any leftover test DB and create a fresh one
+cleanup
+psql -d postgres -c "CREATE DATABASE $TEST_DB OWNER topquaranta;" >/dev/null
+
+# Restore. gunzip → psql; capture stderr to detect SQL errors.
+restore_log=$(mktemp)
+trap 'rm -f "$restore_log"; cleanup' EXIT
+
+if ! gunzip -c "$latest" | psql -q -v ON_ERROR_STOP=1 -d "$TEST_DB" > /dev/null 2> "$restore_log"; then
+    msg="restore failed: $(tail -c 1000 "$restore_log")"
+    echo "$msg" >&2
+    write_status 1 "backup=$latest $msg"
+    exit 1
+fi
+
+# Sanity queries — table presence + row counts within an order of magnitude
+# of the live DB. We don't pin exact counts (live DB grows daily), just
+# verify the restored DB has roughly the same shape.
+restored_artistes=$(psql -tAd "$TEST_DB" -c "SELECT COUNT(*) FROM music_artista;")
+restored_cancons=$(psql -tAd "$TEST_DB" -c "SELECT COUNT(*) FROM music_canco;")
+restored_setmanal=$(psql -tAd "$TEST_DB" -c "SELECT COUNT(*) FROM ranking_rankingsetmanal;")
+live_artistes=$(psql -tAd "$SOURCE_DB" -c "SELECT COUNT(*) FROM music_artista;")
+live_cancons=$(psql -tAd "$SOURCE_DB" -c "SELECT COUNT(*) FROM music_canco;")
+
+# Backup is at most ~24h old; counts should be within 5% of live
+within_pct() {
+    local a="$1" b="$2" pct="$3"
+    if [[ "$b" -eq 0 ]]; then [[ "$a" -eq 0 ]]; return; fi
+    local diff=$(( a > b ? a - b : b - a ))
+    local thr=$(( b * pct / 100 ))
+    [[ "$diff" -le "$thr" ]]
+}
+
+problems=""
+if ! within_pct "$restored_artistes" "$live_artistes" 5; then
+    problems+="artista count drift: $restored_artistes vs live $live_artistes; "
+fi
+if ! within_pct "$restored_cancons" "$live_cancons" 5; then
+    problems+="canco count drift: $restored_cancons vs live $live_cancons; "
+fi
+if [[ "$restored_setmanal" -lt 1 ]]; then
+    problems+="ranking_rankingsetmanal is empty in restored DB; "
+fi
+
+summary="backup=$latest size=$size artistes=$restored_artistes/$live_artistes cancons=$restored_cancons/$live_cancons rankings=$restored_setmanal"
+if [[ -n "$problems" ]]; then
+    write_status 1 "$summary problems: $problems"
+    echo "$summary problems: $problems" >&2
+    exit 1
+fi
+
+write_status 0 "$summary"
+echo "OK $summary"

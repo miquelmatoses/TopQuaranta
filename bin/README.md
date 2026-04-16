@@ -53,3 +53,13 @@ Runs as user `postgres` from cron at 03:00 daily. `pg_dump | gzip -9` into
 `monthly/` on the 1st. Retention: 7 daily, 4 weekly, 12 monthly.
 
 DB is ~45 MB; gzipped ~3 MB per snapshot. Total worst-case retention ~60 MB.
+
+## `tq-restore-test`
+Runs as user `postgres` from cron on the 1st of each month at 04:30 (R14).
+Picks the newest dump in `daily/`, restores it to a throwaway database
+`topquaranta_restore_test`, validates row counts against the live DB
+(must be within 5%), then drops the test DB. Failures land in
+`tq-restore-test.status` and are surfaced by `tq-health` (max-age 35 days).
+
+Defends against silent backup corruption: a `pg_dump` that produces an
+unreadable gzip would otherwise only be discovered during a real disaster.
