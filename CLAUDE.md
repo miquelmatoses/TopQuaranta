@@ -1,13 +1,14 @@
 # CLAUDE.md — TopQuaranta
 
 > Persistent memory for Claude Code. Read this file first on every session.
-> Last updated: 2026-04-16 — Post-Phase-8 audit, monitoring (tq-health), backups, settings cleanup.
+> Last updated: 2026-04-16 — CLAUDE_EXCELLENCE.md added; Phase 9 (Excellence) queued as next.
 
 ## Other docs
 - **`CLAUDE_MODELS.md`** — every Django model with fields, relations, indexes.
 - **`CLAUDE_PIPELINE.md`** — ingest → signal → ranking flow, API clients, crons.
 - **`CLAUDE_STAFF.md`** — staff panel architecture, views, permissions, flows.
 - **`CLAUDE_ALGORITHM.md`** — 14-CTE ranking algorithm details.
+- **`CLAUDE_EXCELLENCE.md`** — full audit + 62 findings (S1..Φ7) for Phase 9.
 - **`CLAUDE_LEGACY.md`** — historical audit of the pre-2026 system (reference only).
 - **`ROADMAP.md`** — phase status; current state and next steps.
 
