@@ -53,6 +53,14 @@ Tancament associat: `root` staff user (sense 2FA enrollat) desactivat amb
 backup codes. La IP allowlist queda fora d'aquesta sessió — additiva, a
 fer quan es decideixi.
 
+**Sessió 5 — Gestió d'usuaris al staff (2026-04-16)** ✅ (no-ID, follow-up UX)
+
+Nova secció `/staff/usuaris/` amb llista + detall + 2 mutacions segures
+(toggle is_active sobre no-staff no-self; reset 2FA). `is_staff` queda
+intencionadament fora del panell — requereix SSH. Totes les mutacions
+van a `StaffAuditLog` via `log_staff_action`. Afegides 3 noves choices
+(`usuari_desactivar`, `usuari_reactivar`, `usuari_reset_2fa`).
+
 Queda pendent de Tier 1 + 2:
 - **R5** Deriva silenciosa Last.fm (autocorrect) — detecció + revisió humana
 - **R7** Retry automàtic de crons que fallin

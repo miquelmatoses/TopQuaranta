@@ -78,6 +78,10 @@ def llista(request):
 | `propostes/<pk>/rebutjar/` | `proposta_rebutjar` | | estat=rebutjat |
 | `configuracio/` | `configuracio` | `eines.configuracio` | ConfiguracioGlobal edit form |
 | `auditlog/` | `auditlog` | `eines.auditlog` | Read-only StaffAuditLog — append-only trail of destructive actions (R9) |
+| `usuaris/` | `usuaris` | `usuaris.llista` | List + filters + search of registered users |
+| `usuaris/<pk>/` | `usuari_detall` | `usuaris.detall` | Full user profile with propostes, sol·licituds, audit |
+| `usuaris/<pk>/toggle-actiu/` | `usuari_toggle_actiu` | `usuaris.toggle_actiu` | POST — (de)activate account (not self / not staff) |
+| `usuaris/<pk>/reset-2fa/` | `usuari_reset_2fa` | `usuaris.reset_2fa` | POST — wipe TOTP + static devices |
 
 ## 4. Views by module
 

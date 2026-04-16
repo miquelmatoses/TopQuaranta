@@ -1,9 +1,9 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-16 — Phase 9: 16 findings landed across 4 sessions
-> (Tier 1 security complete except IP allowlist; Tier 2 reliability partial).
-> See CLAUDE_EXCELLENCE.md for progress.
+> Last updated: 2026-04-16 — Phase 9: 16 findings + staff user mgmt across
+> 5 sessions. Tier 1 security complete except IP allowlist; Tier 2 reliability
+> partial. See CLAUDE_EXCELLENCE.md for progress.
 
 ---
 
