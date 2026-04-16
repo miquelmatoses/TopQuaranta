@@ -1,0 +1,76 @@
+{% extends "web/staff/base_staff.html" %}
+{% load staff_tags %}
+
+{% block staff_title %}Usuaris{% endblock %}
+
+{% block staff_content %}
+<section class="ranking-header">
+  <h2 class="ranking-title">Usuaris</h2>
+  <p class="ranking-date">{{ page.paginator.count }} usuaris registrats</p>
+</section>
+
+<form method="get" class="staff-filters">
+  <select name="estat" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Estat: tots</option>
+    <option value="actius"{% if estat == "actius" %} selected{% endif %}>Actius</option>
+    <option value="inactius"{% if estat == "inactius" %} selected{% endif %}>Inactius</option>
+  </select>
+  <select name="rol" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Rol: tots</option>
+    <option value="staff"{% if rol == "staff" %} selected{% endif %}>Staff</option>
+    <option value="usuari"{% if rol == "usuari" %} selected{% endif %}>Usuaris</option>
+  </select>
+  <input type="text" name="q" value="{{ cerca }}" placeholder="Email / username" class="filter-search" style="max-width:240px">
+  <button type="submit" class="filter-btn">Filtrar</button>
+</form>
+
+<div class="staff-table-wrap">
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>{% sort_header "email" "Email" %}</th>
+        <th>{% sort_header "username" "Username" %}</th>
+        <th>{% sort_header "registrat" "Registrat" %}</th>
+        <th>{% sort_header "ultim" "Últim login" %}</th>
+        <th>Actiu</th>
+        <th>Rol</th>
+        <th>2FA</th>
+        <th>Propostes</th>
+        <th>Artistes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in page %}
+      <tr>
+        <td>
+          <a href="{% url 'staff:usuari_detall' pk=u.pk %}" class="staff-edit-link">{{ u.email|default:"—" }}</a>
+        </td>
+        <td class="staff-cell-muted">{{ u.username }}</td>
+        <td class="staff-cell-muted">{{ u.date_joined|date:"Y-m-d" }}</td>
+        <td class="staff-cell-muted">{{ u.last_login|date:"Y-m-d H:i"|default:"—" }}</td>
+        <td>
+          {% if u.is_active %}<span class="staff-badge-ok">✓</span>
+          {% else %}<span class="staff-badge-no">✗</span>{% endif %}
+        </td>
+        <td>
+          {% if u.is_staff %}<span class="staff-badge">Staff</span>
+          {% else %}<span class="staff-cell-muted">usuari</span>{% endif %}
+        </td>
+        <td>
+          {% if u.is_staff %}
+            {% if u.has_totp %}<span class="staff-badge-ok">✓</span>
+            {% else %}<span class="staff-badge-no">✗</span>{% endif %}
+          {% else %}<span class="staff-cell-muted">—</span>{% endif %}
+        </td>
+        <td class="staff-cell-mono">{{ u.n_propostes }}</td>
+        <td class="staff-cell-mono">{{ u.n_sollicituds_aprovades }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="ranking-empty">Cap usuari trobat amb aquests filtres.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "web/staff/_pagination.html" %}
+{% endblock %}
