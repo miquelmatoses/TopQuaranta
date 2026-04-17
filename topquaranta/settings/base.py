@@ -91,10 +91,21 @@ REST_FRAMEWORK = {
 # worker (effectively doubling it). Use a PostgreSQL-backed cache so
 # the counter is coherent across workers. Table created via
 # `manage.py createcachetable django_cache`.
+#
+# P1: a SEPARATE `pagecache` alias (LocMem, per-worker) is used for
+# HTML page caching of anonymous hits. Per-worker is fine here — a
+# brief spike of cold requests hitting different workers merely warms
+# the cache independently. Splitting the DB cache across workers for
+# this would multiply DB writes unnecessarily.
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "django_cache",
+    },
+    "pagecache": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "topquaranta-pagecache",
+        "TIMEOUT": 600,  # 10 minutes default; @cache_page overrides per view
     },
 }
 

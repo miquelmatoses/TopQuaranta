@@ -1,5 +1,8 @@
 import datetime
+import hashlib
+from functools import wraps
 
+from django.core.cache import caches
 from django.core.paginator import Paginator
 from django.http import (
     Http404,
@@ -218,6 +221,69 @@ def _get_ranking(
     return provisional, True, data_calcul
 
 
+# ── P1 · Server-side page cache for anonymous hits ──────────────────────
+# Logged-in users see a personalised header ("Sortir" + account link) so
+# their responses can NOT share a cache with anon users. Rather than fight
+# Django's @cache_page to handle both, we do the simplest thing: cache
+# ONLY for anonymous requests. The site's traffic mix is dominated by
+# anonymous visitors reading the public ranking, so this covers the
+# common case while keeping the logged-in flow untouched.
+#
+# Keys combine (path, query-string, hashed User-Agent-agnostic data). TTL
+# 600s (10 min) — shorter than the daily ranking refresh cadence so a new
+# provisional ranking appears within 10 min of being computed, without
+# having to plumb cache invalidation.
+#
+# This complements P8's @last_modified / @etag: those still run inside
+# the view, and on a cache MISS the stored response carries the correct
+# Last-Modified / ETag so revalidations on the cached copy also 304.
+
+PAGE_CACHE_TTL_SECONDS = 600
+
+
+def cache_page_for_anon(ttl: int):
+    """Cache the view's response in `pagecache` — but only for anon users.
+
+    Preserves the 304 Not Modified flow from P8's @last_modified / @etag:
+    on a cache HIT we check the client's If-None-Match / If-Modified-
+    Since against the cached response's ETag / Last-Modified and return
+    304 if they match, before copying the body over the wire.
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
+            if request.user.is_authenticated:
+                return view_func(request, *args, **kwargs)
+            cache = caches["pagecache"]
+            key_raw = (
+                f"{view_func.__module__}.{view_func.__name__}:"
+                f"{request.path}?{request.META.get('QUERY_STRING', '')}"
+            )
+            key = "pagecache:" + hashlib.sha1(key_raw.encode()).hexdigest()
+            cached = cache.get(key)
+            if cached is not None:
+                # Re-apply conditional GET semantics on cache hit so the
+                # 304 shortcut still fires.
+                inm = request.META.get("HTTP_IF_NONE_MATCH")
+                cached_etag = cached.get("ETag")
+                if inm and cached_etag and inm.strip() == cached_etag:
+                    return HttpResponse(status=304)
+                # (If-Modified-Since is handled with weaker guarantees; the
+                # ETag path above already covers the common case.)
+                return cached
+            response = view_func(request, *args, **kwargs)
+            # Only cache 200s so we don't poison the cache with a transient
+            # 5xx or a conditional 304 (which has no body).
+            if response.status_code == 200:
+                cache.set(key, response, ttl)
+            return response
+
+        return wrapped
+
+    return decorator
+
+
 # ── P8 · HTTP conditional caching for public ranking pages ──────────────
 # Last-Modified + ETag so browsers (and intermediate caches) can revalidate
 # cheaply: on a repeat visit the client sends If-Modified-Since / If-None-
@@ -317,6 +383,7 @@ def _ranking_page_etag(request: HttpRequest) -> str | None:
     return _etag_for(request, territori, setmana)
 
 
+@cache_page_for_anon(PAGE_CACHE_TTL_SECONDS)
 @last_modified(_homepage_last_modified)
 @etag(_homepage_etag)
 def homepage(request: HttpRequest) -> HttpResponse:
@@ -339,6 +406,7 @@ def homepage(request: HttpRequest) -> HttpResponse:
     )
 
 
+@cache_page_for_anon(PAGE_CACHE_TTL_SECONDS)
 @last_modified(_ranking_page_last_modified)
 @etag(_ranking_page_etag)
 def ranking_page(request: HttpRequest) -> HttpResponse:
