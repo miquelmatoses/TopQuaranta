@@ -101,11 +101,14 @@ class PropostaArtista(models.Model):
     tiktok_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
     facebook_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
 
-    # Deezer IDs stored as comma-separated string
-    deezer_ids = models.CharField(max_length=255, blank=True)
+    # D3: list of Deezer IDs. Previously a comma-separated CharField; now a
+    # JSONField so the ORM parses it for us. Default `list` so `.deezer_ids`
+    # always iterates without a None-check.
+    deezer_ids = models.JSONField(default=list, blank=True)
 
-    # Location data as JSON: [{"municipi_id": 123, "manual": ""}, ...]
-    localitzacions_json = models.TextField(blank=True)
+    # D4: list of location dicts: [{"municipi_id": 123} | {"manual": "..."}, …].
+    # Previously a TextField with a JSON string we parsed by hand.
+    localitzacions = models.JSONField(default=list, blank=True)
 
     # Status
     estat = models.CharField(
@@ -132,15 +135,17 @@ class PropostaArtista(models.Model):
         return f"{self.usuari} proposa: {self.nom} ({self.estat})"
 
     def get_deezer_id_list(self) -> list[int]:
-        """Parse comma-separated Deezer IDs into list of ints."""
-        if not self.deezer_ids:
-            return []
-        result = []
-        for raw in self.deezer_ids.split(","):
-            raw = raw.strip()
-            if raw:
-                try:
-                    result.append(int(raw))
-                except ValueError:
-                    pass
-        return result
+        """Return Deezer IDs as a list of ints.
+
+        D3: now that `deezer_ids` is a JSONField, the list is already
+        structured — but this shim stays so callers don't care about the
+        storage shape, and to coerce strings that sneak in via the form
+        to int before they hit the downstream ORM.
+        """
+        out: list[int] = []
+        for raw in self.deezer_ids or []:
+            try:
+                out.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        return out

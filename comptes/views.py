@@ -1,5 +1,4 @@
 import base64
-import json
 import logging
 from io import BytesIO
 
@@ -456,9 +455,17 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
                 if val:
                     social_data[field] = val
 
-            # Collect Deezer IDs
+            # Collect Deezer IDs (D3: JSONField now stores a list of ints).
             deezer_raw = request.POST.getlist("deezer_ids")
-            deezer_ids = ",".join(d.strip() for d in deezer_raw if d.strip())
+            deezer_ids: list[int] = []
+            for raw in deezer_raw:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    deezer_ids.append(int(raw))
+                except ValueError:
+                    continue
 
             # Collect locations
             loc_municipi_ids = request.POST.getlist("loc_municipi_id")
@@ -480,7 +487,7 @@ def sollicitud_proposta(request: HttpRequest) -> HttpResponse:
                 nom=nom,
                 justificacio=justificacio,
                 deezer_ids=deezer_ids,
-                localitzacions_json=json.dumps(locs) if locs else "",
+                localitzacions=locs,
                 **social_data,
             )
             try:

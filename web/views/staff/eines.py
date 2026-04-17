@@ -1,7 +1,5 @@
 """Staff views for remaining tools: historial, senyal, UserArtista, propostes, configuracio."""
 
-import json
-
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
@@ -309,26 +307,17 @@ def proposta_detall(request: HttpRequest, pk: int) -> HttpResponse:
         messages.error(request, "Proposta no trobada.")
         return redirect("staff:propostes_artistes")
 
-    # Parse locations
+    # D4: localitzacions is now a JSONField returning a list of dicts.
     localitzacions = []
-    if proposta.localitzacions_json:
-        try:
-            locs = json.loads(proposta.localitzacions_json)
-            for loc in locs:
-                if "municipi_id" in loc:
-                    try:
-                        m = Municipi.objects.get(pk=loc["municipi_id"])
-                        localitzacions.append(
-                            f"{m.nom}, {m.comarca} ({m.territori_id})"
-                        )
-                    except Municipi.DoesNotExist:
-                        localitzacions.append(
-                            f"Municipi ID {loc['municipi_id']} (no trobat)"
-                        )
-                elif "manual" in loc:
-                    localitzacions.append(f"{loc['manual']} (manual)")
-        except (json.JSONDecodeError, TypeError):
-            pass
+    for loc in proposta.localitzacions or []:
+        if "municipi_id" in loc:
+            try:
+                m = Municipi.objects.get(pk=loc["municipi_id"])
+                localitzacions.append(f"{m.nom}, {m.comarca} ({m.territori_id})")
+            except Municipi.DoesNotExist:
+                localitzacions.append(f"Municipi ID {loc['municipi_id']} (no trobat)")
+        elif "manual" in loc:
+            localitzacions.append(f"{loc['manual']} (manual)")
 
     # Parse Deezer IDs
     deezer_ids = proposta.get_deezer_id_list()
@@ -400,35 +389,23 @@ def proposta_aprovar(request: HttpRequest, pk: int) -> HttpResponse:
         # R10: legacy `Artista.deezer_id` removed; the loop above is the
         # only source of truth now.
 
-        # Create locations
-        if proposta.localitzacions_json:
-            try:
-                locs = json.loads(proposta.localitzacions_json)
-                first_loc = None
-                for loc in locs:
-                    if "municipi_id" in loc:
-                        try:
-                            m = Municipi.objects.get(pk=loc["municipi_id"])
-                            al = ArtistaLocalitat.objects.create(
-                                artista=artista, municipi=m
-                            )
-                            if not first_loc:
-                                first_loc = al
-                        except Municipi.DoesNotExist:
-                            pass
-                    elif "manual" in loc:
-                        al = ArtistaLocalitat.objects.create(
-                            artista=artista,
-                            municipi=None,
-                            localitat_manual=loc["manual"],
-                        )
-                        if not first_loc:
-                            first_loc = al
-
-                # R11: legacy localitat/comarca/provincia removed; the
-                # ArtistaLocalitat rows above are the sole source of truth.
-            except (json.JSONDecodeError, TypeError):
-                pass
+        # D4: localitzacions is now a JSONField. Each entry is either
+        # {"municipi_id": int} or {"manual": str}. No parse step needed.
+        # R11: legacy localitat/comarca/provincia removed; the
+        # ArtistaLocalitat rows below are the sole source of truth.
+        for loc in proposta.localitzacions or []:
+            if "municipi_id" in loc:
+                try:
+                    m = Municipi.objects.get(pk=loc["municipi_id"])
+                    ArtistaLocalitat.objects.create(artista=artista, municipi=m)
+                except Municipi.DoesNotExist:
+                    pass
+            elif "manual" in loc:
+                ArtistaLocalitat.objects.create(
+                    artista=artista,
+                    municipi=None,
+                    localitat_manual=loc["manual"],
+                )
 
         # Update proposal
         proposta.estat = PropostaArtista.ESTAT_APROVAT
