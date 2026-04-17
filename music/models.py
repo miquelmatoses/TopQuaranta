@@ -537,6 +537,13 @@ class HistorialRevisio(models.Model):
             models.Index(fields=["decisio", "motiu"]),
             models.Index(fields=["canco_isrc"]),
             models.Index(fields=["artista_deezer_id"]),
+            # P3: ml.py hot paths run per track during recalcular_ml.
+            # Each pair (artista_nom|isrc_prefix, decisio) is queried
+            # both alone and with decisio="rebutjada". Composite index
+            # serves both the full-match lookup and the single-column
+            # lookup on the leading field.
+            models.Index(fields=["artista_nom", "decisio"]),
+            models.Index(fields=["isrc_prefix", "decisio"]),
         ]
 
     def __str__(self) -> str:
