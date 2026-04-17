@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="card.css">
+  <style>
+    body { font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-gray-50); padding: var(--mm-space-8); }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--mm-space-4); }
+    .mm-card { padding: var(--mm-space-5); }
+    .mm-card h3 { margin: 0 0 var(--mm-space-2); font-size: var(--mm-text-lg); font-weight: var(--mm-weight-bold); }
+    .mm-card p { margin: 0; font-size: var(--mm-text-sm); color: var(--mm-color-text-muted); line-height: var(--mm-leading-relaxed); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<h2>Card variants</h2>
+<div class="grid">
+
+  <div class="mm-card">
+    <h3>Default</h3>
+    <p>White background with a 1px gray border.</p>
+    <br><code>.mm-card</code>
+  </div>
+
+  <div class="mm-card mm-card--accent-red">
+    <h3>Accent Red</h3>
+    <p>3px left border in brand red.</p>
+    <br><code>.mm-card--accent-red</code>
+  </div>
+
+  <div class="mm-card mm-card--accent-blue">
+    <h3>Accent Blue</h3>
+    <p>3px left border in brand blue.</p>
+    <br><code>.mm-card--accent-blue</code>
+  </div>
+
+  <div class="mm-card mm-card--accent-green">
+    <h3>Accent Green</h3>
+    <p>3px left border in brand green.</p>
+    <br><code>.mm-card--accent-green</code>
+  </div>
+
+  <div class="mm-card mm-card--accent-yellow">
+    <h3>Accent Yellow</h3>
+    <p>3px left border in brand yellow.</p>
+    <br><code>.mm-card--accent-yellow</code>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+/* mm-design — Button component
+   Variants: primary, secondary, ghost
+   Sizes: sm, md, lg
+   States: hover, focus-visible, disabled */
+
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mm-font-sans);
+  font-weight: var(--mm-weight-semibold);
+  border-radius: var(--mm-radius-base);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s;
+  line-height: var(--mm-leading-snug);
+  text-decoration: none;
+}
+
+/* ── Sizes ── */
+
+.mm-btn--sm {
+  font-size: var(--mm-text-xs);
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+}
+
+.mm-btn--md {
+  font-size: var(--mm-text-sm);
+  padding: var(--mm-space-2_5) var(--mm-space-5);
+}
+
+.mm-btn--lg {
+  font-size: var(--mm-text-sm);
+  padding: var(--mm-space-3) var(--mm-space-6);
+}
+
+/* ── Variant: primary ── */
+
+.mm-btn--primary {
+  background-color: var(--mm-color-blue);
+  color: var(--mm-color-white);
+  border-color: var(--mm-color-blue);
+}
+
+.mm-btn--primary:hover {
+  opacity: 0.9;
+}
+
+.mm-btn--primary:focus-visible {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Variant: secondary ── */
+
+.mm-btn--secondary {
+  background-color: var(--mm-color-white);
+  color: var(--mm-color-blue);
+  border-color: var(--mm-color-blue);
+}
+
+.mm-btn--secondary:hover {
+  background-color: var(--mm-color-blue);
+  color: var(--mm-color-white);
+}
+
+.mm-btn--secondary:focus-visible {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Variant: ghost ── */
+
+.mm-btn--ghost {
+  background-color: transparent;
+  color: var(--mm-color-blue);
+  border-color: transparent;
+}
+
+.mm-btn--ghost:hover {
+  text-decoration: underline;
+}
+
+.mm-btn--ghost:focus-visible {
+  outline: 2px solid var(--mm-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Disabled (all variants) ── */
+
+.mm-btn:disabled,
+.mm-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

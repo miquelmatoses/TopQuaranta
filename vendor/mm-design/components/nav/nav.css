@@ -1,0 +1,73 @@
+/* mm-design — Nav component
+   Horizontal bar: brand blue background, logo left, links right.
+   Link states: active, inactive, hover. */
+
+.mm-nav {
+  display: flex;
+  align-items: center;
+  height: 4rem; /* 64px = h-16 */
+  padding: 0 var(--mm-space-6);
+  background-color: var(--mm-color-blue);
+  font-family: var(--mm-font-sans);
+}
+
+@media (min-width: 1024px) {
+  .mm-nav {
+    padding: 0 var(--mm-space-8);
+  }
+}
+
+/* ── Logo area (left) ── */
+
+.mm-nav__logo {
+  color: var(--mm-color-white);
+  font-family: var(--mm-font-display);
+  font-size: var(--mm-text-lg);
+  font-weight: var(--mm-weight-bold);
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.mm-nav__logo:hover {
+  opacity: 0.9;
+}
+
+/* ── Links area (right) ── */
+
+.mm-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Individual link ── */
+
+.mm-nav__link {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-medium);
+  text-decoration: none;
+  border-radius: var(--mm-radius-base);
+  padding: var(--mm-space-1_5) var(--mm-space-3);
+  transition: color 0.15s, background-color 0.15s;
+}
+
+/* Inactive */
+.mm-nav__link {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mm-nav__link:hover {
+  color: var(--mm-color-white);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Active */
+.mm-nav__link--active {
+  color: var(--mm-color-white);
+  background-color: rgba(255, 255, 255, 0.2);
+}

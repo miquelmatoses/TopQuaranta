@@ -1,0 +1,19 @@
+/* mm-design — Section label component
+   Variants: blue, red, green, amber, gray
+   Always uppercase, widest letter spacing */
+
+.mm-section-label {
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--mm-tracking-widest);
+  line-height: var(--mm-leading-snug);
+  margin: 0;
+}
+
+.mm-section-label--blue  { color: var(--mm-color-blue); }
+.mm-section-label--red   { color: var(--mm-color-red); }
+.mm-section-label--green { color: var(--mm-color-green); }
+.mm-section-label--amber { color: var(--mm-color-domain-presence); }
+.mm-section-label--gray  { color: var(--mm-color-gray-400); }

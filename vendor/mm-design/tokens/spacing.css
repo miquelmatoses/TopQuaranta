@@ -1,0 +1,44 @@
+/* mm-design — Spacing, radius, shadow, width, and z-index tokens
+   Source: DESIGN_AUDIT.md sections 4, 5
+   Naming: --mm-space-*, --mm-radius-*, --mm-shadow-*, --mm-width-*, --mm-z-* */
+
+:root {
+  /* ── Spacing scale (4.1) — 4px base unit ── */
+  --mm-space-0_5: 0.125rem;  /*  2px */
+  --mm-space-1:   0.25rem;   /*  4px */
+  --mm-space-1_5: 0.375rem;  /*  6px */
+  --mm-space-2:   0.5rem;    /*  8px */
+  --mm-space-2_5: 0.625rem;  /* 10px */
+  --mm-space-3:   0.75rem;   /* 12px */
+  --mm-space-4:   1rem;      /* 16px */
+  --mm-space-5:   1.25rem;   /* 20px */
+  --mm-space-6:   1.5rem;    /* 24px */
+  --mm-space-8:   2rem;      /* 32px */
+
+  /* ── Border radius (4.3) ── */
+  --mm-radius-sm:   2px;
+  --mm-radius-base: 4px;
+  --mm-radius-lg:   12px;
+  --mm-radius-full: 9999px;
+
+  /* ── Box shadows (4.4) ── */
+  --mm-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --mm-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --mm-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  /* ── Max-width containers (4.2) ── */
+  --mm-width-content:  56rem;    /* 896px — layout wrapper (max-w-4xl) */
+  --mm-width-page:     720px;    /* doc-page content */
+  --mm-width-wide:     80rem;    /* 1280px — max-w-screen-xl */
+
+  /* ── Z-index layers (4.5) ── */
+  --mm-z-base:    0;
+  --mm-z-raised:  1;
+  --mm-z-overlay: 50;
+
+  /* ── Responsive breakpoints (5) — reference only, not usable as var() ── */
+  /* sm:  640px  */
+  /* md:  768px  */
+  /* lg:  1024px */
+  /* xl:  1280px */
+}

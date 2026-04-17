@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Front person — head -->
+  <circle cx="9" cy="7.5" r="2.8" stroke-width="1.7"/>
+  <!-- Front person — shoulders -->
+  <path stroke-width="1.7" d="M2.5 19.5 C3 15.5 5.8 13 9 13 C12.2 13 15 15.5 15.5 19.5"/>
+  <!-- Back person — head (offset right and slightly behind) -->
+  <circle cx="16.5" cy="6.5" r="2.3" stroke-width="1.5"/>
+  <!-- Back person — shoulder (partial, clipped by front) -->
+  <path stroke-width="1.5" d="M16.5 12 C18.8 12 20.5 14 21 17"/>
+</svg>

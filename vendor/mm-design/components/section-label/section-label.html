@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Section Label — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="section-label.css">
+  <style>
+    body { font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-background); padding: var(--mm-space-8); }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    .stack { display: flex; flex-direction: column; gap: var(--mm-space-4); }
+    .example { display: flex; flex-direction: column; gap: var(--mm-space-1); }
+    .example span { font-size: var(--mm-text-lg); font-weight: var(--mm-weight-bold); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<h2>Section label variants</h2>
+<div class="stack">
+
+  <div class="example">
+    <p class="mm-section-label mm-section-label--blue">Instrument</p>
+    <span>Full Moon</span>
+  </div>
+
+  <div class="example">
+    <p class="mm-section-label mm-section-label--red">Role</p>
+    <span>Dolphin</span>
+  </div>
+
+  <div class="example">
+    <p class="mm-section-label mm-section-label--green">Status</p>
+    <span>Complete</span>
+  </div>
+
+  <div class="example">
+    <p class="mm-section-label mm-section-label--amber">Domain</p>
+    <span>Presence</span>
+  </div>
+
+  <div class="example">
+    <p class="mm-section-label mm-section-label--gray">Meta</p>
+    <span>Last updated</span>
+  </div>
+
+</div>
+<br>
+<code>.mm-section-label .mm-section-label--{blue|red|green|amber|gray}</code>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+{
+  "brand": {
+    "red": {
+      "hex": "#cf3339",
+      "rgb": [207, 51, 57],
+      "cmyk": [12, 91, 74, 3],
+      "pantone": "192 U"
+    },
+    "blue": {
+      "hex": "#0047ba",
+      "rgb": [0, 71, 186],
+      "cmyk": [96, 71, 0, 0],
+      "pantone": "2935U"
+    },
+    "yellow": {
+      "hex": "#f1c22f",
+      "rgb": [241, 194, 47],
+      "cmyk": [6, 23, 87, 0],
+      "pantone": "121U"
+    },
+    "green": {
+      "hex": "#427c42",
+      "rgb": [66, 124, 66],
+      "cmyk": [76, 29, 87, 14],
+      "pantone": "7740U"
+    },
+    "white": {
+      "hex": "#ffffff"
+    },
+    "black": {
+      "hex": "#111111"
+    }
+  },
+  "semantic": {
+    "primary":     "#cf3339",
+    "primaryDark": "#a8262b",
+    "background":  "#ffffff",
+    "surface":     "#ffffff",
+    "border":      "#d4d4d4",
+    "textPrimary": "#111111",
+    "textMuted":   "#666666",
+    "success":     "#427c42",
+    "warning":     "#f1c22f",
+    "error":       "#cf3339"
+  },
+  "roles": {
+    "r01": "#cf3339",
+    "r02": "#d46010",
+    "r03": "#c08800",
+    "r04": "#6a8800",
+    "r05": "#427c42",
+    "r06": "#1a8c60",
+    "r07": "#0d8888",
+    "r08": "#1a68b0",
+    "r09": "#3355c8",
+    "r10": "#6630a8",
+    "r11": "#a030a0",
+    "r12": "#b03070"
+  },
+  "domains": {
+    "presence":   "#fbbf24",
+    "bond":       "#10b981",
+    "vision":     "#427c42",
+    "discipline": "#2563eb",
+    "depth":      "#ef4444"
+  },
+  "balance": {
+    "good":    { "bg": "#f0fdf4", "text": "#166534" },
+    "caution": { "bg": "#fef9c3", "text": "#854d0e" },
+    "warning": { "bg": "#fee2e2", "text": "#991b1b" }
+  },
+  "report": {
+    "arcBar":   "#0047ba",
+    "arcLabel": "#0047ba",
+    "selfBar":  "#9ca3af",
+    "trackBg":  "#f3f4f6"
+  },
+  "interactive": {
+    "hoverBg":   "#e8eef8",
+    "focusRing": "#99b3e0",
+    "hoverText": "#003090"
+  },
+  "gray": {
+    "50":  "#f9fafb",
+    "100": "#f3f4f6",
+    "200": "#e5e7eb",
+    "300": "#d1d5db",
+    "400": "#9ca3af",
+    "500": "#6b7280",
+    "600": "#4b5563",
+    "700": "#374151",
+    "800": "#1f2937",
+    "900": "#111827"
+  }
+}

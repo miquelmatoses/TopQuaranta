@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Location pin outer shape -->
+  <path stroke-width="1.7" d="M12 2 C7.6 2 4 5.4 4 9.5 C4 15 12 22 12 22 C12 22 20 15 20 9.5 C20 5.4 16.4 2 12 2 Z"/>
+  <!-- Inner dot -->
+  <circle cx="12" cy="9.5" r="2.5" stroke-width="1.5"/>
+</svg>

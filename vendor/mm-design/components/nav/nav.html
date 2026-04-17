@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nav — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="nav.css">
+  <style>
+    body { margin: 0; font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-gray-50); }
+    .content { padding: var(--mm-space-8); max-width: var(--mm-width-content); margin: 0 auto; }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    p { font-size: var(--mm-text-sm); color: var(--mm-color-text-muted); line-height: var(--mm-leading-relaxed); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<nav class="mm-nav">
+  <a href="#" class="mm-nav__logo">mm-design</a>
+  <ul class="mm-nav__links">
+    <li><a href="#" class="mm-nav__link mm-nav__link--active">Instruments</a></li>
+    <li><a href="#" class="mm-nav__link">Roles</a></li>
+    <li><a href="#" class="mm-nav__link">Science</a></li>
+    <li><a href="#" class="mm-nav__link">About</a></li>
+  </ul>
+</nav>
+
+<div class="content">
+  <h2>Navigation bar</h2>
+  <p>Brand blue background, logo placeholder on the left, links on the right. The active link has a semi-transparent white background. Inactive links are 70% white and gain a hover background.</p>
+  <br>
+  <code>.mm-nav &gt; .mm-nav__logo + .mm-nav__links &gt; .mm-nav__link / .mm-nav__link--active</code>
+</div>
+
+</body>
+</html>

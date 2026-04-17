@@ -1,0 +1,33 @@
+/* mm-design — Badge component
+   Variants: default, beta, paid, free */
+
+.mm-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-xs);
+  font-weight: var(--mm-weight-semibold);
+  padding: var(--mm-space-1) var(--mm-space-2_5);
+  border-radius: var(--mm-radius-base);
+  line-height: var(--mm-leading-snug);
+}
+
+.mm-badge--default {
+  background-color: var(--mm-color-gray-100);
+  color: var(--mm-color-gray-700);
+}
+
+.mm-badge--beta {
+  background-color: var(--mm-color-yellow);
+  color: var(--mm-color-black);
+}
+
+.mm-badge--paid {
+  background-color: var(--mm-color-blue);
+  color: var(--mm-color-white);
+}
+
+.mm-badge--free {
+  background-color: var(--mm-color-green);
+  color: var(--mm-color-white);
+}

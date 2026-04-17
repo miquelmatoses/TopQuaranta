@@ -1,0 +1,25 @@
+/* mm-design — Card component
+   Variants: default, accent-red, accent-blue, accent-green, accent-yellow */
+
+.mm-card {
+  background-color: var(--mm-color-surface);
+  border: 1px solid var(--mm-color-gray-200);
+  border-radius: var(--mm-radius-base);
+  font-family: var(--mm-font-sans);
+  color: var(--mm-color-text-primary);
+}
+
+/* ── Accent variants: 3px left border, no other border ── */
+
+.mm-card--accent-red,
+.mm-card--accent-blue,
+.mm-card--accent-green,
+.mm-card--accent-yellow {
+  border: none;
+  border-left: 3px solid transparent;
+}
+
+.mm-card--accent-red    { border-left-color: var(--mm-color-red); }
+.mm-card--accent-blue   { border-left-color: var(--mm-color-blue); }
+.mm-card--accent-green  { border-left-color: var(--mm-color-green); }
+.mm-card--accent-yellow { border-left-color: var(--mm-color-yellow); }

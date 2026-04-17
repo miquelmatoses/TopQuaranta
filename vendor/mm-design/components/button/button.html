@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Button — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="button.css">
+  <style>
+    body { font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-background); padding: var(--mm-space-8); }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    .row { display: flex; gap: var(--mm-space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--mm-space-4); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<h2>Primary</h2>
+<div class="row">
+  <button class="mm-btn mm-btn--primary mm-btn--sm">Small</button>
+  <button class="mm-btn mm-btn--primary mm-btn--md">Medium</button>
+  <button class="mm-btn mm-btn--primary mm-btn--lg">Large</button>
+  <button class="mm-btn mm-btn--primary mm-btn--md" disabled>Disabled</button>
+</div>
+<code>.mm-btn .mm-btn--primary .mm-btn--{sm|md|lg}</code>
+
+<h2>Secondary</h2>
+<div class="row">
+  <button class="mm-btn mm-btn--secondary mm-btn--sm">Small</button>
+  <button class="mm-btn mm-btn--secondary mm-btn--md">Medium</button>
+  <button class="mm-btn mm-btn--secondary mm-btn--lg">Large</button>
+  <button class="mm-btn mm-btn--secondary mm-btn--md" disabled>Disabled</button>
+</div>
+<code>.mm-btn .mm-btn--secondary .mm-btn--{sm|md|lg}</code>
+
+<h2>Ghost</h2>
+<div class="row">
+  <button class="mm-btn mm-btn--ghost mm-btn--sm">Small</button>
+  <button class="mm-btn mm-btn--ghost mm-btn--md">Medium</button>
+  <button class="mm-btn mm-btn--ghost mm-btn--lg">Large</button>
+  <button class="mm-btn mm-btn--ghost mm-btn--md" disabled>Disabled</button>
+</div>
+<code>.mm-btn .mm-btn--ghost .mm-btn--{sm|md|lg}</code>
+
+</body>
+</html>

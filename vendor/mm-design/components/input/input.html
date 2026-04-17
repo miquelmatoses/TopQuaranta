@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Input — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="input.css">
+  <style>
+    body { font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-background); padding: var(--mm-space-8); max-width: 480px; }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    .field { margin-bottom: var(--mm-space-4); }
+    label { display: block; font-size: var(--mm-text-xs); font-weight: var(--mm-weight-semibold); color: var(--mm-color-text-muted); margin-bottom: var(--mm-space-1); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<h2>Input states</h2>
+
+<div class="field">
+  <label>Default</label>
+  <input class="mm-input" type="text" placeholder="Type something...">
+</div>
+
+<div class="field">
+  <label>With value (click to see focus)</label>
+  <input class="mm-input" type="text" value="Miquel Matoses">
+</div>
+
+<div class="field">
+  <label>Disabled</label>
+  <input class="mm-input" type="text" value="Cannot edit" disabled>
+</div>
+
+<div class="field">
+  <label>Textarea</label>
+  <textarea class="mm-input" placeholder="Write a longer text..."></textarea>
+</div>
+
+<div class="field">
+  <label>Disabled textarea</label>
+  <textarea class="mm-input" disabled>Read-only content here.</textarea>
+</div>
+
+<br>
+<code>.mm-input</code> — works on <code>&lt;input&gt;</code> and <code>&lt;textarea&gt;</code>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Diagonal trend line falling from upper-left to lower-right -->
+  <path stroke-width="1.9" d="M4 6 L14 18"/>
+  <!-- Arrowhead at the bottom -->
+  <path stroke-width="1.9" d="M14 13 L14 18 L9 18"/>
+  <!-- Small base line for chart feel -->
+  <line stroke-width="1.5" x1="4" y1="20" x2="20" y2="20"/>
+</svg>

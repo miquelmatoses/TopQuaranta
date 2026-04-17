@@ -1,0 +1,77 @@
+/* mm-design — Color tokens
+   Source: DESIGN_AUDIT.md sections 2.1–2.10
+   Naming: --mm-color-[name] */
+
+:root {
+  /* ── Brand palette (2.1) ── */
+  --mm-color-red:    #cf3339;
+  --mm-color-blue:   #0047ba;
+  --mm-color-yellow: #f1c22f;
+  --mm-color-green:  #427c42;
+  --mm-color-white:  #ffffff;
+  --mm-color-black:  #111111;
+
+  /* ── Semantic aliases (2.2) ── */
+  --mm-color-primary:      #cf3339;
+  --mm-color-primary-dark:  #a8262b;
+  --mm-color-background:   #ffffff;
+  --mm-color-surface:      #ffffff;
+  --mm-color-border:       #d4d4d4;
+  --mm-color-text-primary: #111111;
+  --mm-color-text-muted:   #666666;
+  --mm-color-success:      #427c42;
+  --mm-color-warning:      #f1c22f;
+  --mm-color-error:        #cf3339;
+
+  /* ── Role colors R01–R12 (2.7) ── */
+  --mm-color-role-r01: #cf3339;  /* Dolphin  — red       */
+  --mm-color-role-r02: #d46010;  /* Wolf     — orange    */
+  --mm-color-role-r03: #c08800;  /* Elephant — amber     */
+  --mm-color-role-r04: #6a8800;  /* Owl      — olive     */
+  --mm-color-role-r05: #427c42;  /* Eagle    — green     */
+  --mm-color-role-r06: #1a8c60;  /* Falcon   — emerald   */
+  --mm-color-role-r07: #0d8888;  /* Octopus  — teal      */
+  --mm-color-role-r08: #1a68b0;  /* Tortoise — cerulean  */
+  --mm-color-role-r09: #3355c8;  /* Bee      — cobalt    */
+  --mm-color-role-r10: #6630a8;  /* Bear     — indigo    */
+  --mm-color-role-r11: #a030a0;  /* Fox      — violet    */
+  --mm-color-role-r12: #b03070;  /* Badger   — crimson   */
+
+  /* ── Domain colors (2.5) ── */
+  --mm-color-domain-presence:   #fbbf24;
+  --mm-color-domain-bond:       #10b981;
+  --mm-color-domain-vision:     #427c42;
+  --mm-color-domain-discipline: #2563eb;
+  --mm-color-domain-depth:      #ef4444;
+
+  /* ── Balance status colors (2.6) ── */
+  --mm-color-balance-good-bg:      #f0fdf4;
+  --mm-color-balance-good-text:    #166534;
+  --mm-color-balance-caution-bg:   #fef9c3;
+  --mm-color-balance-caution-text: #854d0e;
+  --mm-color-balance-warning-bg:   #fee2e2;
+  --mm-color-balance-warning-text: #991b1b;
+
+  /* ── Report UI colors (2.3) ── */
+  --mm-color-arc-bar:   #0047ba;
+  --mm-color-arc-label: #0047ba;
+  --mm-color-self-bar:  #9ca3af;
+  --mm-color-track-bg:  #f3f4f6;
+
+  /* ── Interactive accent colors (2.8) ── */
+  --mm-color-hover-bg:    #e8eef8;
+  --mm-color-focus-ring:  #99b3e0;
+  --mm-color-hover-text:  #003090;
+
+  /* ── Neutral gray palette (2.9) ── */
+  --mm-color-gray-50:  #f9fafb;
+  --mm-color-gray-100: #f3f4f6;
+  --mm-color-gray-200: #e5e7eb;
+  --mm-color-gray-300: #d1d5db;
+  --mm-color-gray-400: #9ca3af;
+  --mm-color-gray-500: #6b7280;
+  --mm-color-gray-600: #4b5563;
+  --mm-color-gray-700: #374151;
+  --mm-color-gray-800: #1f2937;
+  --mm-color-gray-900: #111827;
+}

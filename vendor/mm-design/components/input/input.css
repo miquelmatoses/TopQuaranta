@@ -1,0 +1,41 @@
+/* mm-design — Input component
+   States: default, focus, disabled */
+
+.mm-input {
+  display: block;
+  width: 100%;
+  font-family: var(--mm-font-sans);
+  font-size: var(--mm-text-sm);
+  font-weight: var(--mm-weight-normal);
+  line-height: var(--mm-leading-relaxed);
+  color: var(--mm-color-text-primary);
+  background-color: var(--mm-color-surface);
+  border: 1px solid var(--mm-color-gray-200);
+  border-radius: var(--mm-radius-base);
+  padding: var(--mm-space-2_5) var(--mm-space-3);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.mm-input::placeholder {
+  color: var(--mm-color-gray-400);
+}
+
+.mm-input:focus {
+  outline: none;
+  border-color: var(--mm-color-blue);
+  box-shadow: 0 0 0 3px var(--mm-color-focus-ring);
+}
+
+.mm-input:disabled,
+.mm-input[disabled] {
+  background-color: var(--mm-color-gray-100);
+  color: var(--mm-color-gray-400);
+  cursor: not-allowed;
+}
+
+/* Textarea variant */
+textarea.mm-input {
+  min-height: 5rem;
+  resize: vertical;
+}

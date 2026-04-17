@@ -1,0 +1,39 @@
+/* mm-design — Typography tokens
+   Source: DESIGN_AUDIT.md section 3
+   Naming: --mm-font-*, --mm-text-*, --mm-weight-*, --mm-leading-*, --mm-tracking-* */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  /* ── Font families (3.1) ── */
+  --mm-font-display: "Playfair Display", Georgia, serif;
+  --mm-font-sans:    "Roboto", system-ui, sans-serif;
+  --mm-font-mono:    "JetBrains Mono", monospace;
+
+  /* ── Font size scale (3.2) ── */
+  --mm-text-xs:  0.75rem;   /* 12px */
+  --mm-text-sm:  0.875rem;  /* 14px */
+  --mm-text-base: 1rem;     /* 16px */
+  --mm-text-lg:  1.125rem;  /* 18px */
+  --mm-text-xl:  1.25rem;   /* 20px */
+  --mm-text-2xl: 1.5rem;    /* 24px */
+  --mm-text-3xl: 1.875rem;  /* 30px */
+  --mm-text-5xl: 3rem;      /* 48px */
+  --mm-text-6xl: 3.75rem;   /* 60px */
+
+  /* ── Font weights (3.3) ── */
+  --mm-weight-normal:   400;
+  --mm-weight-medium:   500;
+  --mm-weight-semibold: 600;
+  --mm-weight-bold:     700;
+
+  /* ── Line heights (3.4) ── */
+  --mm-leading-none:    1;
+  --mm-leading-tight:   1.25;
+  --mm-leading-snug:    1.375;
+  --mm-leading-relaxed: 1.625;
+
+  /* ── Letter spacing (3.5) ── */
+  --mm-tracking-wide:   0.025em;
+  --mm-tracking-widest: 0.1em;
+}

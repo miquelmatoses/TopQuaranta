@@ -1,0 +1,16 @@
+{
+  "name": "mm-design",
+  "version": "0.1.0",
+  "description": "Centralized design system — tokens, components, and icons for all Miquel Matoses projects",
+  "files": [
+    "tokens/",
+    "components/",
+    "icons/"
+  ],
+  "exports": {
+    "./tokens/*": "./tokens/*",
+    "./components/*": "./components/*",
+    "./icons/*": "./icons/*"
+  },
+  "type": "module"
+}

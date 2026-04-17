@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Badge — mm-design</title>
+  <link rel="stylesheet" href="../../tokens/colors.css">
+  <link rel="stylesheet" href="../../tokens/typography.css">
+  <link rel="stylesheet" href="../../tokens/spacing.css">
+  <link rel="stylesheet" href="badge.css">
+  <style>
+    body { font-family: var(--mm-font-sans); color: var(--mm-color-text-primary); background: var(--mm-color-background); padding: var(--mm-space-8); }
+    h2 { font-family: var(--mm-font-display); margin: var(--mm-space-6) 0 var(--mm-space-3); }
+    .row { display: flex; gap: var(--mm-space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--mm-space-4); }
+    code { font-family: var(--mm-font-mono); font-size: var(--mm-text-xs); color: var(--mm-color-text-muted); }
+  </style>
+</head>
+<body>
+
+<h2>Badge variants</h2>
+<div class="row">
+  <span class="mm-badge mm-badge--default">Default</span>
+  <span class="mm-badge mm-badge--beta">Beta</span>
+  <span class="mm-badge mm-badge--paid">Paid</span>
+  <span class="mm-badge mm-badge--free">Free</span>
+</div>
+<code>.mm-badge .mm-badge--{default|beta|paid|free}</code>
+
+<h2>In context</h2>
+<div class="row">
+  <span style="font-size: var(--mm-text-sm);">New Moon</span>
+  <span class="mm-badge mm-badge--free">Free</span>
+</div>
+<div class="row">
+  <span style="font-size: var(--mm-text-sm);">Full Moon</span>
+  <span class="mm-badge mm-badge--paid">Paid</span>
+  <span class="mm-badge mm-badge--beta">Beta</span>
+</div>
+
+</body>
+</html>
