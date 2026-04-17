@@ -1,0 +1,47 @@
+# C1: pre-commit hooks — mirror the CI lint/format checks so they fail
+# on the developer's machine in seconds instead of in the GitHub Actions
+# log five minutes later.
+#
+# Install once with:
+#     pip install pre-commit==4.0.1
+#     pre-commit install
+#
+# Run manually against all files:
+#     pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: detect-private-key
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.10
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # Local hook: Django missing-migration detection. Mirrors the CI job
+  # so you don't commit a model change without its migration.
+  - repo: local
+    hooks:
+      - id: django-makemigrations-check
+        name: Django makemigrations --check
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && DJANGO_SETTINGS_MODULE=topquaranta.settings.test .venv/bin/python manage.py makemigrations --check --dry-run'
+        language: system
+        pass_filenames: false
+        files: \.py$
