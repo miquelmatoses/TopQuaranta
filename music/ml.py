@@ -61,16 +61,40 @@ FEATURE_NAMES = [
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
 TFIDF_MAX_FEATURES = 200
-_tfidf = None
+
+# P2: module-level cache for the two joblib artifacts (RF classifier +
+# TF-IDF vectorizer), keyed on file mtime so recalcular_ml writing a new
+# model is picked up on the next call without a gunicorn restart. The
+# previous code re-read the ~1.3 MB RF model from disk on EVERY call to
+# `pre_classificar` — that's ~30 ms per classification, invoked once
+# per track during obtenir_novetats. The TF-IDF path was already cached
+# but without invalidation (stale after retraining).
+_model_cache: dict = {"clf_mtime": None, "clf": None, "tfidf_mtime": None, "tfidf": None}
 
 
 def _get_tfidf():
-    global _tfidf
-    if _tfidf is None and TFIDF_PATH.exists():
+    if not TFIDF_PATH.exists():
+        return None
+    mtime = TFIDF_PATH.stat().st_mtime
+    if _model_cache["tfidf_mtime"] != mtime:
         import joblib
 
-        _tfidf = joblib.load(TFIDF_PATH)
-    return _tfidf
+        _model_cache["tfidf"] = joblib.load(TFIDF_PATH)
+        _model_cache["tfidf_mtime"] = mtime
+    return _model_cache["tfidf"]
+
+
+def _get_clf():
+    """Return the cached RF classifier, reloading when the joblib file changes."""
+    if not MODEL_PATH.exists():
+        return None
+    mtime = MODEL_PATH.stat().st_mtime
+    if _model_cache["clf_mtime"] != mtime:
+        import joblib
+
+        _model_cache["clf"] = joblib.load(MODEL_PATH)
+        _model_cache["clf_mtime"] = mtime
+    return _model_cache["clf"]
 
 
 def _tfidf_features(text: str) -> list[float]:
@@ -323,11 +347,9 @@ def pre_classificar(canco) -> dict:
     Classify a Canco using the RF model if available,
     or heuristic fallback if not.
     """
-    if MODEL_PATH.exists():
+    clf = _get_clf()
+    if clf is not None:
         try:
-            import joblib
-
-            clf = joblib.load(MODEL_PATH)
             features = _build_features(canco)
             proba = clf.predict_proba([features])[0]
             # proba[1] = probability of approval (class 1)
