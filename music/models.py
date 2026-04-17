@@ -449,6 +449,14 @@ class Canco(models.Model):
         ordering = ["nom"]
         verbose_name = "Cançó"
         verbose_name_plural = "Cançons"
+        indexes = [
+            # D6: obtenir_senyal filters `activa + verificada + artista +
+            # data_llancament`. `verificada` + `activa` already carry
+            # db_index=True each, but the combination (verificada,
+            # artista) matches the most common shape and lets the planner
+            # avoid an index intersection step.
+            models.Index(fields=["verificada", "artista"]),
+        ]
         constraints = [
             # D1: ISRC is the universal track key — once it's set, no two
             # Cancons may share it. Empty string is allowed for legacy

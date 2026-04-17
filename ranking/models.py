@@ -231,7 +231,16 @@ class RankingSetmanal(models.Model):
     class Meta:
         unique_together = [("canco", "territori", "setmana")]
         ordering = ["territori", "posicio"]
-        indexes = [models.Index(fields=["setmana", "territori"])]
+        indexes = [
+            models.Index(fields=["setmana", "territori"]),
+            # D6: hot path for homepage + /ranking/?t=X is
+            # `filter(territori=X, setmana=Y).order_by("posicio")[:40]`.
+            # A composite (territori, setmana, posicio) lets PostgreSQL
+            # seek to the exact slice and read rows already sorted by
+            # posicio — zero sort work. At 130k rows (~5 years out) this
+            # turns a ~200 ms query into ~1 ms.
+            models.Index(fields=["territori", "setmana", "posicio"]),
+        ]
 
     def __str__(self) -> str:
         nom = self.canco.nom if self.canco_id else (self.canco_nom_snapshot or "?")
