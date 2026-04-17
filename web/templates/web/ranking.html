@@ -3,6 +3,12 @@
 
 {% block title %}Top 40 {{ nom_territori }} — TopQuaranta{% endblock %}
 
+{% block meta_description %}El rànquing setmanal de les 40 cançons en català més escoltades a {{ nom_territori }}. Dades setmanals des de Last.fm, pipeline transparent i codi obert.{% endblock %}
+{% block og_title %}Top 40 {{ nom_territori }} — TopQuaranta{% endblock %}
+{% block og_description %}El top 40 de música en català a {{ nom_territori }}, actualitzat cada setmana.{% endblock %}
+{% block twitter_title %}Top 40 {{ nom_territori }} — TopQuaranta{% endblock %}
+{% block twitter_description %}El top 40 de música en català a {{ nom_territori }}, actualitzat cada setmana.{% endblock %}
+
 {% block content %}
 <!-- ═══ Territory sub-nav — switch between rankings ═══ -->
 <nav class="ranking-subnav" aria-label="Territoris">
@@ -38,6 +44,9 @@
       {% endif %}
     {% else %}
       <p class="ranking-date">Setmana del {{ setmana|date:"j F Y" }}</p>
+    {% endif %}
+    {% if darrera_actualitzacio %}
+      <p class="ranking-updated">Actualitzat el {{ darrera_actualitzacio|date:"j F Y" }} a les {{ darrera_actualitzacio|date:"H:i" }}</p>
     {% endif %}
   </div>
 </section>

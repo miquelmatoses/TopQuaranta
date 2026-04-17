@@ -1,0 +1,7 @@
+User-agent: *
+# Public pages are crawlable; staff panel and user-only areas aren't.
+Disallow: /staff/
+Disallow: /compte/
+Disallow: /api/
+
+Sitemap: https://www.topquaranta.cat/sitemap.xml

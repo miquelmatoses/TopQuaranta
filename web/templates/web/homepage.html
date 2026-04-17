@@ -41,6 +41,9 @@
     {% else %}
       <p class="ranking-date">Setmana del {{ setmana|date:"j F Y" }}</p>
     {% endif %}
+    {% if darrera_actualitzacio %}
+      <p class="ranking-updated">Actualitzat el {{ darrera_actualitzacio|date:"j F Y" }} a les {{ darrera_actualitzacio|date:"H:i" }}</p>
+    {% endif %}
     <!-- Territory watermark -->
     <img src="{% static 'mm-design/icons/territories/territory-ppcc.svg' %}" alt="" class="territori-watermark" aria-hidden="true">
   </div>

@@ -371,6 +371,14 @@ img {
   font-style: italic;
 }
 
+/* F5: last-modified timestamp, smaller + muted, sits below the date */
+.ranking-updated {
+  font-size: var(--mm-text-xs);
+  color: var(--mm-color-text-muted);
+  margin-top: var(--mm-space-1);
+  opacity: 0.7;
+}
+
 .provisional-badge {
   display: inline-block;
   font-size: var(--mm-text-xs);

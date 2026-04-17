@@ -8,6 +8,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sitemaps",  # F3: /sitemap.xml generation
     "django.contrib.staticfiles",
     # Third-party
     "rest_framework",
@@ -55,6 +56,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # S4: must come AFTER AuthenticationMiddleware so request.user is set.
     "axes.middleware.AxesMiddleware",
+    # A8: stamp /api/vN/* responses with X-API-Version.
+    "web.api.middleware.ApiVersionHeaderMiddleware",
 ]
 
 # S11: TOTP issuer shown in the user's authenticator app.
@@ -133,7 +136,13 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
-    ("mm-design", BASE_DIR / "node_modules" / "mm-design"),
+    # A10: mm-design tokens are vendored into the repo at `vendor/mm-design/`
+    # (committed). Previously this pointed to `node_modules/mm-design` which
+    # was populated by `npm install` from a git dependency on
+    # `github:miquelmatoses/mm-design` — fragile (deploys fail if the source
+    # repo is unreachable). The vendored copy is frozen; refresh by copying
+    # a new snapshot into vendor/ and committing.
+    ("mm-design", BASE_DIR / "vendor" / "mm-design"),
 ]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"

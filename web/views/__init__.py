@@ -323,6 +323,7 @@ def homepage(request: HttpRequest) -> HttpResponse:
     """Public homepage showing the current week's Top 40 for PPCC territory."""
     setmana = _setmana_actual()
     ranking, es_provisional, data_calcul = _get_ranking("PPCC", setmana)
+    darrera_actualitzacio = _ranking_last_modified_dt("PPCC", setmana)
 
     return render(
         request,
@@ -332,6 +333,7 @@ def homepage(request: HttpRequest) -> HttpResponse:
             "es_provisional": es_provisional,
             "setmana": setmana,
             "data_calcul": data_calcul,
+            "darrera_actualitzacio": darrera_actualitzacio,
             "territori_actiu": "PPCC",
         },
     )
@@ -384,6 +386,7 @@ def ranking_page(request: HttpRequest) -> HttpResponse:
         setmana = _setmana_actual()
 
     ranking, es_provisional, data_calcul = _get_ranking(territori, setmana)
+    darrera_actualitzacio = _ranking_last_modified_dt(territori, setmana)
     nom_territori = TERRITORI_NOMS[territori]
 
     return render(
@@ -394,6 +397,7 @@ def ranking_page(request: HttpRequest) -> HttpResponse:
             "es_provisional": es_provisional,
             "setmana": setmana,
             "data_calcul": data_calcul,
+            "darrera_actualitzacio": darrera_actualitzacio,
             "territori": territori,
             "territori_actiu": territori,
             "nom_territori": nom_territori,

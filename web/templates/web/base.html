@@ -4,7 +4,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}TopQuaranta{% endblock %}</title>
+  <title>{% block title %}TopQuaranta — Rànquing de música en català{% endblock %}</title>
+
+  {# F3: SEO + social previews. Each view can override the individual #}
+  {# blocks; defaults describe the project so shared links to any sub-page #}
+  {# still render a decent title + description + image card. #}
+  <meta name="description" content="{% block meta_description %}El rànquing setmanal de música en català als Països Catalans. Mesurem el que sona per demostrar que la nostra música no para de créixer.{% endblock %}">
+  <link rel="canonical" href="{% block canonical_url %}https://www.topquaranta.cat{{ request.path }}{% endblock %}">
+
+  {# Open Graph (Facebook, WhatsApp, Telegram previews). Note: Django's #}
+  {# template language does not let one block reference another's value, #}
+  {# so each block has its own default. Views that want a fully tailored #}
+  {# card should override all of og_title / og_description / og_image. #}
+  <meta property="og:site_name" content="TopQuaranta">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:locale" content="ca_ES">
+  <meta property="og:title" content="{% block og_title %}TopQuaranta — Rànquing de música en català{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}El rànquing setmanal de música en català als Països Catalans.{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}https://www.topquaranta.cat{{ request.path }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}https://www.topquaranta.cat{% static 'web/img/og-default.png' %}{% endblock %}">
+
+  {# Twitter Card. #}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% block twitter_title %}TopQuaranta{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}El rànquing setmanal de música en català als Països Catalans.{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}https://www.topquaranta.cat{% static 'web/img/og-default.png' %}{% endblock %}">
+
   <link rel="icon" type="image/svg+xml" href="{% static 'web/img/favicon.svg' %}">
   <link rel="stylesheet" href="{% static 'mm-design/tokens/colors.css' %}">
   <link rel="stylesheet" href="{% static 'mm-design/tokens/typography.css' %}">
