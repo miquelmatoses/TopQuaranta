@@ -20,18 +20,45 @@ number.
 The following are non-goals. They are listed explicitly so that
 decisions about what to build next stay anchored.
 
-### No monetization of the data or the users
+### No monetization that would corrupt the measurement
 
-TopQuaranta will not:
-- Run ads on the public site.
-- Sell the data to labels, platforms, or third parties.
-- Sell the user list, the proposal history, or any derived insight to
-  anyone.
-- Accept sponsorships that would influence ranking outputs or any
-  editorial decision.
+The project has running costs (server, domain, time) and will likely
+accept revenue streams aligned with its mission. What it **won't**
+do is compromise the measurement to get that revenue.
 
-The data is free (CC BY) precisely so that nobody — including the
-operators — can build a moat around it.
+**Acceptable revenue:**
+
+- **Banner ads or sponsorships for cultural content in Catalan** — a
+  new album by a Catalan-speaking artist, a festival, a cultural
+  event, a book. The spot is a product of the same ecosystem the
+  project measures; showing it doesn't conflict with the mission,
+  it reinforces it.
+- **Listed support from labels, cultural institutions, or public
+  bodies** whose purpose is to fund Catalan music visibility, as
+  long as they buy *placement, not position*.
+
+**Unacceptable revenue:**
+
+- **Selling the data** (the rankings, the signal, the user proposals,
+  the derived insights) to labels, platforms, or third parties. The
+  data is CC BY precisely so that nobody — including the operators —
+  can build a moat around it. Free downloads already fulfil any
+  legitimate research use case.
+- **Selling the user list** (registered accounts, proposal history,
+  email addresses) under any banner — that's the surveillance vector
+  the next section forbids.
+- **Any revenue tied to ranking outcomes.** A sponsor cannot pay to
+  move an artist up, have a specific track featured as #1, suppress
+  a competitor, or influence the coefficients. The ranking is the
+  measurement, and the measurement is what makes the project worth
+  anything. If that compromises, the project is worthless regardless
+  of revenue.
+- **Ads for non-musical / non-cultural content** that dilute the
+  editorial register of the site.
+
+If any revenue stream is added, it's documented here as an edit to
+this section — so a reader can always check what the current
+commitments are.
 
 ### No platform capture
 
