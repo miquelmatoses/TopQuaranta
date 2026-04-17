@@ -8,7 +8,16 @@ SECRET_KEY = config("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
 
 DATABASES = {
-    "default": dj_database_url.config(default=config("DATABASE_URL")),
+    # P6: persistent connections. Without pooling, every request opens a
+    # fresh psycopg2 connection (~5ms on localhost). `conn_max_age=600`
+    # keeps the connection alive for up to 10 minutes per worker, and
+    # `conn_health_checks=True` pings before reuse so a recycled-by-the-
+    # server connection doesn't raise InterfaceError mid-request.
+    "default": dj_database_url.config(
+        default=config("DATABASE_URL"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    ),
 }
 
 # Security
