@@ -149,6 +149,16 @@ O1/O2/O4-O7/O8). Tier 3 (Architecture), Tier 4 (Culture), Tier 5
 | **P4** `obtenir_senyal` canvia `update_or_create` per `bulk_create(ignore_conflicts=True)` en batches de 200 | ✅ | `26f75a7` |
 | **P8** `@last_modified` + `@etag` a `homepage` i `ranking_page` — 304 per a clients revalidant | ✅ | `0d2e200` |
 
+Efecte combinat: rendiment millor sense tocar lògica ni UI.
+- P6: elimina ~5 ms/request de DB handshake.
+- P3: queries de ML passen a 2.2 ms per full table scan sobre 1.5k
+  rows — a 100k decisions el benefici serà ordres de magnitud.
+- P4: ~2400 roundtrips per run de `obtenir_senyal` passen a ~6 bulk
+  inserts.
+- P8: revalidacions client (setmanal / diari) retornen 304 Not
+  Modified sense re-renderitzar templates ni re-fetchar rows.
+  Verificat amb curl end-to-end.
+
 **Sessió 11 — Pack "ho fem tot" (2026-04-17)** ✅
 
 | ID | Estat | Commit |
@@ -176,15 +186,27 @@ després de cada commit). Smoke tests reals:
 - O5: `grep -E 'ghp_|://.+:.+@github' ~/.git/config ~/app/.git/config
   ~/.netrc` → "OK: no PAT in git/netrc".
 
-Efecte combinat: rendiment millor sense tocar lògica ni UI.
-- P6: elimina ~5ms/request de DB handshake.
-- P3: queries de ML passen a 2.2ms per full table scan sobre 1.5k rows
-  — a 100k decisions el benefici serà ordres de magnitud.
-- P4: ~2400 roundtrips per run de `obtenir_senyal` passen a ~6 bulk
-  inserts.
-- P8: revalidacions client (setmanal / diari) retornen 304 Not Modified
-  sense re-renderitzar templates ni re-fetchar rows. Verificat amb curl
-  end-to-end.
+**Sessió 12 — "ho fem tot" v2: process + data + perf + filosofia (2026-04-17)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **C2** `.github/dependabot.yml` — updates setmanals de pip + github-actions, groupats per família | ✅ | `f201d38` |
+| **C3 + C5** `CHANGELOG.md` baseline (0.9.0) + `README.md` refrescat per a contributors | ✅ | `278c3de` |
+| **D3 + D4** `PropostaArtista.deezer_ids` i `localitzacions` passen a `JSONField` | ✅ | `84e530f` |
+| **P1** `pagecache` LocMem + `cache_page_for_anon` — homepage / ranking serveixen a ~13 ms en cache hit sense trencar el 304 de P8 | ✅ | `449be4c` |
+| **Φ5 + Φ1 + Φ7** `LICENSE-DATA.md` (CC BY 4.0), `docs/DEFINITION.md` (què compta com a música en català), `MANIFEST.md` (què farà / no farà el projecte) | ✅ | `b7564fa` |
+
+Nou troballes en una sola sessió. Notes:
+- P1 va introduir un bug subtil (cache hit no comprovava `If-None-Match`),
+  detectat amb curl i arreglat al mateix commit abans de push.
+- Audit pre-flight D3/D4: `PropostaArtista` té 0 files a producció —
+  migració trivial.
+- Els tres docs filosòfics (Φ) converteixen valors implícits en àncores
+  explícites que decisions futures poden consultar. El que abans era
+  coneixement del mantenidor ara és visible i auditable.
+
+Benchmark P1: homepage cold ~386 ms, warm cache hit ~13 ms. `If-None-
+Match` conditional encara retorna 304 contra la resposta cached.
 
 ---
 
@@ -328,8 +350,9 @@ Tenim backups. Mai s'han restaurat. **Un backup no testat no és un backup.** Un
 
 ## 🟠 ALT
 
-### P1. **Zero caching layer**
+### P1. **Zero caching layer** ✅ resolt (Sessió 12, `449be4c`)
 No hi ha `CACHES` configurats a `settings/*.py`. **Cada visita a la homepage executa el mateix query complet.** Les pàgines de rànquing, el selector de territoris, el mapa — tots es regeneren on-demand. A tràfic 10x, el gunicorn de 2 workers saturarà. Una cache LocMem (zero dependencies) + `@cache_page(3600)` a les vistes públiques donaria 10-100x d'amplada de banda.
+> **Resolució:** `pagecache` alias (LocMem, TTL 600s, separat del DatabaseCache que usa axes / DRF throttles). Decorador `cache_page_for_anon` a `homepage` i `ranking_page` — usuaris autenticats passen directe, anònims llegeixen de memòria. Cache hit preserva el 304 de P8 comprovant `If-None-Match` contra l'ETag de la resposta cached. Cold 386 ms → warm 13 ms.
 
 ### P2. ML model recarregat del disc a cada thread de gunicorn ✅ resolt (Sessió 11, `761d51e`)
 `music/ml.py:67-72` carrega el model RF (1.3 MB) lazily. Cada worker gunicorn = 2 càrregues. Però pitjor: `pre_classificar()` és eager en invocacions múltiples, però no hi ha garantia que el model estigui en memòria si Python GC l'allibera. A més, amb scikit-learn recents `joblib.load` pot trigar ~30ms. Hauria de ser module-level amb `@functools.lru_cache`.
@@ -424,11 +447,13 @@ Diverses cançons poden tenir el mateix ISRC (p. ex. reedicions). **La nostra pi
 Són fields editables al staff però no consumits pel pipeline. **Són metadata orphanada**. O afegir un consumidor (usar `mbid` per fer lookups més precisos a Last.fm), o eliminar-los.
 > **Resolució:** eliminats els tres camps (migració 0035). Audit previ: 0 consumidors de lectura; `Artista.lastfm_mbid` estava populat (4253 files) però mai llegit. Si algun dia cal, es pot regenerar amb una sola crida Last.fm `artist.getInfo`.
 
-### D3. `PropostaArtista.deezer_ids` és CharField comma-separated
+### D3. `PropostaArtista.deezer_ids` és CharField comma-separated ✅ resolt (Sessió 12, `84e530f`)
 Hauria de ser un model relacional `PropostaArtistaDeezer` o almenys `JSONField`. **Parsing manual és font de bugs.** Què passa si algú posa una coma dins d'un ID? Què passa si hi ha espais extra?
+> **Resolució:** `JSONField(default=list)`. El ORM ja parsa per nosaltres. La shim `get_deezer_id_list()` continua existint per coaccionar strings que arribin del formulari a int. Audit previ: 0 files a PropostaArtista → migració trivial.
 
-### D4. `PropostaArtista.localitzacions_json` és TextField amb JSON serialitzat
+### D4. `PropostaArtista.localitzacions_json` és TextField amb JSON serialitzat ✅ resolt (Sessió 12, `84e530f`)
 PostgreSQL té `JSONField` natiu des de Django 3.1. Validació automàtica, queries indexables, tot millor. **Aquest és llegacy-by-design.**
+> **Resolució:** renombrat a `localitzacions`, ara `JSONField(default=list)`. Els 3 call sites (submission a comptes/views.py, detall + approve a web/views/staff/eines.py) simplificats: sense `json.loads()`, iteració directa sobre la llista de dicts.
 
 ### D5. Sense constraint "un artista no pot col·laborar amb si mateix" ✅ resolt (Sessió 11, `613572c`)
 `Canco.artistes_col` (M2M a Artista) **permet que `artista == artista_col`**. No tenim cap constraint que ho eviti. Dada bruta amb aquesta inconsistència es pot ficar i contaminar els càlculs de territori (doble comptabilitat).
@@ -518,19 +543,22 @@ Un bulk approve de 100 cançons executa el POST i no mostra res fins al final. S
 Black, isort, ruff, mypy — tot declarat a `requirements-dev.txt` però no executat automàticament. **Cada commit confia que l'autor hagi corregut ell mateix.**
 > **Resolució:** `.pre-commit-config.yaml` amb hooks estàndard (trailing whitespace, EOF, YAML/JSON/TOML valid, detecció de merge markers, privat keys, fitxers >512KB) + black 25.1.0 + isort 6.0.1 (mateixes versions que CI) + hook local `makemigrations --check --dry-run`. `pre-commit==4.0.1` afegit a requirements-dev.txt.
 
-### C2. Sense política de dependencies updates
+### C2. Sense política de dependencies updates ✅ resolt (Sessió 12, `f201d38`)
 Res com Dependabot o Renovate. **scikit-learn, Django, requests — es van actualitzant nosaltres o quan algun CVE crític força l'acció.**
+> **Resolució:** `.github/dependabot.yml` setmanal (dl 06:00 Europe/Madrid) per a `pip` + `github-actions`. Updates groupats per família (django-and-auth, dev-tooling) per minimitzar soroll. CI (O3) valida cada PR automàtica.
 
-### C3. Sense versionament semàntic
+### C3. Sense versionament semàntic ✅ resolt (Sessió 12, `278c3de`)
 Cap tag git, cap CHANGELOG.md. **Dir "la versió que funcionava el 3 d'abril" depèn de reconstruir mentalment quin commit era.**
+> **Resolució:** `CHANGELOG.md` baseline amb entry 0.9.0 que inventaria totes les troballes de Phase 9. Keep a Changelog + SemVer. Futurs releases tagueig git.
 
 ### C4. Sense política de deprecation
 Quan el sistema evolucioni i una API o camp passi a obsolet, no hi ha procés per a anunciar-ho, quant temps mantenir compatibilitat, etc.
 
 ## 🟢 BAIX
 
-### C5. Documentació dispersa
+### C5. Documentació dispersa ✅ resolt (Sessió 12, `278c3de`)
 CLAUDE.md i CLAUDE_* són útils però no hi ha un `README.md` per a un nou contribuidor. **Onboarding d'algú nou al projecte és "mira aquesta carpeta i fes-te'n la teva idea".**
+> **Resolució:** `README.md` refrescat: drop de referències stale a Wagtail i `distribucio/`/`legacy/`, secció "Desenvolupament local" amb clone + install + test + pre-commit install, enllaços explícits a CLAUDE.md / RUNBOOK.md / VERSIONING.md / SSH_KEY_POLICY.md. El CI badge ara apunta al workflow real.
 
 ### C6. Sense codi d'ètica, sense govern
 Decisions com "què és Catalan music" es fan per defecte (ML trained on past decisions). **Però no hi ha document que expliqui els criteris.** Si algú discrepa, no sap a qui apel·lar-se.
@@ -547,13 +575,14 @@ Els usuaris no saben què es planeja. No hi ha un lloc per proposar features. **
 
 Aquesta és la secció que un audit "normal" no fa. I és la que més importa per fer l'obra eterna.
 
-### Φ1. La definició de "música catalana" és implícita
+### Φ1. La definició de "música catalana" és implícita ✅ resolt (Sessió 12, `b7564fa`)
 El sistema classifica via ISRC prefix + noms + heurístiques ML. **El resultat és un model estadístic, no una declaració cultural.** Què considera el projecte "català"?
 - Artista nascut al PPCC?
 - Cantat en català (majoritàriament)?
 - Vinculació cultural (residencia, identitat declarada)?
 
 No hi ha una resposta documentada. La fórmula 14-CTE té decisions arbitràries incrustades (pesos dels coeficients). **Un projecte aspirant a excel·lència cultural necessita un manifest.**
+> **Resolució:** `docs/DEFINITION.md` fixa la regla (primary vocal delivery en català), els criteris operacionals (release < 12 mesos, artista aprovat), els edge cases (bilingüe, multiple versions, col·laboracions, covers, escopi territorial) i la governança (staff decideix, ML prioritza, apel·lacions via PropostaArtista). El ML no decideix — només ordena la cua de revisió humana.
 
 ### Φ2. Opacidad cap als usuaris finals
 El públic veu una posició (#1, #2...) però no sap:
@@ -570,14 +599,16 @@ Un artista verificat pot veure les seves estadístiques, **però no corregir dad
 ### Φ4. Cap transparència algorítmica
 Els coeficients de `ConfiguracioGlobal` no són públics. **Un artista que cau del #5 al #20 en una setmana no sap si ha estat per la seva reproducció o per una decisió del sistema.** Publicar els coeficients + documentació del que fan els 14 CTEs seria un acte de respecte.
 
-### Φ5. Sense llicència de dades
+### Φ5. Sense llicència de dades ✅ resolt (Sessió 12, `b7564fa`)
 RankingSetmanal és dades valuoses. **Si algú vol publicar "Evolució del rànquing 2025-2026", té permís?** No hi ha CC-BY-SA ni CC0 declarat. La dada queda com a bé privat per defecte. **Això va contra l'esperit de difusió cultural.**
+> **Resolució:** `LICENSE-DATA.md` — CC BY 4.0 explícit per a rankings, signal, coeficients, historial. Scope definit (què cobreix, què no — upstream Last.fm/Deezer queda sota les seues llicències). Attribution l'única contrapartida.
 
 ### Φ6. Sense retenció explícita
 `SenyalDiari` creix per sempre. **Què passa l'any 2030 quan siguin 3M+ files?** Hauria d'haver una política: "Les dades de signal Last.fm es poden arxivar després de 2 anys; el ranking setmanal es conserva indefinidament com a document cultural."
 
-### Φ7. Sense manifest del projecte
+### Φ7. Sense manifest del projecte ✅ resolt (Sessió 12, `b7564fa`)
 CLAUDE.md parla de l'arquitectura tècnica. ROADMAP.md de feines pendents. **No hi ha un CULTURAL.md que digui "això és TopQuaranta i per què existeix".** Si un dia el desenvolupador original es retira, el projecte perd la seva brúixola.
+> **Resolució:** `MANIFEST.md` — què és el projecte (provar setmanalment que la música en català és viva), què NO serà mai (no monetitzar, no platform capture, no surveillance, no gatekeeping, no canvis quiet d'algoritme). Àncora per a decisions futures.
 
 ---
 

@@ -1,11 +1,13 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-17 — Phase 9: 41 findings + staff user mgmt + public
-> transparency across 11 sessions. Tier 1 security complete except IP allowlist;
-> Tier 2 reliability complete; Performance complete (P2/P3/P4/P6/P8; P1/P5/P7
-> remaining); Ops mostly done (O3/O5/O8/O9/R14 done; O1/O2/O4/O6/O7 remaining);
-> Architecture started (A8/A10 done); SEO landed (F3/F5); pre-commit (C1).
+> Last updated: 2026-04-17 — Phase 9: 50 findings + staff user mgmt + public
+> transparency across 12 sessions. Tier 1 security complete; Tier 2
+> reliability complete; Performance mostly complete (P1/P2/P3/P4/P6/P8
+> done; P5/P7 remaining); Ops mostly done (O3/O5/O8/O9/R14 done;
+> O1/O2/O4/O6/O7 remaining); Architecture started (A8/A10 done); SEO
+> landed (F3/F5); Process mostly done (C1/C2/C3/C5 done); Data model
+> cleanups (D3/D4/D5 done); Cultural docs landed (Φ1/Φ5/Φ7).
 > See CLAUDE_EXCELLENCE.md.
 
 ---
@@ -53,7 +55,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (41 findings landed: Tier 1 security + Tier 2 reliability complete + Performance mostly done + Ops mostly done (CI, restore-test, logrotate, runbook, SSH policy) + SEO live (F3/F5) + Architecture started (A8/A10) + Process (C1 pre-commit) + Tier 4 cultural transparency core) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (50 findings landed: Tier 1 security + Tier 2 reliability complete + Performance mostly done + Ops mostly done + SEO live + Architecture started + Process mostly done + Data model cleanups + Cultural docs landed (DEFINITION / MANIFEST / CC BY data)) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
