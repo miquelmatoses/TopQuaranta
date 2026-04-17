@@ -140,6 +140,25 @@ i Tier 2 (reliability) completes; Ops avançat (R14, O3, O9 fets, queden
 O1/O2/O4-O7/O8). Tier 3 (Architecture), Tier 4 (Culture), Tier 5
 (Exquisitesa) per a sessions futures.
 
+**Sessió 10 — Pack performance sense canviar res (2026-04-17)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **P6** `CONN_MAX_AGE=600` + `CONN_HEALTH_CHECKS=True` a production.py | ✅ | `36d7579` |
+| **P3** Composite indexes `(artista_nom, decisio)` + `(isrc_prefix, decisio)` a `HistorialRevisio` | ✅ | `e7925a7` |
+| **P4** `obtenir_senyal` canvia `update_or_create` per `bulk_create(ignore_conflicts=True)` en batches de 200 | ✅ | `26f75a7` |
+| **P8** `@last_modified` + `@etag` a `homepage` i `ranking_page` — 304 per a clients revalidant | ✅ | `0d2e200` |
+
+Efecte combinat: rendiment millor sense tocar lògica ni UI.
+- P6: elimina ~5ms/request de DB handshake.
+- P3: queries de ML passen a 2.2ms per full table scan sobre 1.5k rows
+  — a 100k decisions el benefici serà ordres de magnitud.
+- P4: ~2400 roundtrips per run de `obtenir_senyal` passen a ~6 bulk
+  inserts.
+- P8: revalidacions client (setmanal / diari) retornen 304 Not Modified
+  sense re-renderitzar templates ni re-fetchar rows. Verificat amb curl
+  end-to-end.
+
 ---
 
 ## Taula de severitat
@@ -288,25 +307,29 @@ No hi ha `CACHES` configurats a `settings/*.py`. **Cada visita a la homepage exe
 ### P2. ML model recarregat del disc a cada thread de gunicorn
 `music/ml.py:67-72` carrega el model RF (1.3 MB) lazily. Cada worker gunicorn = 2 càrregues. Però pitjor: `pre_classificar()` és eager en invocacions múltiples, però no hi ha garantia que el model estigui en memòria si Python GC l'allibera. A més, amb scikit-learn recents `joblib.load` pot trigar ~30ms. Hauria de ser module-level amb `@functools.lru_cache`.
 
-### P3. Taula `HistorialRevisio` sense índexs
+### P3. Taula `HistorialRevisio` sense índexs ✅ resolt (Sessió 10, `e7925a7`)
 `HistorialRevisio.objects.filter(artista_nom=X).count()` s'executa 2 vegades per track durant `recalcular_ml` (una per ratio, una per count). A 9.000 tracks × 2 = 18.000 queries. Cadascun és un full table scan sobre 1.448 files. És ràpid ara (uns 50 ms) però **a 100k decisions acumulades serà dolor pur**. Els camps `artista_nom`, `isrc_prefix`, `decisio` haurien de tenir `db_index=True`.
+> **Resolució:** composite indexes `(artista_nom, decisio)` i `(isrc_prefix, decisio)`. PostgreSQL serveix també les queries single-column quan el camp és líder. Benchmark post-migració: 2.2 ms per query.
 
-### P4. `obtenir_senyal` fa `update_or_create` en loop
+### P4. `obtenir_senyal` fa `update_or_create` en loop ✅ resolt (Sessió 10, `26f75a7`)
 A `ingesta/management/commands/obtenir_senyal.py:113` un `update_or_create` per cada track. ~1.200 queries. Amb `bulk_create(ignore_conflicts=True)` es reduiria a 1-2 queries. Al ritme actual són 30 segons que podrien ser 1.
+> **Resolució:** buffer d'instàncies + `bulk_create(ignore_conflicts=True)` en batches de 200. El unique_together `(canco, data)` fa que `ignore_conflicts` substitueixi el skip-set previ. Elimina la transaction.atomic per fila (ara les bulk fan de commit natural).
 
 ### P5. Gunicorn amb WSGI blocking i 2 workers
 Django 5.2 suporta vistes asíncrones (`async def`). Les pipelines I/O-bound (Deezer, Last.fm) no són cridades per vistes web, però les vistes staff sí tenen blocking queries. Amb 2 workers, **capacitat concurrent teòrica és 2 requests simultanis**. A tràfic moderat ja es nota.
 
-### P6. Sense connection pooling
+### P6. Sense connection pooling ✅ resolt (Sessió 10, `36d7579`)
 Django usa `CONN_MAX_AGE=0` per defecte (nova connexió a cada request). Amb `django-db-geventpool` o `CONN_MAX_AGE=600` i `CONN_HEALTH_CHECKS=True`, estalviaries ~5ms per request.
+> **Resolució:** `conn_max_age=600` + `conn_health_checks=True` a production.py via `dj_database_url.config(...)`. Només a producció; local.py/test.py sense canvi.
 
 ## 🟡 MITJÀ
 
 ### P7. CSS monolític de 1.989 línies
 `web/static/web/css/style.css` és un únic fitxer que bloqueja el render. Hauria de fragmentar-se per pàgina i carregar-se amb `<link media="print" onload="this.media='all'">` o bé fer critical CSS inline.
 
-### P8. Sense ETag ni Last-Modified a pàgines públiques
+### P8. Sense ETag ni Last-Modified a pàgines públiques ✅ resolt (Sessió 10, `0d2e200`)
 El rànquing setmanal canvia un cop per setmana. Servir-lo amb `Cache-Control: public, max-age=86400` + `ETag` reduiria les crides al gunicorn per usuaris recurrents en un 90%. Django té `django.views.decorators.http.etag` i `last_modified` decoradors que no s'usen.
+> **Resolució:** `@last_modified` + `@etag` a `homepage` i `ranking_page`. Last-Modified = més recent entre `RankingSetmanal.created_at` i `RankingProvisional.data_calcul` per a (territori, setmana). ETag inclou `is_authenticated` per distingir headers logged-in vs anon. Sense `Cache-Control: public` (header varia per auth). Verificat: 304 tant amb `If-Modified-Since` com amb `If-None-Match`.
 
 ---
 

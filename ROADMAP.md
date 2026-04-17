@@ -1,11 +1,10 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-16 — Phase 9: 27 findings + staff user mgmt + public
-> transparency across 9 sessions. Tier 1 security complete except IP allowlist;
-> Tier 2 reliability complete (cron retry, signal on_commit, ISRC unique,
-> backup restore test, defensive templates); CI live (O3); logrotate (O9);
-> R10/R11 dual sources resoltes; Φ4 cultural transparency landed.
+> Last updated: 2026-04-17 — Phase 9: 31 findings + staff user mgmt + public
+> transparency across 10 sessions. Tier 1 security complete except IP allowlist;
+> Tier 2 reliability complete; Performance pack (P3/P4/P6/P8) complete; CI live
+> (O3); logrotate (O9); Φ4 cultural transparency landed.
 > See CLAUDE_EXCELLENCE.md.
 
 ---
@@ -53,7 +52,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (27 findings landed: Tier 1 security + Tier 2 reliability complete + Ops partial (CI, logrotate, restore-test) + Tier 4 cultural transparency core) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (31 findings landed: Tier 1 security + Tier 2 reliability complete + Performance pack (P3/P4/P6/P8) + Ops partial (CI, logrotate, restore-test) + Tier 4 cultural transparency core) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
