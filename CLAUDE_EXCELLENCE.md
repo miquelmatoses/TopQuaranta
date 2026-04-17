@@ -149,6 +149,33 @@ O1/O2/O4-O7/O8). Tier 3 (Architecture), Tier 4 (Culture), Tier 5
 | **P4** `obtenir_senyal` canvia `update_or_create` per `bulk_create(ignore_conflicts=True)` en batches de 200 | ✅ | `26f75a7` |
 | **P8** `@last_modified` + `@etag` a `homepage` i `ranking_page` — 304 per a clients revalidant | ✅ | `0d2e200` |
 
+**Sessió 11 — Pack "ho fem tot" (2026-04-17)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **P2** Cache del classificador RF + TF-IDF amb invalidació per mtime | ✅ | `761d51e` |
+| **D5** Prevenir self-collab: migració de neteja (7 files) + `m2m_changed` guard | ✅ | `613572c` |
+| **D2** Esborrar camps dead `lastfm_mbid` i `lastfm_verificat` | ✅ | `9446f89` |
+| **F3+F5** SEO: meta description, OG, Twitter Cards, sitemap.xml, robots.txt + og-default.png; timestamp "Actualitzat el ..." a les pàgines de ranking | ✅ | `f14a3e8` |
+| **A10** Vendor mm-design a `vendor/mm-design/` (ja no depenem de npm per a la UI) | ✅ | `d37fcd2` |
+| **A8** Política de versionat d'API (`VERSIONING.md`) + middleware `X-API-Version` | ✅ | `4c8295a` |
+| **O5** Verificació + documentació de la política de claus SSH | ✅ | `76adfa9` |
+| **O8** `RUNBOOK.md` — playbook per a 8 incidents operacionals | ✅ | `521f19a` |
+| **C1** `.pre-commit-config.yaml` — mirror de la CI local | ✅ | `99bc2dc` |
+
+Deu troballes en una sola sessió. Sense regressions (59 tests passen
+després de cada commit). Smoke tests reals:
+- P2 benchmark: 22 ms per classificació (era 22 + 30 ms de joblib.load).
+- D5 audit: 7 self-collabs existents netejats; guard rebutja nous amb
+  ValidationError.
+- F3: `/robots.txt` servit, `/sitemap.xml` amb ~4k entries i protocol
+  https, 15 meta tags al head del homepage (OG + Twitter + canonical).
+- A10: `/static/mm-design/tokens/colors.css` 200 via Caddy des de
+  `vendor/mm-design/`.
+- A8: GET `/api/v1/localitzacio/territoris/` retorna `X-API-Version: 1`.
+- O5: `grep -E 'ghp_|://.+:.+@github' ~/.git/config ~/app/.git/config
+  ~/.netrc` → "OK: no PAT in git/netrc".
+
 Efecte combinat: rendiment millor sense tocar lògica ni UI.
 - P6: elimina ~5ms/request de DB handshake.
 - P3: queries de ML passen a 2.2ms per full table scan sobre 1.5k rows
@@ -304,8 +331,9 @@ Tenim backups. Mai s'han restaurat. **Un backup no testat no és un backup.** Un
 ### P1. **Zero caching layer**
 No hi ha `CACHES` configurats a `settings/*.py`. **Cada visita a la homepage executa el mateix query complet.** Les pàgines de rànquing, el selector de territoris, el mapa — tots es regeneren on-demand. A tràfic 10x, el gunicorn de 2 workers saturarà. Una cache LocMem (zero dependencies) + `@cache_page(3600)` a les vistes públiques donaria 10-100x d'amplada de banda.
 
-### P2. ML model recarregat del disc a cada thread de gunicorn
+### P2. ML model recarregat del disc a cada thread de gunicorn ✅ resolt (Sessió 11, `761d51e`)
 `music/ml.py:67-72` carrega el model RF (1.3 MB) lazily. Cada worker gunicorn = 2 càrregues. Però pitjor: `pre_classificar()` és eager en invocacions múltiples, però no hi ha garantia que el model estigui en memòria si Python GC l'allibera. A més, amb scikit-learn recents `joblib.load` pot trigar ~30ms. Hauria de ser module-level amb `@functools.lru_cache`.
+> **Resolució:** `_model_cache` module-level dict amb claus `clf_mtime` + `tfidf_mtime`. Invalidació automàtica quan `recalcular_ml` escriu un model nou (mtime canvia → reload transparent). Benchmark post-canvi: 22 ms per classificació (vs 52 ms abans).
 
 ### P3. Taula `HistorialRevisio` sense índexs ✅ resolt (Sessió 10, `e7925a7`)
 `HistorialRevisio.objects.filter(artista_nom=X).count()` s'executa 2 vegades per track durant `recalcular_ml` (una per ratio, una per count). A 9.000 tracks × 2 = 18.000 queries. Cadascun és un full table scan sobre 1.448 files. És ràpid ara (uns 50 ms) però **a 100k decisions acumulades serà dolor pur**. Els camps `artista_nom`, `isrc_prefix`, `decisio` haurien de tenir `db_index=True`.
@@ -366,14 +394,16 @@ En un sol paquet: models ORM, signals, ML, serveis, verificació, titlecase, con
 ### A7. `music/ml.py` barreja classificador + heurística + retraining
 ~500 línies barregen: feature extraction, RF training, heuristic fallback, background thread management, joblib I/O. **Unit testing és impracticable** sense refactor en classes. Una classe `Classifier` amb mètodes clars permet tests de mutació.
 
-### A8. Sense versionament d'API
+### A8. Sense versionament d'API ✅ resolt (Sessió 11, `4c8295a`)
 `/api/v1/` existeix com a prefix, però no hi ha política: què passa si es canvia el schema de resposta? Cap consumidor extern pot confiar-hi. Si un dia volem fer app mòbil, **no hi ha una API estable documentada.**
+> **Resolució:** `web/api/VERSIONING.md` documenta quan bumpar, què es considera canvi additiu vs breaking, i el procediment per introduir v2 amb finestra de 6 mesos de solapament. Middleware `ApiVersionHeaderMiddleware` afegeix `X-API-Version: N` a qualsevol resposta sota `/api/vN/*`.
 
 ### A9. Sense feature flags
 Un canvi d'algoritme és all-or-nothing. Amb un `FeatureFlag` a `ConfiguracioGlobal` (ex: `enable_ppcc_v2`) es podria llançar una versió nova en paral·lel i comparar. Ara qualsevol experiment requereix deploy complet.
 
-### A10. mm-design com a npm git dependency és fràgil
+### A10. mm-design com a npm git dependency és fràgil ✅ resolt (Sessió 11, `d37fcd2`)
 `package.json` apunta a `github:miquelmatoses/mm-design`. Si l'autor (tu mateix) esborres el repo, TopQuaranta **falla al `npm install`** fins que es rehabiliti. **Una copia al repo o vendoring a `static/vendor/mm-design/` és la defensa.**
+> **Resolució:** còpia de mm-design vendrada a `vendor/mm-design/` (committed). `STATICFILES_DIRS` apunta ara allà. Els 34 `{% static 'mm-design/...' %}` dels templates continuen funcionant sense canviar-los. node_modules/ deixa de ser requisit per a deployar.
 
 ### A11. `Usuari(AbstractUser)` reusa `auth_user` table — un anti-pattern
 `AUTH_USER_MODEL = "comptes.Usuari"` però usa la mateixa taula que el default de Django (`auth_user`). Funciona, però és confús: lector nou pensa "això és el User de Django" i es despistarà. Hauria de ser `comptes_usuari`.
@@ -390,8 +420,9 @@ Diverses cançons poden tenir el mateix ISRC (p. ex. reedicions). **La nostra pi
 
 ## 🟡 MITJÀ
 
-### D2. `Canco.lastfm_mbid`, `Canco.lastfm_verificat`, `Artista.lastfm_mbid` gairebé dead fields
+### D2. `Canco.lastfm_mbid`, `Canco.lastfm_verificat`, `Artista.lastfm_mbid` gairebé dead fields ✅ resolt (Sessió 11, `9446f89`)
 Són fields editables al staff però no consumits pel pipeline. **Són metadata orphanada**. O afegir un consumidor (usar `mbid` per fer lookups més precisos a Last.fm), o eliminar-los.
+> **Resolució:** eliminats els tres camps (migració 0035). Audit previ: 0 consumidors de lectura; `Artista.lastfm_mbid` estava populat (4253 files) però mai llegit. Si algun dia cal, es pot regenerar amb una sola crida Last.fm `artist.getInfo`.
 
 ### D3. `PropostaArtista.deezer_ids` és CharField comma-separated
 Hauria de ser un model relacional `PropostaArtistaDeezer` o almenys `JSONField`. **Parsing manual és font de bugs.** Què passa si algú posa una coma dins d'un ID? Què passa si hi ha espais extra?
@@ -399,8 +430,9 @@ Hauria de ser un model relacional `PropostaArtistaDeezer` o almenys `JSONField`.
 ### D4. `PropostaArtista.localitzacions_json` és TextField amb JSON serialitzat
 PostgreSQL té `JSONField` natiu des de Django 3.1. Validació automàtica, queries indexables, tot millor. **Aquest és llegacy-by-design.**
 
-### D5. Sense constraint "un artista no pot col·laborar amb si mateix"
+### D5. Sense constraint "un artista no pot col·laborar amb si mateix" ✅ resolt (Sessió 11, `613572c`)
 `Canco.artistes_col` (M2M a Artista) **permet que `artista == artista_col`**. No tenim cap constraint que ho eviti. Dada bruta amb aquesta inconsistència es pot ficar i contaminar els càlculs de territori (doble comptabilitat).
+> **Resolució:** migració 0034 neteja les 7 files existents (portable entre SQLite+PostgreSQL via `DELETE … WHERE EXISTS`). Receiver `m2m_changed` (pre_add/pre_set, tots dos costats de la relació) rebutja amb `ValidationError`.
 
 ### D6. Índexs compostos que podrien millorar la pipeline
 - `RankingSetmanal (territori, setmana, posicio)` — per a les pàgines de rànquing
@@ -428,8 +460,9 @@ No hi ha `.github/workflows/`. Cap test es corre automàticament en push. Cap va
 ### O4. Sense ambient de staging
 Els canvis van directe a producció. **Primera vegada que es veu el codi amb dades reals és en producció.** Errors que només apareixen amb volum real (performance, race conditions) es descobreixen amb l'usuari final.
 
-### O5. Token GitHub al git config exposable
+### O5. Token GitHub al git config exposable ✅ resolt (Sessió 11, `76adfa9`)
 Ja esmentat al S2. Però des del costat d'ops: **quan aquest servidor es decomissioni i el disc no es destrueixi físicament, aquest token viatja al nou server o al reciclador**.
+> **Resolució:** verificació actual confirmada (no hi ha cap PAT a `.git/config`, `~/.netrc`, ni env vars — S2 al seu moment ja va passar a SSH deploy key). `deploy/SSH_KEY_POLICY.md` documenta regles + procediment de rotació + one-liner de verificació perquè no retrocedim.
 
 ### O6. Monitoring és pull-based — ningú mira `tq-health` regularment
 Vàrem crear `tq-health`, però exigeix algú que el executi. **Un failure de pipeline pot durar hores o dies abans que algú s'adoni.** Un `tq-health` executant-se cada hora + enviant webhook a healthchecks.io o Uptime Kuma (gratuït, self-hosted) resoldria això.
@@ -439,8 +472,9 @@ Si el servidor s'incendia, els backups s'incendien amb ell. Una política 3-2-1 
 
 ## 🟡 MITJÀ
 
-### O8. Sense runbook ni playbook
+### O8. Sense runbook ni playbook ✅ resolt (Sessió 11, `521f19a`)
 Què fas si el pipeline falla a les 6 AM un dissabte? Hi ha algun document que digui "mira A, si fail mira B"? No. **Tot el coneixement operacional és implícit al cap del manteniment.**
+> **Resolució:** `RUNBOOK.md` amb 8 seccions (lloc caigut, cron fallat, ranking erroni, DB trencada, disc ple, rollback, lockout staff, re-run de migracions). Cada secció té comandes concrets per diagnosticar i remeiar.
 
 ### O9. Logrotate no configurat per `novetats.log` ✅ resolt (Sessió 9, `fee0472`)
 El novetats.log de cada hora acumula. Ara fa 25 MB. En 6 mesos farà 180 MB. Sense rotació, pot acabar omplint disk. Caldria `/etc/logrotate.d/topquaranta`.
@@ -458,16 +492,18 @@ Els SVG icons tenen `aria-hidden="true"`, bé. Però el mapa D3 **és inaccessib
 ### F2. Cap internacionalització
 Tot Catalan-only. No hi ha `{% trans %}` ni `gettext` en ús. **Si un curiós de fora vol entendre què és TopQuaranta, no hi ha botó EN.** Paradoxalment: això va en contra de la missió cultural — difondre música en català a nous públics que no parlen català.
 
-### F3. Cap estratègia SEO mínima
+### F3. Cap estratègia SEO mínima ✅ resolt (Sessió 11, `f14a3e8`)
 Ni `<meta name="description">` sistemàtic, ni Open Graph tags, ni Twitter Cards, ni sitemap.xml, ni robots.txt estructurat. **Quan algú comparteix un enllaç de rànquing a WhatsApp, apareix sense preview.**
+> **Resolució:** blocks `meta_description` / `og_*` / `twitter_*` / `canonical_url` a `base.html` amb defaults raonables; `ranking.html` els sobreescriu per territori. `sitemap.xml` (~4k URLs, protocol https) i `robots.txt` servits a l'arrel. Imatge `og-default.png` 1200×630 generada amb Pillow.
 
 ## 🟡 MITJÀ
 
 ### F4. Sense dark mode
 mm-design podria suportar-ho amb `@media (prefers-color-scheme: dark)`. Actualment només light.
 
-### F5. Pàgines públiques no mostren timestamp de darrera actualització
+### F5. Pàgines públiques no mostren timestamp de darrera actualització ✅ resolt (Sessió 11, `f14a3e8`)
 "El rànquing del 2026-04-13" — però *quan* es va calcular? Quan serà el pròxim? Això dona context que manca.
+> **Resolució:** homepage i ranking_page exposen `darrera_actualitzacio` al context (reusant `_ranking_last_modified_dt` de P8). Templates mostren "Actualitzat el DD MMMM YYYY a les HH:MM" sota la data del rànquing.
 
 ### F6. Cap indicador de progrés en accions staff llargues
 Un bulk approve de 100 cançons executa el POST i no mostra res fins al final. Sense feedback, l'usuari no sap si cal esperar o ha fallat.
@@ -478,8 +514,9 @@ Un bulk approve de 100 cançons executa el POST i no mostra res fins al final. S
 
 ## 🟡 MITJÀ
 
-### C1. Sense pre-commit hooks
+### C1. Sense pre-commit hooks ✅ resolt (Sessió 11, `99bc2dc`)
 Black, isort, ruff, mypy — tot declarat a `requirements-dev.txt` però no executat automàticament. **Cada commit confia que l'autor hagi corregut ell mateix.**
+> **Resolució:** `.pre-commit-config.yaml` amb hooks estàndard (trailing whitespace, EOF, YAML/JSON/TOML valid, detecció de merge markers, privat keys, fitxers >512KB) + black 25.1.0 + isort 6.0.1 (mateixes versions que CI) + hook local `makemigrations --check --dry-run`. `pre-commit==4.0.1` afegit a requirements-dev.txt.
 
 ### C2. Sense política de dependencies updates
 Res com Dependabot o Renovate. **scikit-learn, Django, requests — es van actualitzant nosaltres o quan algun CVE crític força l'acció.**
