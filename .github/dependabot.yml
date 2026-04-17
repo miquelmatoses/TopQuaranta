@@ -1,0 +1,60 @@
+# C2: automatic dependency update PRs.
+#
+# Weekly is the right cadence — daily spams the inbox, monthly misses
+# security-relevant releases for too long. All updates are grouped so a
+# week's worth of bumps becomes ONE PR that CI can either pass or block.
+#
+# The PRs land in main; the CI (O3) runs the same pytest + lint + missing-
+# migrations checks on the bump, so a breaking update can't silently ship.
+
+version: 2
+
+updates:
+  # Python dependencies — top-level requirements*.txt.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # Security-critical pins moved together so we don't ship partial
+      # upgrades that break auth.
+      django-and-auth:
+        patterns:
+          - "django"
+          - "argon2-cffi"
+          - "django-axes"
+          - "django-otp*"
+          - "qrcode*"
+      # Dev tooling can bump together with low risk.
+      dev-tooling:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "isort"
+          - "factory-boy"
+          - "responses"
+          - "pre-commit"
+
+  # GitHub Actions workflow pins (actions/checkout, actions/setup-python…).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Madrid"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"
