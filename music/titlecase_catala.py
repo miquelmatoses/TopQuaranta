@@ -64,6 +64,13 @@ _APOSTROPHE_SUBSTITUTES = {
     "\u02bc": "'",  # ʼ MODIFIER LETTER APOSTROPHE
 }
 
+# Opening punctuation that introduces a new "sentence" inside a title.
+# The first alphabetic character AFTER these is capitalised (so
+# "(original Mix)" becomes "(Original Mix)"). Digits and apostrophes
+# are intentionally NOT here — "3rd" must stay "3rd" and "'s" stays
+# "'s".
+_OPENING_PUNCT = set("([{«\u201c\u00bf\u00a1")  #  ( [ { «  "  ¿  ¡
+
 
 def normalize_apostrophes(text: str) -> str:
     """Replace orphan accents and fancy quotation marks with ASCII '."""
@@ -74,10 +81,24 @@ def normalize_apostrophes(text: str) -> str:
 
 
 def _capitalize_word(word: str) -> str:
-    """Capitalize the first letter of a word, leaving the rest unchanged."""
+    """Capitalize the first alphabetic character, after any opening punctuation.
+
+    Examples:
+        "original"       -> "Original"
+        "(original"      -> "(Original"
+        "«paraula"       -> "«Paraula"
+        "3rd"            -> "3rd"   (digit, not alpha → unchanged)
+        "'s"             -> "'s"    (apostrophe is not in _OPENING_PUNCT)
+        "L'"             -> "L'"    (first char is already alpha)
+    """
     if not word:
         return word
-    return word[0].upper() + word[1:]
+    i = 0
+    while i < len(word) and word[i] in _OPENING_PUNCT:
+        i += 1
+    if i < len(word) and word[i].isalpha():
+        return word[:i] + word[i].upper() + word[i + 1 :]
+    return word
 
 
 def _is_acronym(word: str) -> bool:

@@ -98,6 +98,35 @@ class TestTitlecaseSingleLetters:
         assert titlecase_catala("dir A o B") == "Dir a o B"
 
 
+class TestTitlecaseOpeningPunctuation:
+    def test_open_paren(self):
+        assert (
+            titlecase_catala("wish i never (original mix)")
+            == "Wish i Never (Original Mix)"
+        )
+
+    def test_nested_paren_with_feat(self):
+        assert (
+            titlecase_catala("500 days (feat. jae luna) (acoustic version)")
+            == "500 Days (Feat. Jae Luna) (Acoustic Version)"
+        )
+
+    def test_square_bracket(self):
+        assert titlecase_catala("títol [bonus]") == "Títol [Bonus]"
+
+    def test_opening_guillemet(self):
+        assert titlecase_catala("l'amor «és així»") == "L'Amor «És Així»"
+
+    def test_digit_led_word_untouched(self):
+        # "3rd" must not become "3Rd".
+        assert titlecase_catala("el 3rd millor disc") == "El 3rd Millor Disc"
+
+    def test_possessive_s_untouched(self):
+        # English possessive — first char is apostrophe, not in opening
+        # punct, so no capitalization inside the word.
+        assert titlecase_catala("2001's 99") == "2001's 99"
+
+
 class TestTitlecaseAcronyms:
     def test_two_letter_acronym_preserved(self):
         assert titlecase_catala("cançons per a un DJ") == "Cançons per a un DJ"

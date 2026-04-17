@@ -370,7 +370,7 @@ class Command(BaseCommand):
         try:
             Album.objects.create(
                 deezer_id=dz_id,
-                nom=album_data["title"],
+                nom=titlecase_catala(album_data["title"]),
                 artista=artista,
                 data_llancament=album_data.get("release_date"),
                 tipus=tipus,
