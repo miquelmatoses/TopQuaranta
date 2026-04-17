@@ -19,6 +19,7 @@
 /var/log/topquaranta/metadata.log
 /var/log/topquaranta/errors.log
 /var/log/topquaranta/backup.log
+/var/log/topquaranta/arxivar.log
 {
     weekly
     rotate 8
