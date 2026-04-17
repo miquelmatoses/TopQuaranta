@@ -11,6 +11,7 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader
+from django.views.decorators.http import etag, last_modified
 
 from music.constants import TERRITORI_NOMS  # noqa: F401 (re-exported)
 from music.constants import TERRITORIS_VALIDS
@@ -217,6 +218,107 @@ def _get_ranking(
     return provisional, True, data_calcul
 
 
+# ── P8 · HTTP conditional caching for public ranking pages ──────────────
+# Last-Modified + ETag so browsers (and intermediate caches) can revalidate
+# cheaply: on a repeat visit the client sends If-Modified-Since / If-None-
+# Match, and if the underlying ranking hasn't changed we short-circuit to
+# a 304 Not Modified response — saving the template render, the prefetch,
+# and the bytes on the wire. No Cache-Control: public because the header
+# differs per auth state; the ETag encodes `is_authenticated` to keep
+# logged-in and anonymous clients from sharing cached responses by accident.
+
+
+def _ranking_last_modified_dt(
+    territori: str, setmana: datetime.date
+) -> datetime.datetime | None:
+    """Most recent timestamp at which the ranking for (territori, setmana) changed."""
+    official = (
+        RankingSetmanal.objects.filter(territori=territori, setmana=setmana)
+        .order_by("-created_at")
+        .values_list("created_at", flat=True)
+        .first()
+    )
+    if official:
+        return official
+    provis_date = (
+        RankingProvisional.objects.filter(territori=territori)
+        .order_by("-data_calcul")
+        .values_list("data_calcul", flat=True)
+        .first()
+    )
+    if provis_date:
+        # DateField → midnight UTC for Last-Modified.
+        return datetime.datetime.combine(
+            provis_date, datetime.time(0, 0), tzinfo=datetime.timezone.utc
+        )
+    return None
+
+
+def _etag_for(
+    request: HttpRequest, territori: str | None, setmana: datetime.date | None
+) -> str | None:
+    """Weak ETag combining ranking identity + auth state.
+
+    Auth state is included because the rendered page differs in the header
+    ("Entrar" vs "Sortir"). Without this, a logged-in user could see the
+    anonymous-cached version after switching accounts.
+    """
+    if not territori or not setmana:
+        return None
+    lm = _ranking_last_modified_dt(territori, setmana)
+    if lm is None:
+        return None
+    auth = "1" if request.user.is_authenticated else "0"
+    return f'W/"{territori}-{setmana.isoformat()}-{int(lm.timestamp())}-{auth}"'
+
+
+def _homepage_last_modified(request: HttpRequest) -> datetime.datetime | None:
+    return _ranking_last_modified_dt("PPCC", _setmana_actual())
+
+
+def _homepage_etag(request: HttpRequest) -> str | None:
+    return _etag_for(request, "PPCC", _setmana_actual())
+
+
+def _ranking_page_territori_setmana(
+    request: HttpRequest,
+) -> tuple[str | None, datetime.date | None]:
+    """Parse ?t= and ?setmana= from the query string, or return (None, None).
+
+    Returning None from the conditional-view helpers tells Django to skip
+    the header entirely and fall through to the view (which renders the
+    territory selector / 404 path).
+    """
+    territori = request.GET.get("t", "").upper()
+    if not territori or territori not in TERRITORIS_VALIDS:
+        return None, None
+    setmana_str = request.GET.get("setmana")
+    if setmana_str:
+        try:
+            setmana = datetime.date.fromisoformat(setmana_str)
+        except ValueError:
+            return None, None
+        if setmana.weekday() != 0:
+            return None, None
+    else:
+        setmana = _setmana_actual()
+    return territori, setmana
+
+
+def _ranking_page_last_modified(request: HttpRequest) -> datetime.datetime | None:
+    territori, setmana = _ranking_page_territori_setmana(request)
+    if not territori or not setmana:
+        return None
+    return _ranking_last_modified_dt(territori, setmana)
+
+
+def _ranking_page_etag(request: HttpRequest) -> str | None:
+    territori, setmana = _ranking_page_territori_setmana(request)
+    return _etag_for(request, territori, setmana)
+
+
+@last_modified(_homepage_last_modified)
+@etag(_homepage_etag)
 def homepage(request: HttpRequest) -> HttpResponse:
     """Public homepage showing the current week's Top 40 for PPCC territory."""
     setmana = _setmana_actual()
@@ -235,6 +337,8 @@ def homepage(request: HttpRequest) -> HttpResponse:
     )
 
 
+@last_modified(_ranking_page_last_modified)
+@etag(_ranking_page_etag)
 def ranking_page(request: HttpRequest) -> HttpResponse:
     """Single ranking page with territory selector.
 
