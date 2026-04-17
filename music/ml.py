@@ -69,7 +69,12 @@ TFIDF_MAX_FEATURES = 200
 # `pre_classificar` — that's ~30 ms per classification, invoked once
 # per track during obtenir_novetats. The TF-IDF path was already cached
 # but without invalidation (stale after retraining).
-_model_cache: dict = {"clf_mtime": None, "clf": None, "tfidf_mtime": None, "tfidf": None}
+_model_cache: dict = {
+    "clf_mtime": None,
+    "clf": None,
+    "tfidf_mtime": None,
+    "tfidf": None,
+}
 
 
 def _get_tfidf():
