@@ -4,7 +4,6 @@ from datetime import date, timedelta
 from difflib import SequenceMatcher
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
 
 from ingesta.clients.lastfm import _normalize_track, get_track_info
 from music.constants import DIES_CADUCITAT
@@ -154,6 +153,22 @@ class Command(BaseCommand):
         skipped = 0
         drifts = 0  # R5: count of rows flagged with corregit=True this run
 
+        # P4: buffer SenyalDiari rows and flush every BULK_BATCH calls via
+        # bulk_create(ignore_conflicts=True). The per-row update_or_create
+        # in the previous implementation ran ~2 queries per track (SELECT
+        # + INSERT/UPDATE); with ~1200 tracks that's ~2400 roundtrips.
+        # bulk_create collapses each batch to one INSERT. `ignore_conflicts`
+        # preserves "skip if already ingested" semantics without a second
+        # safety net. Flushing periodically also keeps progress durable if
+        # the process crashes mid-run.
+        BULK_BATCH = 200
+        buffer: list[SenyalDiari] = []
+
+        def flush(b: list[SenyalDiari]) -> None:
+            if b:
+                SenyalDiari.objects.bulk_create(b, ignore_conflicts=True)
+                b.clear()
+
         for i, canco in enumerate(cancons.iterator(), 1):
             if canco.pk in already_ingested:
                 skipped += 1
@@ -176,43 +191,49 @@ class Command(BaseCommand):
                 if is_drift:
                     drifts += 1
 
-                with transaction.atomic():
-                    SenyalDiari.objects.update_or_create(
+                buffer.append(
+                    SenyalDiari(
                         canco=canco,
                         data=target_date,
-                        defaults={
-                            "lastfm_playcount": result["playcount"],
-                            "lastfm_listeners": result["listeners"],
-                            "lastfm_returned_track": returned_track[:500],
-                            "lastfm_returned_artista": returned_artist[:255],
-                            "corregit": is_drift,
-                            "error": False,
-                            "error_msg": "",
-                        },
+                        lastfm_playcount=result["playcount"],
+                        lastfm_listeners=result["listeners"],
+                        lastfm_returned_track=returned_track[:500],
+                        lastfm_returned_artista=returned_artist[:255],
+                        corregit=is_drift,
+                        error=False,
+                        error_msg="",
                     )
+                )
                 success += 1
             else:
-                with transaction.atomic():
-                    SenyalDiari.objects.update_or_create(
+                buffer.append(
+                    SenyalDiari(
                         canco=canco,
                         data=target_date,
-                        defaults={
-                            "lastfm_playcount": None,
-                            "lastfm_listeners": None,
-                            "lastfm_returned_track": "",
-                            "lastfm_returned_artista": "",
-                            "corregit": False,
-                            "error": True,
-                            "error_msg": f"Last.fm lookup failed for '{artist_name}' / '{track_name}'",
-                        },
+                        lastfm_playcount=None,
+                        lastfm_listeners=None,
+                        lastfm_returned_track="",
+                        lastfm_returned_artista="",
+                        corregit=False,
+                        error=True,
+                        error_msg=(
+                            f"Last.fm lookup failed for '{artist_name}' / "
+                            f"'{track_name}'"
+                        ),
                     )
+                )
                 errors += 1
+
+            if len(buffer) >= BULK_BATCH:
+                flush(buffer)
 
             if i % 100 == 0:
                 self.stdout.write(
                     f"  Processed {i}... (ok={success}, err={errors}, "
                     f"skip={skipped}, drift={drifts})"
                 )
+
+        flush(buffer)
 
         self.stdout.write(
             self.style.SUCCESS(
