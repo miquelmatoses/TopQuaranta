@@ -412,42 +412,45 @@ class Command(BaseCommand):
                     defaults=defaults,
                 )
 
-        # Link other contributors as collaborators
-        if (created or force) and contributors:
-            for contributor in contributors:
-                c_id = contributor.get("id")
-                c_name = contributor.get("name", "")
-                if not c_id or c_id == real_artista.deezer_id_principal:
-                    continue
-                ad = (
-                    ArtistaDeezer.objects.filter(deezer_id=c_id)
-                    .select_related("artista")
-                    .first()
-                )
-                if ad:
-                    collab = ad.artista
-                else:
-                    collab = Artista.objects.create(
-                        nom=c_name,
-                        lastfm_nom=c_name,
-                        aprovat=False,
-                        auto_descobert=True,
-                        font_descoberta="collaborador",
+        # Best-effort guarantee (R10b lesson): classify the Canco even
+        # if adding collaborators below raises. See the equivalent
+        # pattern in ingesta/management/commands/obtenir_novetats.py.
+        try:
+            if (created or force) and contributors:
+                for contributor in contributors:
+                    c_id = contributor.get("id")
+                    c_name = contributor.get("name", "")
+                    if not c_id or c_id == real_artista.deezer_id_principal:
+                        continue
+                    ad = (
+                        ArtistaDeezer.objects.filter(deezer_id=c_id)
+                        .select_related("artista")
+                        .first()
                     )
-                    ArtistaDeezer.objects.get_or_create(
-                        deezer_id=c_id,
-                        defaults={"artista": collab, "principal": True},
-                    )
-                    logger.info(
-                        "Created collaborator Artista '%s' (deezer_id=%d)",
-                        c_name,
-                        c_id,
-                    )
-                canco.artistes_col.add(collab)
+                    if ad:
+                        collab = ad.artista
+                    else:
+                        collab = Artista.objects.create(
+                            nom=c_name,
+                            lastfm_nom=c_name,
+                            aprovat=False,
+                            auto_descobert=True,
+                            font_descoberta="collaborador",
+                        )
+                        ArtistaDeezer.objects.get_or_create(
+                            deezer_id=c_id,
+                            defaults={"artista": collab, "principal": True},
+                        )
+                        logger.info(
+                            "Created collaborator Artista '%s' (deezer_id=%d)",
+                            c_name,
+                            c_id,
+                        )
+                    canco.artistes_col.add(collab)
+        finally:
+            if created or force:
+                from music.ml import classificar_i_guardar
 
-        if created or force:
-            from music.ml import classificar_i_guardar
-
-            classificar_i_guardar(canco)
+                classificar_i_guardar(canco)
 
         return created

@@ -230,30 +230,33 @@ class Command(BaseCommand):
                 canco.album.save(update_fields=["data_llancament"])
                 canco.data_llancament = album_date
 
-        # Resolve main artist from contributors
-        contributors = data.get("contributors", [])
-        if contributors:
-            main = contributors[0]
-            main_id = main.get("id")
-            main_name = main.get("name", "")
-            if main_id and main_id != canco.artista.deezer_id_principal:
-                real_artista = _get_or_create_artista(main_id, main_name)
-                if real_artista:
-                    canco.artista = real_artista
+        # Best-effort guarantee (R10b lesson): classify even if the
+        # contributor resolution below raises.
+        try:
+            contributors = data.get("contributors", [])
+            if contributors:
+                main = contributors[0]
+                main_id = main.get("id")
+                main_name = main.get("name", "")
+                if main_id and main_id != canco.artista.deezer_id_principal:
+                    real_artista = _get_or_create_artista(main_id, main_name)
+                    if real_artista:
+                        canco.artista = real_artista
 
-            # Add secondary contributors
-            for c in contributors[1:]:
-                c_id = c.get("id")
-                c_name = c.get("name", "")
-                if c_id and c_id != canco.artista.deezer_id_principal:
-                    collab = _get_or_create_artista(c_id, c_name)
-                    if collab:
-                        canco.artistes_col.add(collab)
+                # Add secondary contributors
+                for c in contributors[1:]:
+                    c_id = c.get("id")
+                    c_name = c.get("name", "")
+                    if c_id and c_id != canco.artista.deezer_id_principal:
+                        collab = _get_or_create_artista(c_id, c_name)
+                        if collab:
+                            canco.artistes_col.add(collab)
 
-        canco.save(
-            update_fields=["isrc", "preview_url", "artista_id", "data_llancament"]
-        )
-        classificar_i_guardar(canco)
+            canco.save(
+                update_fields=["isrc", "preview_url", "artista_id", "data_llancament"]
+            )
+        finally:
+            classificar_i_guardar(canco)
 
     def _create_track(self, album: Album, track_data: dict) -> bool:
         """Create a Canco from track data, or merge into existing by ISRC. Returns True if new."""
@@ -337,17 +340,24 @@ class Command(BaseCommand):
         except IntegrityError:
             return False
 
-        # Add collaborators
-        if contributors:
-            for c in contributors[1:]:
-                c_id = c.get("id")
-                c_name = c.get("name", "")
-                if c_id and c_id != artista.deezer_id_principal:
-                    collab = _get_or_create_artista(c_id, c_name)
-                    if collab:
-                        canco.artistes_col.add(collab)
-
-        classificar_i_guardar(canco)
+        # Best-effort guarantee: classify the Canco even if adding
+        # collaborators below raises. A brief regression (R10b) left
+        # tracks unclassified when the collaborator loop failed after
+        # the Canco was already persisted. recalcular_ml eventually
+        # rescued them, but the window was visible in the staff panel
+        # as tracks with ml_classe=''. classificar_i_guardar is
+        # idempotent, so running it once here is fine.
+        try:
+            if contributors:
+                for c in contributors[1:]:
+                    c_id = c.get("id")
+                    c_name = c.get("name", "")
+                    if c_id and c_id != artista.deezer_id_principal:
+                        collab = _get_or_create_artista(c_id, c_name)
+                        if collab:
+                            canco.artistes_col.add(collab)
+        finally:
+            classificar_i_guardar(canco)
         return True
 
     def _create_album(self, artista: Artista, album_data: dict) -> bool:
