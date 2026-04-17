@@ -208,6 +208,29 @@ Nou troballes en una sola sessió. Notes:
 Benchmark P1: homepage cold ~386 ms, warm cache hit ~13 ms. `If-None-
 Match` conditional encara retorna 304 contra la resposta cached.
 
+**Sessió 13 — Quickwins defensius + revisió del manifest (2026-04-17)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **Φ7 revisió** | `MANIFEST.md` — secció "No monetization" reescrita: distingir *revenue alineada amb la missió* (anuncis culturals en català, suport institucional amb placement no position) de *revenue que corrompria la mesura* (vendre dades, vendre la llista d'usuaris, qualsevol cosa lligada a resultats del ranking) | ✅ | `694303a` |
+| **D6** Índexs compostos: `RankingSetmanal(territori, setmana, posicio)` i `Canco(verificada, artista)`. Els altres dos proposats (SenyalDiari) ja tenien cobertura existent. | ✅ | `cf52345` |
+| **C4** `docs/DEPRECATION.md` — com retirar camps / commands / API / features sense sorpreses. Motivada per la regressió R10b (Sessió 8). | ✅ | `b8e2de5` |
+| **Φ6** `docs/RETENTION.md` + nou management command `arxivar_senyal_vell` (cron trimestral). `SenyalDiari` > 2 anys s'exporta a `senyal-YYYY.csv.gz` i s'esborra. Ranking + audit logs per sempre. | ✅ | `977beef` |
+
+Notes:
+- Manifest: el compromís de "no monetització" era meu, no del mantenidor.
+  La nova versió obre la porta a publicitat alineada amb la missió
+  (àlbums en català, esdeveniments culturals, patrocini institucional
+  sense influència sobre el ranking) mantenint la línia dura contra
+  vendre dades o comprar posició al ranking.
+- D6: EXPLAIN sobre la taula actual (40 files) encara fa Seq Scan —
+  PostgreSQL escull scan lineal per a taules molt petites. L'índex
+  entra en acció quan la taula creix, exactament el cas d'ús futur.
+- Φ6: `arxivar_senyal_vell --dry-run --retention-days 3` detectà
+  correctament 6515 files per arxivar i agrupar per any. El command
+  real (730 dies) no troba cap fila hui perquè la instal·lació és
+  recent.
+
 ---
 
 ## Taula de severitat
@@ -459,10 +482,11 @@ PostgreSQL té `JSONField` natiu des de Django 3.1. Validació automàtica, quer
 `Canco.artistes_col` (M2M a Artista) **permet que `artista == artista_col`**. No tenim cap constraint que ho eviti. Dada bruta amb aquesta inconsistència es pot ficar i contaminar els càlculs de territori (doble comptabilitat).
 > **Resolució:** migració 0034 neteja les 7 files existents (portable entre SQLite+PostgreSQL via `DELETE … WHERE EXISTS`). Receiver `m2m_changed` (pre_add/pre_set, tots dos costats de la relació) rebutja amb `ValidationError`.
 
-### D6. Índexs compostos que podrien millorar la pipeline
+### D6. Índexs compostos que podrien millorar la pipeline ✅ resolt (Sessió 13, `cf52345`)
 - `RankingSetmanal (territori, setmana, posicio)` — per a les pàgines de rànquing
 - `SenyalDiari (data, canco_id, error)` — per al normalize
 - `Canco (verificada, artista_id)` — per a les queries del pipeline
+> **Resolució:** afegits els índexs de `RankingSetmanal(territori, setmana, posicio)` i `Canco(verificada, artista)`. L'índex proposat per a `SenyalDiari` descartat després d'auditar: els existents `(canco, data)`, `(data, error)` i `(data, corregit)` ja cobreixen totes les query shapes del normalize — afegir-ne un de nou només costaria write throughput.
 
 ---
 
@@ -551,8 +575,9 @@ Res com Dependabot o Renovate. **scikit-learn, Django, requests — es van actua
 Cap tag git, cap CHANGELOG.md. **Dir "la versió que funcionava el 3 d'abril" depèn de reconstruir mentalment quin commit era.**
 > **Resolució:** `CHANGELOG.md` baseline amb entry 0.9.0 que inventaria totes les troballes de Phase 9. Keep a Changelog + SemVer. Futurs releases tagueig git.
 
-### C4. Sense política de deprecation
+### C4. Sense política de deprecation ✅ resolt (Sessió 13, `b8e2de5`)
 Quan el sistema evolucioni i una API o camp passi a obsolet, no hi ha procés per a anunciar-ho, quant temps mantenir compatibilitat, etc.
+> **Resolució:** `docs/DEPRECATION.md` — procés de 4 passos (CHANGELOG/Deprecated → avís al codi → espera 90d/180d → elimina). Cobreix model fields, management commands, API endpoints, staff features, ops scripts. Inclou template per a la propera deprecation. Motivada per la regressió R10b de la Sessió 8.
 
 ## 🟢 BAIX
 
@@ -603,8 +628,9 @@ Els coeficients de `ConfiguracioGlobal` no són públics. **Un artista que cau d
 RankingSetmanal és dades valuoses. **Si algú vol publicar "Evolució del rànquing 2025-2026", té permís?** No hi ha CC-BY-SA ni CC0 declarat. La dada queda com a bé privat per defecte. **Això va contra l'esperit de difusió cultural.**
 > **Resolució:** `LICENSE-DATA.md` — CC BY 4.0 explícit per a rankings, signal, coeficients, historial. Scope definit (què cobreix, què no — upstream Last.fm/Deezer queda sota les seues llicències). Attribution l'única contrapartida.
 
-### Φ6. Sense retenció explícita
+### Φ6. Sense retenció explícita ✅ resolt (Sessió 13, `977beef`)
 `SenyalDiari` creix per sempre. **Què passa l'any 2030 quan siguin 3M+ files?** Hauria d'haver una política: "Les dades de signal Last.fm es poden arxivar després de 2 anys; el ranking setmanal es conserva indefinidament com a document cultural."
+> **Resolució:** `docs/RETENTION.md` + management command `arxivar_senyal_vell` (cron trimestral). `SenyalDiari` > 2 anys s'exporta a `senyal-YYYY.csv.gz` dins de `/home/topquaranta/archive/` i s'esborra de la DB. Write atomic (fsync + rename before DB delete). Ranking setmanal + HistorialRevisio + StaffAuditLog: per sempre.
 
 ### Φ7. Sense manifest del projecte ✅ resolt (Sessió 12, `b7564fa`)
 CLAUDE.md parla de l'arquitectura tècnica. ROADMAP.md de feines pendents. **No hi ha un CULTURAL.md que digui "això és TopQuaranta i per què existeix".** Si un dia el desenvolupador original es retira, el projecte perd la seva brúixola.

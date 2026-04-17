@@ -1,13 +1,13 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-17 — Phase 9: 50 findings + staff user mgmt + public
-> transparency across 12 sessions. Tier 1 security complete; Tier 2
-> reliability complete; Performance mostly complete (P1/P2/P3/P4/P6/P8
-> done; P5/P7 remaining); Ops mostly done (O3/O5/O8/O9/R14 done;
-> O1/O2/O4/O6/O7 remaining); Architecture started (A8/A10 done); SEO
-> landed (F3/F5); Process mostly done (C1/C2/C3/C5 done); Data model
-> cleanups (D3/D4/D5 done); Cultural docs landed (Φ1/Φ5/Φ7).
+> Last updated: 2026-04-17 — Phase 9: 53 findings + staff user mgmt + public
+> transparency across 13 sessions. Tier 1 security complete; Tier 2
+> reliability complete; Performance mostly complete (P5/P7 remaining);
+> Ops mostly done (O1/O2/O4/O6/O7 remaining, all external-infra);
+> Architecture started (A8/A10 done); SEO landed; Process near-complete
+> (C6/C7/C8 remaining); Data model cleanups complete; Cultural docs
+> (DEFINITION/MANIFEST/RETENTION/DEPRECATION/CC BY data) landed.
 > See CLAUDE_EXCELLENCE.md.
 
 ---
@@ -55,7 +55,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (50 findings landed: Tier 1 security + Tier 2 reliability complete + Performance mostly done + Ops mostly done + SEO live + Architecture started + Process mostly done + Data model cleanups + Cultural docs landed (DEFINITION / MANIFEST / CC BY data)) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (53 findings landed: Tier 1 security + Tier 2 reliability complete + Performance mostly done + Ops mostly done + SEO live + Architecture started + Process near-complete + Data model complete + Cultural docs (DEFINITION / MANIFEST / RETENTION / DEPRECATION / CC BY) landed) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
