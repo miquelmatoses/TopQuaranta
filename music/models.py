@@ -73,12 +73,9 @@ class Artista(models.Model):
         max_length=255,
         help_text="Exact name for Last.fm API calls (case-sensitive).",
     )
-    lastfm_mbid = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text="MusicBrainz ID — improves Last.fm lookup accuracy.",
-    )
+    # D2: lastfm_mbid dropped 2026-04-17 — was populated historically from
+    # Last.fm but never consumed by any code path. Regenerate via a
+    # Last.fm artist.getInfo call if ever needed.
     nom = models.CharField(max_length=255)
     slug = models.SlugField(max_length=280, unique=True, blank=True)
     territoris = models.ManyToManyField(
@@ -421,8 +418,9 @@ class Canco(models.Model):
         blank=True,
         help_text="Track name as returned by Last.fm (may differ from Spotify).",
     )
-    lastfm_mbid = models.CharField(max_length=50, blank=True)
-    lastfm_verificat = models.BooleanField(default=False)
+    # D2: lastfm_mbid + lastfm_verificat dropped 2026-04-17 — both had
+    # zero populated rows and zero consumers. See Canco model above /
+    # CLAUDE_EXCELLENCE.md D2 for context.
     # R5: "Last.fm's autocorrect of our query IS the correct track".
     # When True, obtenir_senyal stops flagging SenyalDiari rows for this
     # track as corrected even when the returned names differ from what

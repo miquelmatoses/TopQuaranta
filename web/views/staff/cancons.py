@@ -208,8 +208,7 @@ def editar(request: HttpRequest, pk: int) -> HttpResponse:
         canco.nom = request.POST.get("nom", canco.nom).strip()
         canco.isrc = request.POST.get("isrc", canco.isrc).strip()
         canco.lastfm_nom = request.POST.get("lastfm_nom", "").strip()
-        canco.lastfm_mbid = request.POST.get("lastfm_mbid", "").strip()
-        canco.lastfm_verificat = "lastfm_verificat" in request.POST
+        # D2: lastfm_mbid / lastfm_verificat fields dropped.
         canco.verificada = "verificada" in request.POST
         canco.activa = "activa" in request.POST
 

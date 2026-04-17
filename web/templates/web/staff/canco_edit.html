@@ -38,17 +38,6 @@
   </div>
 
   <div class="form-field">
-    <label class="form-label" for="lastfm_mbid">MusicBrainz ID (Last.fm)</label>
-    <input type="text" name="lastfm_mbid" id="lastfm_mbid" value="{{ canco.lastfm_mbid|default:'' }}" maxlength="50">
-  </div>
-
-  <div class="form-field">
-    <label style="font-size:var(--mm-text-sm)">
-      <input type="checkbox" name="lastfm_verificat"{% if canco.lastfm_verificat %} checked{% endif %}> Last.fm verificat
-    </label>
-  </div>
-
-  <div class="form-field">
     <label style="font-size:var(--mm-text-sm)">
       <input type="checkbox" name="verificada"{% if canco.verificada %} checked{% endif %}> Verificada
     </label>
