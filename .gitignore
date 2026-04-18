@@ -41,9 +41,10 @@ htmlcov/
 # pytest
 .pytest_cache/
 
-# ML models (binary, generated locally)
+# ML models (binary, generated locally by recalcular_ml)
 music/lid.176.ftz
 music/ml_tfidf.joblib
+music/ml_model.joblib
 
 # Claude Code
 .claude/

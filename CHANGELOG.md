@@ -10,8 +10,62 @@ Dates are UTC.
 
 ## [Unreleased]
 
-Phase 9 — Excellence continues. Ongoing work beyond 0.9.0: remaining
-Tier 3 (Architecture), Tier 5 (Exquisitesa).
+Phase 9 wrap-up + groundwork for ML feature extraction (Silero integration,
+coming in the next block).
+
+### Added
+
+- **Φ6 data retention** (`977beef`) — `docs/RETENTION.md` + new management
+  command `arxivar_senyal_vell` that runs quarterly and archives
+  `SenyalDiari` rows older than 2 years to gzipped CSV, then deletes from
+  the live DB. Writes are atomic (fsync + rename before DB delete).
+- **C4 deprecation policy** (`b8e2de5`) — `docs/DEPRECATION.md` establishing
+  a 4-step process (announce in CHANGELOG, emit in-code warning, wait
+  90/180 days, remove). Motivated by the R10b regression.
+- **D6 composite indexes** (`cf52345`) — `RankingSetmanal(territori,
+  setmana, posicio)` and `Canco(verificada, artista)` for the hot ranking
+  and pipeline queries. Future-proofing for when the tables grow.
+- **Artista.lastfm_te_scrobbles** (`116505a`) — new boolean that
+  distinguishes "real Last.fm errors" (artist indexed, specific track
+  not) from "silent tracks" (artist has no Last.fm data at all).
+  Maintained by `obtenir_senyal`; migration 0037 backfills from
+  `SenyalDiari` history.
+
+### Changed
+
+- **Φ7 manifest** (`694303a`) — "No monetization" section rewritten.
+  Distinguishes mission-aligned revenue (cultural ads in Catalan,
+  institutional support with placement-not-position) from revenue that
+  would corrupt the measurement (selling data, selling the user list,
+  anything tied to ranking outcomes).
+- **Φ1 definition** (`a7b04fe`) — instrumental tracks no longer treated as
+  a separate rule; they fail the "delivery is in Catalan" test and are
+  rejected with `motiu="no_catala"`. No new motiu needed.
+- **titlecase_catala** (`ee4652b`, `43a000b`) — orphan accents (` / ´ /
+  curly quotes) normalised to ASCII apostrophe before tokenising;
+  single-letter "I"/"A"/"O" stop being treated as acronyms mid-sentence;
+  words after opening punctuation `([{«"¿¡` now capitalise the first
+  alphabetic character. Applied in production via new `retitlecase`
+  command over Canco.nom (2038 rows updated) and Album.nom (2881 rows).
+  Upstream `_create_album` also titlecases now.
+- **Last.fm signal ingest** (`116505a`) — `_normalize_track` now strips
+  alternate titles after `|`; `get_track_info` gains a last-resort
+  fallback via `artist.getTopTracks` (fuzzy match ratio ≥ 0.95) that
+  recovers case-only variants like "+ Arcade" vs "+ ARCADE".
+
+### Fixed
+
+- **R10c** (`f41d40a`) — `obtenir_novetats._create_track`,
+  `_process_track_data`, and `obtenir_metadata._upsert_track` now wrap
+  the collaborator-resolution loop in `try/finally` with
+  `classificar_i_guardar(canco)` in the finally. A brief regression
+  window on 2026-04-16 left 1 track unclassified because the collab
+  loop raised before the classifier ran; the fix guarantees a track is
+  never persisted without an ML class set, even if collab fails.
+
+### Docs
+
+- **Sessió 13** (`fb2bd50`) — documentation for the D6/C4/Φ6 landing.
 
 ---
 

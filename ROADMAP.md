@@ -1,14 +1,11 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-17 — Phase 9: 53 findings + staff user mgmt + public
-> transparency across 13 sessions. Tier 1 security complete; Tier 2
-> reliability complete; Performance mostly complete (P5/P7 remaining);
-> Ops mostly done (O1/O2/O4/O6/O7 remaining, all external-infra);
-> Architecture started (A8/A10 done); SEO landed; Process near-complete
-> (C6/C7/C8 remaining); Data model cleanups complete; Cultural docs
-> (DEFINITION/MANIFEST/RETENTION/DEPRECATION/CC BY data) landed.
-> See CLAUDE_EXCELLENCE.md.
+> Last updated: 2026-04-18 — Phase 9: 53 findings landed. Sessió 14 wrapped
+> up the small follow-ups (titlecase edge cases, R10c regression guard,
+> smarter Last.fm retry, `lastfm_te_scrobbles` flag). Next block opens a
+> new line of work: Silero VAD + language classifier as ML features for
+> the staff triage queue.
 
 ---
 

@@ -231,6 +231,26 @@ Notes:
   real (730 dies) no troba cap fila hui perquè la instal·lació és
   recent.
 
+**Sessió 14 — Petites follow-ups: titlecase, regressions, signal smart (2026-04-18)** ✅
+
+| ID | Estat | Commit |
+|---|---|---|
+| **titlecase v2** Normalitzar accents orfes (` ´ ' ' ʼ → '), single-letter "I"/"A"/"O" mai acrònims, majúscula després de `([{«"¿¡` | ✅ | `ee4652b`, `43a000b` |
+| **titlecase a Albums** També aplicat a `Album.nom` a `_create_album` + re-run en bloc del comand `retitlecase` | ✅ | `43a000b` |
+| **R10c** `try/finally` a `classificar_i_guardar` als tres sites d'ingest — garanteix ml_classe mai NULL post-persistence | ✅ | `f41d40a` |
+| **Φ1 fold** DEFINITION.md: instrumentals no són regla separada — són `no_catala` per manca de delivery | ✅ | `a7b04fe` |
+| **Last.fm signal smart** `"|"` stripping al retry + `artist.getTopTracks` fallback + `Artista.lastfm_te_scrobbles` flag | ✅ | `116505a` |
+
+Efecte operacional mesurable:
+- Retitlecase: 2038 Cancons + 2881 Albums actualitzats.
+- `lastfm_te_scrobbles`: 424 artistes aprovats amb scrobbles confirmades
+  (18.5%), 1864 silent artists.
+- Errors recurrents Last.fm passen de 222 tracks sense distinció a
+  131 reals (artista actiu, track no indexat) + 91 silents (artista
+  sense cap scrobble, expected).
+- "+ Arcade" de Adrien Broadway recuperat automàticament via fallback
+  a "+ ARCADE" (pc=33, funciona real).
+
 ---
 
 ## Taula de severitat
