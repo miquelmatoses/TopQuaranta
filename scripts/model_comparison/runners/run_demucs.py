@@ -21,8 +21,10 @@ SOURCES = model.sources  # drums, bass, other, vocals
 rows = MANIFEST.read_text().strip().split("\n")[1:]
 results = []
 for row in rows:
-    label, pk, nom, artista, mp3, wav = row.split("\t")
-    wav_path = Path(wav)
+    parts = row.split("\t")
+    label, pk, nom, artista = parts[0], parts[1], parts[2], parts[3]
+    idioma = parts[4] if len(parts) > 4 else ""
+    wav_path = CLIPS / f"{pk}.wav"
     if not wav_path.exists():
         continue
     wf, sr = torchaudio.load(str(wav_path))

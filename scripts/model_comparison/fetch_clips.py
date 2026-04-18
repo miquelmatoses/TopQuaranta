@@ -1,9 +1,14 @@
 """
 Regenerate clips/*.wav from manifest.tsv.
 
-Looks up each Canco by pk, fetches a fresh Deezer preview URL (preview URLs are
-signed and expire in hours), downloads the MP3, and converts to 16 kHz mono WAV
-via ffmpeg — the format every runner expects.
+Manifest columns: label, pk, nom, artista, idioma.
+- `pk` starting with a digit is a Canco primary key (DB lookup → fresh preview URL).
+- `pk` starting with `d` is a raw Deezer track id for non-catalogued clips used for
+  LID and out-of-distribution tests.
+
+For each row, fetches a fresh Deezer preview URL (signed, expires in hours),
+downloads the MP3, and converts to 16 kHz mono WAV via ffmpeg — the format
+every runner expects.
 
 Run from the project root with the full Django environment:
 
@@ -22,12 +27,25 @@ import django
 
 django.setup()
 
-from ingesta.clients.deezer import DeezerClient  # noqa: E402
+from ingesta.clients.deezer import _get  # noqa: E402
 from music.models import Canco  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 CLIPS = HERE / "clips"
 MANIFEST = HERE / "manifest.tsv"
+
+
+def _preview_url_for(pk: str) -> str | None:
+    """Resolve a manifest pk to a Deezer preview URL."""
+    if pk.startswith("d"):
+        deezer_id = int(pk[1:])
+    else:
+        canco = Canco.objects.filter(pk=int(pk)).first()
+        if not canco or not canco.deezer_id:
+            return None
+        deezer_id = canco.deezer_id
+    data = _get(f"https://api.deezer.com/track/{deezer_id}")
+    return (data or {}).get("preview")
 
 
 def _download(url: str, dest: Path) -> None:
@@ -57,25 +75,19 @@ def _to_wav(mp3: Path, wav: Path) -> None:
 
 def main() -> int:
     CLIPS.mkdir(exist_ok=True)
-    client = DeezerClient()
     rows = MANIFEST.read_text().strip().split("\n")[1:]
-    ok = failed = 0
+    ok = skipped = failed = 0
     for row in rows:
-        label, pk, nom, artista, _mp3, _wav = row.split("\t")
+        parts = row.split("\t")
+        label, pk, nom, artista = parts[0], parts[1], parts[2], parts[3]
         wav = CLIPS / f"{pk}.wav"
         if wav.exists():
-            ok += 1
-            continue
-        canco = Canco.objects.filter(pk=int(pk)).first()
-        if not canco or not canco.deezer_id:
-            print(f"  [{label:5}] {pk:>5} SKIP no deezer_id  {nom[:40]}")
-            failed += 1
+            skipped += 1
             continue
         try:
-            data = client.track(canco.deezer_id)
-            preview = data.get("preview")
+            preview = _preview_url_for(pk)
             if not preview:
-                print(f"  [{label:5}] {pk:>5} SKIP no preview  {nom[:40]}")
+                print(f"  [{label:5}] {pk:>14} SKIP no preview  {nom[:40]}")
                 failed += 1
                 continue
             mp3 = CLIPS / f"{pk}.mp3"
@@ -83,11 +95,13 @@ def main() -> int:
             _to_wav(mp3, wav)
             mp3.unlink()
             ok += 1
-            print(f"  [{label:5}] {pk:>5} OK  {nom[:40]}")
+            print(f"  [{label:5}] {pk:>14} OK  {nom[:40]} — {artista[:30]}")
         except Exception as exc:
-            print(f"  [{label:5}] {pk:>5} FAIL {exc!r}  {nom[:40]}")
+            print(f"  [{label:5}] {pk:>14} FAIL {exc!r}  {nom[:40]}")
             failed += 1
-    print(f"\n{ok} OK, {failed} failed, {len(rows)} total.")
+    print(
+        f"\n{ok} fetched, {skipped} already present, {failed} failed, {len(rows)} total."
+    )
     return 0 if failed == 0 else 1
 
 

@@ -22,7 +22,10 @@ audio = AudioAdapter.default()
 rows = MANIFEST.read_text().strip().split("\n")[1:]
 results = []
 for row in rows:
-    label, pk, nom, artista, mp3, wav = row.split("\t")
+    parts = row.split("\t")
+    label, pk, nom, artista = parts[0], parts[1], parts[2], parts[3]
+    idioma = parts[4] if len(parts) > 4 else ""
+    wav = str(CLIPS / f"{pk}.wav")
     if not Path(wav).exists():
         continue
     start = time.time()
