@@ -57,6 +57,10 @@ FEATURE_NAMES = [
     "isrc_any",
     "isrc_prefix_q",
     "artista_aprovat",
+    # Silero VAD voice fraction (0-1). -1 sentinel for "not yet analysed"
+    # so the RF classifier can treat missing differently from "0 voice".
+    "silero_veu_probabilitat",
+    "silero_processat",  # 0/1 — have we run Silero on this track yet?
 ] + [f"tfidf_{i}" for i in range(200)]
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
@@ -194,6 +198,15 @@ def _build_features(canco) -> list[float]:
     nb_col = canco.artistes_col.count()
     nb_approved = Canco.objects.filter(artista=artista, verificada=True).count()
 
+    # Silero VAD features: pass the voice fraction if we've analysed this
+    # track, else two neutral values that the RF can treat as "missing".
+    silero_processat = 1.0 if canco.silero_processat_at is not None else 0.0
+    silero_veu = (
+        float(canco.silero_veu_probabilitat)
+        if canco.silero_veu_probabilitat is not None
+        else 0.5
+    )
+
     return [
         float(es),
         float(digital),
@@ -218,6 +231,8 @@ def _build_features(canco) -> list[float]:
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
         float(1 if artista.aprovat else 0),
+        silero_veu,
+        silero_processat,
     ] + _tfidf_features(canco.nom)
 
 
@@ -271,7 +286,27 @@ def _build_features_from_historial(rec) -> list[float]:
         float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
         float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
         float(_artista_aprovat_from_historial(rec)),
+        *_silero_from_historial(rec),
     ] + _tfidf_features(rec.canco_nom)
+
+
+def _silero_from_historial(rec) -> tuple[float, float]:
+    """Best-effort lookup of Silero features for a HistorialRevisio row.
+
+    HistorialRevisio rows don't store Silero data directly. If the
+    underlying Canco still exists (matched by ISRC), we enrich from
+    there — so a track we've analysed with Silero contributes its real
+    voice probability even when training from historical decisions.
+    Otherwise fall back to neutral values.
+    """
+    from music.models import Canco
+
+    if rec.canco_isrc:
+        c = Canco.objects.filter(isrc=rec.canco_isrc).first()
+        if c and c.silero_processat_at is not None:
+            return (float(c.silero_veu_probabilitat or 0.0), 1.0)
+    # Neutral: no signal to help the RF either way.
+    return (0.5, 0.0)
 
 
 def _artista_aprovat_from_historial(rec) -> int:
