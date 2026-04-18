@@ -18,8 +18,11 @@ A track is eligible if **the primary vocal delivery is in Catalan**.
 Primary vocal delivery means the full sung text, not samples, inserts,
 or spoken interludes.
 
-Instrumental tracks are **not** eligible — they can't measure
-language vitality.
+Instrumental tracks have no vocal delivery at all, so by this same
+rule they are not in Catalan and therefore not eligible. They are
+rejected with `motiu="no_catala"` — no separate "instrumental"
+motiu is needed. A track with no lyrics can't be measured for
+language vitality by any stretch of the definition.
 
 ## Operational criteria
 
