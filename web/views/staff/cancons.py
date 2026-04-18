@@ -49,6 +49,23 @@ def llista(request: HttpRequest) -> HttpResponse:
     if ml_classe in ("A", "B", "C"):
         qs = qs.filter(ml_classe=ml_classe)
 
+    # Filter: Silero VAD voice fraction (triage hint, not hard gate).
+    # "inst" → probably instrumental (voice < 10%)
+    # "dubte" → uncertain (10–40%)
+    # "vocal" → clearly vocal (>= 40%)
+    # "pendent" → not yet analysed by Silero
+    silero = request.GET.get("silero", "")
+    if silero == "inst":
+        qs = qs.filter(silero_veu_probabilitat__lt=0.10)
+    elif silero == "dubte":
+        qs = qs.filter(
+            silero_veu_probabilitat__gte=0.10, silero_veu_probabilitat__lt=0.40
+        )
+    elif silero == "vocal":
+        qs = qs.filter(silero_veu_probabilitat__gte=0.40)
+    elif silero == "pendent":
+        qs = qs.filter(silero_processat_at__isnull=True)
+
     # Filter: date range
     data_des = request.GET.get("data_des", "")
     data_fins = request.GET.get("data_fins", "")
@@ -75,6 +92,7 @@ def llista(request: HttpRequest) -> HttpResponse:
             "page": page,
             "verificada": verificada,
             "ml_classe": ml_classe,
+            "silero": silero,
             "data_des": data_des,
             "data_fins": data_fins,
             "cerca": cerca,
