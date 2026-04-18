@@ -48,8 +48,14 @@ def _get_model():
     return _model, _get_speech_timestamps
 
 
-def _download_preview(url: str, dest: Path) -> bool:
-    """Download the Deezer preview MP3 to `dest`. Returns True on success."""
+def _download_preview(url: str, dest: Path, loud: bool = True) -> bool:
+    """Download the Deezer preview MP3 to `dest`. Returns True on success.
+
+    `loud=False` logs failures at DEBUG instead of WARNING — used for the
+    first attempt on a likely-expired URL, where we know we'll retry
+    with a refreshed URL. Only the FINAL failure of a track produces a
+    user-visible warning.
+    """
     try:
         r = requests.get(url, timeout=15, stream=True)
         r.raise_for_status()
@@ -59,7 +65,9 @@ def _download_preview(url: str, dest: Path) -> bool:
                     fh.write(chunk)
         return dest.stat().st_size > 1024  # Guard against empty responses
     except requests.RequestException as exc:
-        logger.warning("Silero: preview download failed for %s: %s", url, exc)
+        (logger.warning if loud else logger.debug)(
+            "Silero: preview download failed for %s: %s", url, exc
+        )
         return False
 
 
@@ -162,12 +170,16 @@ def analyze_preview(
         wav = tmp / "preview.wav"
 
         got = False
+        # First attempt: whatever URL we have stored. Silence failures
+        # at DEBUG — stored URLs expire after a few days, so a stale
+        # miss is expected and not a real problem as long as the
+        # refresh below succeeds.
         if preview_url:
-            got = _download_preview(preview_url, mp3)
+            got = _download_preview(preview_url, mp3, loud=False)
         if not got and deezer_track_id:
             fresh = _refresh_preview_url(deezer_track_id)
             if fresh:
-                got = _download_preview(fresh, mp3)
+                got = _download_preview(fresh, mp3, loud=True)
         if not got:
             return None
         if not _mp3_to_wav(mp3, wav):
