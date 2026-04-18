@@ -52,3 +52,7 @@ music/ml_model.joblib
 
 # Temporary files
 temp/
+
+# Spleeter downloads model weights here when run from project root.
+# (Used by scripts/model_comparison/runners/run_spleeter.py.)
+pretrained_models/
