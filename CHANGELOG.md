@@ -67,6 +67,27 @@ coming in the next block).
 
 - **Sessió 13** (`fb2bd50`) — documentation for the D6/C4/Φ6 landing.
 
+### Added (continued — Silero VAD block, Sessió 15)
+
+- **Canco.silero_veu_probabilitat / silero_processat_at** (`19a8904`) —
+  new fields tracking the fraction of a Deezer preview that contains
+  human voice, per the Silero VAD model. Populated by a new nightly
+  cron `analitzar_silero`.
+- **Silero features in RF classifier** (`abda422`) — `FEATURE_NAMES`
+  grows by two (`silero_veu_probabilitat`, `silero_processat`). The
+  next `recalcular_ml_si_cal` retrain picks them up; until then, the
+  RF falls back to the heuristic for class predictions because the
+  feature count mismatches.
+- **Staff triage badge + filter** (`85756fa`) — `/staff/cancons/` has a
+  new "Veu" column (🎵 < 10% / 🎤 10-40% / 🎤 ≥40%) and a filter
+  dropdown so the reviewer can show, say, just the tracks Silero
+  thinks are instrumental.
+- **Ops** (`cdc01e2`) — nightly 02:30 cron, tq-health max-age 48h,
+  logrotate entry for silero.log.
+- **Deps**: torch==2.5.1+cpu, torchaudio==2.5.1+cpu, silero-vad==5.1.2
+  (CPU-only from the torch CPU index), plus the `ffmpeg` system
+  binary. Venv grows from ~450 MB to ~1.3 GB.
+
 ---
 
 ## [0.9.0] — 2026-04-17
