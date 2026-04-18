@@ -1,3 +1,8 @@
+# Pin torch/torchaudio to the CPU-only build from PyTorch's own index.
+# This extra index is required for the `+cpu` version specifiers below
+# (the CUDA-bundled variants on PyPI are 10x larger).
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 django==5.2
 psycopg2-binary==2.9.10
 python-decouple==3.8
@@ -13,9 +18,8 @@ django-axes==8.3.1           # S4: brute-force login protection
 django-otp==1.7.0            # S11: TOTP 2FA for staff
 qrcode[pil]==8.2             # S11: render enrollment QR (pulls Pillow)
 # Audio analysis (Silero VAD)
-# NOTE: torch and torchaudio must be installed FROM THE CPU INDEX:
-#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchaudio==2.5.1
-# Otherwise pip fetches the CUDA build (~2.5 GB) which we don't need.
+# The `+cpu` suffix + --extra-index-url at top of this file pulls the
+# CPU-only build (~200 MB vs ~2.5 GB for the default CUDA-bundled).
 torch==2.5.1+cpu
 torchaudio==2.5.1+cpu
 silero-vad==5.1.2            # Voice Activity Detection feature for ML
