@@ -42,6 +42,12 @@ _TRACK_SUFFIX_STRIP = [
         r")\b.*$",
         re.I,
     ),
+    # Pipe-separated alternate titles (ex. "Balh Plan de Canejan | Ball Pla
+    # de Sort ..."). Last.fm indexes under the first title; drop everything
+    # from the pipe onward. Applied only on retry (after the original name
+    # failed) so tracks legitimately containing " | " don't lose it on the
+    # first attempt.
+    re.compile(r"\s*\|\s*.*$"),
 ]
 
 _UNICODE_PUNCT = {
@@ -119,6 +125,65 @@ def _api_call(artist_name: str, track_name: str) -> tuple[dict | None, int | Non
     return None, None
 
 
+def _find_in_artist_top_tracks(
+    artist_name: str, track_name: str, min_ratio: float = 0.95
+) -> dict | None:
+    """Search the artist's top 50 tracks for a fuzzy match to track_name.
+
+    Returns the matched track dict (from artist.getTopTracks) or None. Used
+    as a last-resort recovery when track.getInfo fails with err=6 even
+    after normalization — typically for case-only variants ("+ Arcade" vs
+    "+ ARCADE") or punctuation variants that Last.fm's autocorrect doesn't
+    catch.
+
+    The `min_ratio` default of 0.95 is intentionally strict: this is a
+    "blind" fallback without staff review, so we only accept near-exact
+    matches. Looser cases (ratio 0.80–0.95) become "real errors" that
+    surface in the staff panel for manual resolution.
+    """
+    try:
+        time.sleep(RATE_LIMIT_SLEEP)
+        response = requests.get(
+            LASTFM_API_URL,
+            params={
+                "method": "artist.getTopTracks",
+                "api_key": settings.LASTFM_API_KEY,
+                "artist": artist_name,
+                "format": "json",
+                "limit": 50,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException:
+        return None
+
+    tracks = data.get("toptracks", {}).get("track", [])
+    if isinstance(tracks, dict):
+        tracks = [tracks]
+    if not tracks:
+        return None
+
+    # Fuzzy match against the normalized track name (strips feat., parens…).
+    from difflib import SequenceMatcher
+
+    target = _normalize_track(track_name).lower()
+    best = None
+    best_ratio = 0.0
+    for t in tracks:
+        candidate = t.get("name", "")
+        ratio = SequenceMatcher(
+            None, target, _normalize_track(candidate).lower()
+        ).ratio()
+        if ratio > best_ratio:
+            best = t
+            best_ratio = ratio
+    if best is not None and best_ratio >= min_ratio:
+        return best
+    return None
+
+
 def _extract_returned_names(track: dict) -> tuple[str, str]:
     """Pull the name/artist Last.fm ACTUALLY returned (after autocorrect=1).
 
@@ -185,6 +250,29 @@ def get_track_info(artist_name: str, track_name: str) -> dict | None:
                     "returned_artist": ra,
                 }
             err = err2 if err2 is not None else err
+
+        # Final fallback: search the artist's top tracks for a near-exact
+        # match to the track name. Catches case-only variants like
+        # "+ Arcade" vs "+ ARCADE" that Last.fm's autocorrect misses.
+        match = _find_in_artist_top_tracks(artist_name, track_name)
+        if match is not None:
+            logger.info(
+                "Last.fm recovered '%s'/'%s' via top-tracks match to '%s'",
+                artist_name,
+                track_name,
+                match.get("name", ""),
+            )
+            artist_field = match.get("artist") or {}
+            if isinstance(artist_field, dict):
+                ra = (artist_field.get("name") or "").strip()
+            else:
+                ra = str(artist_field).strip()
+            return {
+                "playcount": int(match.get("playcount", 0)),
+                "listeners": int(match.get("listeners", 0)),
+                "returned_track": (match.get("name") or "").strip(),
+                "returned_artist": ra,
+            }
 
     if err is not None:
         logger.warning(

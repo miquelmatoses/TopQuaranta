@@ -51,7 +51,14 @@ class TestGetTrackInfoTrackNotFound:
     @patch("ingesta.clients.lastfm.time.sleep")
     @patch("ingesta.clients.lastfm.requests.get")
     def test_track_not_found(self, mock_get, mock_sleep):
-        """Last.fm error 6 → returns None, no exception."""
+        """Last.fm error 6 → returns None, no exception.
+
+        The client makes two calls: (1) track.getInfo returns err=6, and
+        (2) a last-resort artist.getTopTracks fallback. Both mocked to
+        return the same err=6 shape; the fallback returns empty tracks
+        and the whole chain yields None. No rate-limit retries on
+        API-level errors.
+        """
         mock_get.return_value.status_code = 200
         mock_get.return_value.raise_for_status.return_value = None
         mock_get.return_value.json.return_value = {
@@ -62,8 +69,60 @@ class TestGetTrackInfoTrackNotFound:
         result = get_track_info("Unknown Artist", "Unknown Track")
 
         assert result is None
-        # Should not retry on API-level errors
-        assert mock_get.call_count == 1
+        # One getInfo + one getTopTracks fallback. The normalized-name
+        # retry is skipped because _normalize_track("Unknown Track") ==
+        # "Unknown Track".
+        assert mock_get.call_count == 2
+
+
+class TestGetTrackInfoTopTracksFallback:
+    @patch("ingesta.clients.lastfm.time.sleep")
+    @patch("ingesta.clients.lastfm.requests.get")
+    def test_fuzzy_recovery_via_top_tracks(self, mock_get, mock_sleep):
+        """A case-only variant ('+ Arcade' vs '+ ARCADE') is recovered
+        via the artist.getTopTracks fallback when track.getInfo fails.
+        """
+        responses = [
+            # track.getInfo(+ Arcade) → err=6
+            {"error": 6, "message": "Track not found"},
+            # artist.getTopTracks → contains + ARCADE with playcount
+            {
+                "toptracks": {
+                    "track": [
+                        {
+                            "name": "+ ARCADE",
+                            "playcount": "33",
+                            "listeners": "7",
+                            "artist": {"name": "Adrien Broadway"},
+                        },
+                        {
+                            "name": "Other Song",
+                            "playcount": "10",
+                            "listeners": "3",
+                            "artist": {"name": "Adrien Broadway"},
+                        },
+                    ]
+                }
+            },
+        ]
+        call_iter = iter(responses)
+
+        def fake_get(*args, **kwargs):
+            resp = mock_get.return_value
+            resp.status_code = 200
+            resp.raise_for_status.return_value = None
+            resp.json.return_value = next(call_iter)
+            return resp
+
+        mock_get.side_effect = fake_get
+
+        result = get_track_info("Adrien Broadway", "+ Arcade")
+
+        assert result is not None
+        assert result["playcount"] == 33
+        assert result["listeners"] == 7
+        assert result["returned_track"] == "+ ARCADE"
+        assert result["returned_artist"] == "Adrien Broadway"
 
 
 class TestGetTrackInfoNetworkError:

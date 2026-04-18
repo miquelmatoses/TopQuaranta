@@ -107,6 +107,18 @@ class Artista(models.Model):
     deezer_nom = models.CharField(max_length=255, blank=True)
     deezer_nom_similitud = models.FloatField(null=True, blank=True)
 
+    # Last.fm indexing status. Set True the first time obtenir_senyal
+    # observes a non-zero playcount on ANY of the artist's tracks. Used
+    # by the staff panel to distinguish real Last.fm errors (artist is
+    # indexed but a specific track isn't) from silent tracks (artist
+    # is unknown to Last.fm; errors are expected, not actionable).
+    lastfm_te_scrobbles = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True iff Last.fm returned playcount>0 for at least one "
+        "track by this artist. Maintained by obtenir_senyal.",
+    )
+
     # R11: legacy location fields (localitat, comarca, provincia) dropped
     # 2026-04-16. ArtistaLocalitat is the sole source of truth. Read via
     # `localitat_principal` property or iterate `localitats.all()`.

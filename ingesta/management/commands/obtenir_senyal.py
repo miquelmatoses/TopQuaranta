@@ -152,6 +152,10 @@ class Command(BaseCommand):
         errors = 0
         skipped = 0
         drifts = 0  # R5: count of rows flagged with corregit=True this run
+        # Artistes que hem vist amb playcount>0 en aquest run — els
+        # marquem amb `lastfm_te_scrobbles=True` en bloc al final si
+        # encara no ho estan. Evita fer un UPDATE per cada track.
+        artist_ids_with_plays: set[int] = set()
 
         # P4: buffer SenyalDiari rows and flush every BULK_BATCH calls via
         # bulk_create(ignore_conflicts=True). The per-row update_or_create
@@ -204,6 +208,12 @@ class Command(BaseCommand):
                         error_msg="",
                     )
                 )
+                # Marca l'artista com a "té scrobbles" si hem vist
+                # playcount > 0. Canco sense plays encara compta com a
+                # "silent" — el flag és per distingir un artista
+                # indexat de Last.fm d'un que no hi és.
+                if result["playcount"] and not canco.artista.lastfm_te_scrobbles:
+                    artist_ids_with_plays.add(canco.artista_id)
                 success += 1
             else:
                 buffer.append(
@@ -235,6 +245,15 @@ class Command(BaseCommand):
 
         flush(buffer)
 
+        # Mark newly-active artistes. Idempotent: artists already True
+        # stay True; a single UPDATE per run.
+        if artist_ids_with_plays:
+            from music.models import Artista
+
+            Artista.objects.filter(
+                pk__in=artist_ids_with_plays, lastfm_te_scrobbles=False
+            ).update(lastfm_te_scrobbles=True)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"\n  Ingestion complete for {target_date}:\n"
@@ -242,6 +261,7 @@ class Command(BaseCommand):
                 f"    Errors:  {errors}\n"
                 f"    Skipped (already ingested): {skipped}\n"
                 f"    Drift-flagged (corregit=True): {drifts}\n"
+                f"    Newly-active artistes: {len(artist_ids_with_plays)}\n"
                 f"    Total processed: {success + errors + skipped}"
             )
         )
