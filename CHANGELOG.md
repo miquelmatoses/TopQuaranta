@@ -67,26 +67,38 @@ coming in the next block).
 
 - **Sessió 13** (`fb2bd50`) — documentation for the D6/C4/Φ6 landing.
 
-### Added (continued — Silero VAD block, Sessió 15)
+### Added / Reverted (Silero VAD experiment, Sessió 15)
 
-- **Canco.silero_veu_probabilitat / silero_processat_at** (`19a8904`) —
-  new fields tracking the fraction of a Deezer preview that contains
-  human voice, per the Silero VAD model. Populated by a new nightly
-  cron `analitzar_silero`.
-- **Silero features in RF classifier** (`abda422`) — `FEATURE_NAMES`
-  grows by two (`silero_veu_probabilitat`, `silero_processat`). The
-  next `recalcular_ml_si_cal` retrain picks them up; until then, the
-  RF falls back to the heuristic for class predictions because the
-  feature count mismatches.
-- **Staff triage badge + filter** (`85756fa`) — `/staff/cancons/` has a
-  new "Veu" column (🎵 < 10% / 🎤 10-40% / 🎤 ≥40%) and a filter
-  dropdown so the reviewer can show, say, just the tracks Silero
-  thinks are instrumental.
-- **Ops** (`cdc01e2`) — nightly 02:30 cron, tq-health max-age 48h,
-  logrotate entry for silero.log.
-- **Deps**: torch==2.5.1+cpu, torchaudio==2.5.1+cpu, silero-vad==5.1.2
-  (CPU-only from the torch CPU index), plus the `ffmpeg` system
-  binary. Venv grows from ~450 MB to ~1.3 GB.
+Silero VAD was integrated end-to-end (commits `19a8904`, `abda422`,
+`85756fa`, `cdc01e2`, `7fc2eba`, `49188cc`) — new Canco fields, RF
+feature, staff badge, nightly cron, logrotate, deps, a partial
+backfill of 410 tracks.
+
+**Reverted at the end of the same session** because the model is
+structurally inadequate for music:
+
+  - Silero VAD is trained on speech (podcasts, phone calls, clean
+    voice), not singing.
+  - Against ground truth (47 staff-verified Catalan vocal tracks),
+    Silero classified **51% as <10% voice** — i.e., a false-positive
+    rate for "instrumental" of one in two.
+  - Flagrantly wrong on rock bands with instrumentation (Sopa de
+    Cabra concerts at 0-7%), hardcore (Katarrama 1.7%), typical
+    vocal tracks (Aquarella "Aire Pur" 0%, ALTATXU 3.5%).
+  - As an ML feature this would inject systematic noise, hurting
+    the 97.7% CV accuracy of the current classifier.
+
+Schema reverted via migration `0039_revert_silero_fields`. Code
+deleted. Deps removed from requirements.txt. Cron + tq-health +
+logrotate cleaned. The `torch` and `silero-vad` install stays in
+the venv (~850 MB), harmless; a fresh install from requirements.txt
+won't pull them.
+
+Lesson recorded: speech-VAD ≠ voice-in-music detector. If we revisit
+instrumental detection, the right model family is music-specific:
+Spleeter (source separation), MusicNN (music tags), Demucs,
+inaSpeechSegmenter. A standalone comparison harness is the next
+step, NOT another integration-first attempt.
 
 ---
 

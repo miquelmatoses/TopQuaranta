@@ -40,37 +40,6 @@ def ml_badge(canco):
 
 
 @register.simple_tag
-def silero_badge(canco):
-    """Render a compact Silero VAD badge.
-
-    - "—" if the track has not been analysed yet.
-    - "🎵 N%" if voice fraction < 0.10 (likely instrumental).
-    - "🎤 N%" if voice fraction ≥ 0.10 (some voice, possibly vocal).
-    Color: red for likely-instrumental, green for clearly-vocal,
-    yellow for the uncertain middle band.
-    """
-    if canco.silero_processat_at is None:
-        return format_html('<span class="staff-ml staff-ml--none">—</span>')
-    vf = canco.silero_veu_probabilitat
-    if vf is None:
-        return format_html('<span class="staff-ml staff-ml--none">⚠</span>')
-    pct = int(round(vf * 100))
-    if vf < 0.10:
-        css, icon = "bad", "🎵"  # likely instrumental
-    elif vf < 0.40:
-        css, icon = "caution", "🎤"  # voice but low coverage
-    else:
-        css, icon = "good", "🎤"  # clearly vocal
-    return format_html(
-        '<span class="staff-ml staff-ml--{}" title="Silero voice fraction">'
-        "{} {}%</span>",
-        css,
-        icon,
-        pct,
-    )
-
-
-@register.simple_tag
 def territori_list(artista):
     """Render comma-separated territory codes."""
     codes = list(artista.territoris.values_list("codi", flat=True))

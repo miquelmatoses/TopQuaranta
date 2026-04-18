@@ -27,7 +27,6 @@ declare -A MAX_AGE_HOURS=(
     [calcular_ranking]=170     # 7 days + 2h buffer
     [tq-restore-test]=840      # 35 days (monthly + 4d buffer)
     [arxivar_senyal_vell]=2400 # 100 days (quarterly + 8d buffer)
-    [analitzar_silero]=48      # 48h (daily + buffer)
 )
 
 overall=0

@@ -455,16 +455,6 @@ class Canco(models.Model):
     )
     ml_classe = models.CharField(max_length=1, blank=True, db_index=True)
     ml_confianca = models.FloatField(null=True, blank=True)
-
-    # Silero VAD: fraction of the 30s Deezer preview where human voice was
-    # detected. NULL means not processed yet (or no preview available).
-    # Populated by `manage.py analitzar_silero`. Used as a feature in the
-    # RF classifier (a track with ~0% voice is very unlikely to be in any
-    # language, much less Catalan) and surfaced in the staff panel for
-    # triage hints ("this track is probably instrumental").
-    silero_veu_probabilitat = models.FloatField(null=True, blank=True)
-    silero_processat_at = models.DateTimeField(null=True, blank=True, db_index=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
