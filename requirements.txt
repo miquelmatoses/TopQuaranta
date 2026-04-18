@@ -12,3 +12,10 @@ argon2-cffi==25.1.0          # S10: stronger password hashing
 django-axes==8.3.1           # S4: brute-force login protection
 django-otp==1.7.0            # S11: TOTP 2FA for staff
 qrcode[pil]==8.2             # S11: render enrollment QR (pulls Pillow)
+# Audio analysis (Silero VAD)
+# NOTE: torch and torchaudio must be installed FROM THE CPU INDEX:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 torchaudio==2.5.1
+# Otherwise pip fetches the CUDA build (~2.5 GB) which we don't need.
+torch==2.5.1+cpu
+torchaudio==2.5.1+cpu
+silero-vad==5.1.2            # Voice Activity Detection feature for ML
