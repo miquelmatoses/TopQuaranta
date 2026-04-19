@@ -1,3 +1,7 @@
+# Install with:
+#   pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+# (torch is pinned to the CPU-only build; PyPI doesn't host +cpu wheels.)
+
 django==5.2
 psycopg2-binary==2.9.10
 python-decouple==3.8
@@ -12,3 +16,8 @@ argon2-cffi==25.1.0          # S10: stronger password hashing
 django-axes==8.3.1           # S4: brute-force login protection
 django-otp==1.7.0            # S11: TOTP 2FA for staff
 qrcode[pil]==8.2             # S11: render enrollment QR (pulls Pillow)
+# Language identification (Whisper LID as a staff signal on Canco)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0+cpu            # CPU-only PyTorch for faster-whisper backbone
+faster-whisper==1.2.1        # large-v3 LID via detect_language(), int8 CPU
+soundfile==0.13.1            # WAV loader (no torchcodec dependency)

@@ -20,6 +20,7 @@
 /var/log/topquaranta/errors.log
 /var/log/topquaranta/backup.log
 /var/log/topquaranta/arxivar.log
+/var/log/topquaranta/whisper.log
 {
     weekly
     rotate 8

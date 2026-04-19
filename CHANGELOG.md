@@ -10,10 +10,38 @@ Dates are UTC.
 
 ## [Unreleased]
 
-Phase 9 wrap-up + groundwork for ML feature extraction (Silero integration,
-coming in the next block).
+Phase 9 wrap-up + groundwork for ML feature extraction + Whisper LID
+integration (Sessió 16).
 
 ### Added
+
+- **Model-comparison harness** at `scripts/model_comparison/` — ground-
+  truth manifest of 48 clips (21 Catalan vocals + 15 foreign-language
+  hits + 11 instrumentals + 1 mislabelled), regenerable via
+  `fetch_clips.py`, one runner per candidate model in its own venv. The
+  harness paid for itself: surfaced two real catalogue errors (Martina
+  Burón *In The Rain* = actually English; Marc Parrot *Visions Tàctils*
+  = actually instrumental), both rebutjat with `motiu="no_catala"`.
+  `resultats.md` records per-model numbers (Silero, Spleeter, Demucs,
+  MusicNN, inaSpeechSegmenter, Whisper large-v3, VoxLingua107 ECAPA).
+  Commits `9c83908`, `04db69e`, `4ba4bb5`, `ee58e8c`.
+- **Whisper LID** (`ingesta/clients/whisper.py`,
+  `ingesta/management/commands/analitzar_whisper.py`, migration `0040`)
+  — `faster-whisper large-v3` via `detect_language()` on the 30-second
+  Deezer preview. New fields on `Canco`: `whisper_lang`, `whisper_p`,
+  `whisper_processat_at`. Evaluated on the 48-clip harness after human
+  correction of 2 ground-truth labels: **precision(ca) = 100 %**,
+  recall(ca) = 81 %, specificity = 100 %. Zero false positives on the
+  dangerous class — no foreign-language or instrumental clip got
+  `p(ca) > 0.05`. Deliberately a staff **signal, not a hard gate**:
+  a new badge + dropdown on `/staff/cancons/` flags tracks where
+  `whisper_lang != ca`, making catalogue audit work the routine case
+  rather than the exception. Runs nightly at 02:30 via cron, limit
+  500 tracks/night (≈3h45m at ~27 s/track CPU).
+- **Staff template tag** `whisper_badge` + filter dropdown "Idioma" +
+  table column on `/staff/cancons/`.
+
+### Added (before Whisper)
 
 - **Φ6 data retention** (`977beef`) — `docs/RETENTION.md` + new management
   command `arxivar_senyal_vell` that runs quarterly and archives

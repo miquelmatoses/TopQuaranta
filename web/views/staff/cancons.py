@@ -49,6 +49,19 @@ def llista(request: HttpRequest) -> HttpResponse:
     if ml_classe in ("A", "B", "C"):
         qs = qs.filter(ml_classe=ml_classe)
 
+    # Filter: Whisper LID (triage hint, not hard gate).
+    # "ca"      → Whisper agrees with "Catalan" — high-confidence auto-queue.
+    # "no_ca"   → Whisper predicts a non-Catalan language — suspicious,
+    #             especially for tracks already marked verificada=True.
+    # "pendent" → not yet analysed.
+    whisper = request.GET.get("whisper", "")
+    if whisper == "ca":
+        qs = qs.filter(whisper_lang="ca")
+    elif whisper == "no_ca":
+        qs = qs.filter(whisper_processat_at__isnull=False).exclude(whisper_lang="ca")
+    elif whisper == "pendent":
+        qs = qs.filter(whisper_processat_at__isnull=True)
+
     # Filter: date range
     data_des = request.GET.get("data_des", "")
     data_fins = request.GET.get("data_fins", "")
@@ -75,6 +88,7 @@ def llista(request: HttpRequest) -> HttpResponse:
             "page": page,
             "verificada": verificada,
             "ml_classe": ml_classe,
+            "whisper": whisper,
             "data_des": data_des,
             "data_fins": data_fins,
             "cerca": cerca,

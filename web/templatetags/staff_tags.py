@@ -40,6 +40,32 @@ def ml_badge(canco):
 
 
 @register.simple_tag
+def whisper_badge(canco):
+    """Render a compact Whisper LID badge.
+
+    - "—" if the track hasn't been analysed yet.
+    - "CA N%" in green if Whisper agrees with our catalogue (ca).
+    - "XX N%" in orange if Whisper predicts a non-Catalan language —
+      signal to staff that the verification may be wrong (as Whisper
+      surfaced 2 real catalogue errors on the 48-clip eval set).
+    Precision on the eval set is 100 %: if Whisper says `ca`, the
+    track was really Catalan in every case measured.
+    """
+    if canco.whisper_processat_at is None:
+        return format_html('<span class="staff-ml staff-ml--none">—</span>')
+    lang = canco.whisper_lang or "?"
+    prob = canco.whisper_p
+    pct = f"{int(round(prob * 100))}" if prob is not None else "?"
+    css = "good" if lang == "ca" else "caution"
+    return format_html(
+        '<span class="staff-ml staff-ml--{}" title="Whisper LID">{} {}%</span>',
+        css,
+        lang.upper(),
+        pct,
+    )
+
+
+@register.simple_tag
 def territori_list(artista):
     """Render comma-separated territory codes."""
     codes = list(artista.territoris.values_list("codi", flat=True))

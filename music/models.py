@@ -455,6 +455,14 @@ class Canco(models.Model):
     )
     ml_classe = models.CharField(max_length=1, blank=True, db_index=True)
     ml_confianca = models.FloatField(null=True, blank=True)
+    # Whisper large-v3 language identification over the Deezer preview.
+    # Populated nightly by `analitzar_whisper`; leave NULL → not yet analysed
+    # so the next run picks it up. `whisper_lang` is a 2-letter ISO code
+    # (ca, es, en, fr, it, pt, …) or empty string on model failure.
+    # `whisper_p` is the top-1 language probability in [0, 1].
+    whisper_lang = models.CharField(max_length=3, blank=True, db_index=True)
+    whisper_p = models.FloatField(null=True, blank=True)
+    whisper_processat_at = models.DateTimeField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

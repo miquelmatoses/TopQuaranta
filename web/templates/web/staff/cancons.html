@@ -21,6 +21,12 @@
     <option value="B"{% if ml_classe == "B" %} selected{% endif %}>B</option>
     <option value="C"{% if ml_classe == "C" %} selected{% endif %}>C</option>
   </select>
+  <select name="whisper" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Idioma: Totes</option>
+    <option value="ca"{% if whisper == "ca" %} selected{% endif %}>Whisper: català</option>
+    <option value="no_ca"{% if whisper == "no_ca" %} selected{% endif %}>Whisper: no-català ⚠</option>
+    <option value="pendent"{% if whisper == "pendent" %} selected{% endif %}>— Sense analitzar</option>
+  </select>
   <input type="text" name="q" value="{{ cerca }}" placeholder="Cercar nom o artista..." class="filter-search" style="max-width:240px">
   <label style="font-size:var(--mm-text-sm);white-space:nowrap">Des de
     <input type="date" name="data_des" value="{{ data_des }}" class="filter-search" style="max-width:150px">
@@ -57,6 +63,7 @@
         <tr>
           <th></th>
           <th>{% sort_header "ml" "ML" %}</th>
+          <th>Idioma</th>
           <th>{% sort_header "nom" "Cançó" %}</th>
           <th>{% sort_header "artista" "Artista" %}</th>
           <th>{% sort_header "album" "Album" %}</th>
@@ -72,6 +79,7 @@
         <tr>
           <td><input type="checkbox" name="ids" value="{{ canco.pk }}" class="row-check"></td>
           <td>{% ml_badge canco %}</td>
+          <td>{% whisper_badge canco %}</td>
           <td><a href="{% url 'staff:canco_editar' pk=canco.pk %}" class="staff-edit-link">{{ canco.nom }}</a></td>
           <td><a href="{% url 'staff:artista_editar' pk=canco.artista.pk %}" class="staff-edit-link">{{ canco.artista.nom }}</a></td>
           <td class="staff-cell-muted">{% if canco.album %}<a href="{% url 'staff:album_editar' pk=canco.album.pk %}" class="staff-edit-link">{{ canco.album.nom }}</a>{% else %}<span class="staff-cell-muted">—</span>{% endif %}</td>
@@ -86,7 +94,7 @@
           <td class="staff-cell-muted">{% territori_list canco.artista %}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="ranking-empty">Cap can&ccedil;&oacute; trobada.</td></tr>
+        <tr><td colspan="11" class="ranking-empty">Cap can&ccedil;&oacute; trobada.</td></tr>
         {% endfor %}
       </tbody>
     </table>
