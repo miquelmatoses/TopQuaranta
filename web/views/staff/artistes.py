@@ -47,7 +47,13 @@ def llista(request: HttpRequest) -> HttpResponse:
     if deezer == "si":
         qs = qs.filter(deezer_ids__isnull=False)
     elif deezer == "no":
-        qs = qs.filter(deezer_no_trobat=True)
+        # Current state = absence of any ArtistaDeezer row. The legacy
+        # `deezer_no_trobat` flag used to be the filter here, but it can
+        # become stale once auto-descoberta or staff adds a Deezer link
+        # (see Àlex Blat, 2026-04-19). Signal
+        # `clear_deezer_no_trobat_on_ad_save` now syncs the flag too,
+        # but the filter shouldn't depend on a cache field.
+        qs = qs.filter(deezer_ids__isnull=True)
 
     territori = request.GET.get("territori", "")
     if territori:
