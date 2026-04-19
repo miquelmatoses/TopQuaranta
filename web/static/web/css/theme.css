@@ -44,6 +44,7 @@
   --mm-color-background:        var(--tq-color-ink);
   --mm-color-text-primary:      #ffffff;
   --mm-color-text-secondary:    var(--tq-color-ink-muted);
+  --mm-color-text-muted:        var(--tq-color-ink-muted);
   --mm-color-border:            var(--tq-color-border);
   --mm-color-surface:           var(--tq-color-surface);
 
@@ -220,6 +221,80 @@ main.container a:hover { color: var(--tq-color-yellow-deep); }
 main.container h1, main.container h2, main.container h3,
 main.container h4, main.container h5, main.container h6 {
   color: #ffffff;
+}
+
+/* Inline SVG icons: always inherit stroke/fill from the enclosing
+   `color`. Prevents the "black icon on black bg" case that shows up
+   when a legacy rule set `color` but the icon was drawn with a
+   default `stroke="currentColor"` that fell back to black. */
+main.container svg[stroke="currentColor"] { stroke: currentColor; }
+main.container svg[fill="currentColor"] { fill: currentColor; }
+
+/* Dark backgrounds anywhere — force light foreground for anything
+   that used to be dark-on-light. This picks up every container that
+   has `background-color: var(--mm-color-background)` (now black) and
+   had an implicit dark text color; the rule is narrowly scoped to
+   the public body so staff cards (white surface) aren't affected. */
+body:not(.home-yellow) main.container {
+  color: #ffffff;
+}
+
+/* Card-on-black overrides: legacy components that were designed
+   to sit on a white page now need an explicit white surface so
+   their monochrome SVG badges (served as <img>) stay readable
+   and their muted-grey text has a light background to contrast
+   against. This is the cercol pattern: floating white cards on
+   the coloured / dark page. */
+body:not(.home-yellow) .welcome-hero,
+body:not(.home-yellow) .selector-card,
+body:not(.home-yellow) .ranking-entry,
+body:not(.home-yellow) .ranking-rank-card,
+body:not(.home-yellow) .rank-hero,
+body:not(.home-yellow) .artista-card,
+body:not(.home-yellow) .artista-perfil,
+body:not(.home-yellow) .album-card,
+body:not(.home-yellow) .album-perfil,
+body:not(.home-yellow) .canco-card,
+body:not(.home-yellow) .canco-perfil,
+body:not(.home-yellow) .profile-hero,
+body:not(.home-yellow) .profile-body {
+  background: var(--tq-color-surface);
+  color: var(--tq-color-ink);
+  border-radius: var(--tq-radius-lg);
+}
+/* Nested links inside those cards follow their new dark-on-white
+   context (not the page-level yellow-on-black). */
+body:not(.home-yellow) .welcome-hero a,
+body:not(.home-yellow) .selector-card a,
+body:not(.home-yellow) .ranking-entry a,
+body:not(.home-yellow) .rank-hero a,
+body:not(.home-yellow) .artista-card a,
+body:not(.home-yellow) .album-card a,
+body:not(.home-yellow) .canco-card a,
+body:not(.home-yellow) .profile-hero a,
+body:not(.home-yellow) .profile-body a {
+  color: var(--tq-color-ink);
+}
+body:not(.home-yellow) .welcome-hero a:hover,
+body:not(.home-yellow) .selector-card a:hover,
+body:not(.home-yellow) .ranking-entry a:hover,
+body:not(.home-yellow) .rank-hero a:hover,
+body:not(.home-yellow) .artista-card a:hover,
+body:not(.home-yellow) .album-card a:hover,
+body:not(.home-yellow) .canco-card a:hover,
+body:not(.home-yellow) .profile-hero a:hover,
+body:not(.home-yellow) .profile-body a:hover {
+  color: var(--tq-color-yellow-deep);
+}
+/* Titles inside floating cards keep ink color. */
+body:not(.home-yellow) .welcome-hero :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .selector-card :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .ranking-entry :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .rank-hero :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .artista-card :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .album-card :where(h1,h2,h3,h4,h5,h6),
+body:not(.home-yellow) .canco-card :where(h1,h2,h3,h4,h5,h6) {
+  color: var(--tq-color-ink);
 }
 
 /* ═══ Footer — same black as body, divider on top ═══ */
