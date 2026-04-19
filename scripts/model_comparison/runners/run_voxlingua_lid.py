@@ -10,8 +10,8 @@ import sys
 import time
 from pathlib import Path
 
+import soundfile as sf
 import torch
-import torchaudio
 from speechbrain.inference.classifiers import EncoderClassifier
 
 HERE = Path(__file__).resolve().parent.parent
@@ -37,12 +37,11 @@ for row in rows:
         continue
     start = time.time()
     try:
-        signal, sr = torchaudio.load(str(wav))
-        if sr != 16000:
-            signal = torchaudio.functional.resample(signal, sr, 16000)
-        # Mono + 1D
-        if signal.dim() == 2 and signal.shape[0] > 1:
-            signal = signal.mean(dim=0, keepdim=True)
+        # Clips are already 16 kHz mono WAV (fetch_clips.py normalises them).
+        data, sr = sf.read(str(wav), dtype="float32")
+        if data.ndim > 1:
+            data = data.mean(axis=1)
+        signal = torch.from_numpy(data).unsqueeze(0)
         out = clf.classify_batch(signal)
         # out = (scores_per_class, index, label_prob, label_name)
         # label_name like "ca: Catalan"

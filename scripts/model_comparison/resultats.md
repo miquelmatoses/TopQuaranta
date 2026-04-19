@@ -39,16 +39,34 @@ Swift, The Weeknd, Adele, Stromae, Angèle, Måneskin, Pausini, Caetano Veloso).
 
 `detect_language()` on the raw 30 s clip. No source separation.
 
-**Binary confusion matrix (ca vs no-ca, 48 clips):**
+**Binary confusion matrix (ca vs no-ca, 48 clips) — after user-verified
+ground-truth correction:**
 
 |  | **Predicted ca** | **Predicted no-ca** |
 |---|---:|---:|
-| **Is ca (23)** | 17 (TP) | 6 (FN) |
-| **Not ca (25)** | **0 (FP)** | 25 (TN) |
+| **Is ca (21)** | 17 (TP) | 4 (FN) |
+| **Not ca (27)** | **0 (FP)** | 27 (TN) |
 
 **Precision(ca) = 17/17 = 100 %**
-**Recall(ca)    = 17/23 = 73.9 %**
-**Specificity   = 25/25 = 100 %**
+**Recall(ca)    = 17/21 = 81.0 %**
+**Specificity   = 27/27 = 100 %**
+
+Staff verified the 6 clips Whisper flagged as non-Catalan:
+- **2 turned out to be OUR catalogue errors**: `In The Rain` (Martina Burón,
+  pk=7925) is actually English; `Visions Tàctils` (Marc Parrot, pk=721) is
+  actually instrumental. Both were `verificada=True` with `idioma=ca` in
+  our DB — Whisper correctly flagged them as non-Catalan. **Recommend
+  rebutjar(motiu="no_catala")** for both.
+- **3 are genuine Whisper false negatives**: Tarquim, Batre de Pepe Moreno
+  (both Jonatan Penalba), Tape - Remix (Adrien Broadway). Two of three are
+  the same artist — Penalba's vocal timbre may be systematically
+  misclassified as Spanish. Demucs-vocals preprocessing is a candidate
+  fix for a follow-up iteration.
+- **1 inconclusive**: Jofre Bardagí *Ja Tens l'Amor* — Deezer preview
+  broken, staff can't re-verify.
+
+Ground-truth corrections applied to `manifest.tsv`: In The Rain → `en`;
+Visions Tàctils → `inst`.
 
 ### The 6 Catalan false negatives (by what Whisper saw)
 
@@ -117,6 +135,24 @@ else:                                     reject (but staff can override)
 - Untested: Demucs-vocals preprocessing. Community claim is it helps on
   mixed mastering; we saw 100 % precision without it, so there's no
   motivation to add complexity.
+
+## SpeechBrain VoxLingua107 ECAPA-TDNN — SECOND-OPINION, rejected
+
+Ran the same 48 clips through `speechbrain/lang-id-voxlingua107-ecapa` as a
+sanity check against Whisper. Results disqualify it for our pipeline:
+
+- **Multi-class accuracy: 14/38 = 36.8 %** (vs Whisper 84.2 %).
+- **Two false positives on `ca`** — unacceptable:
+  - C. Tangana *Tú Me Dejaste De Querer* → predicted ca (0.44), p_es=0.13
+  - Rozalén *La Puerta Violeta* → predicted ca (0.44), p_es=0.15
+- Wild hallucinations on Catalan clips (predicted `jw`, `my`, `ar`, `la`,
+  `cy`, `zh`, `sco`, `yi`, `ba`, `eu`) — consistent with the known issue
+  that VoxLingua is trained on YouTube speech, not singing, and degrades
+  badly on music.
+- Only 8 of 23 Catalan clips got `p(ca) ≥ 0.5` (vs 17 for Whisper).
+
+Keeping the runner in the repo for future reference — it proves negative
+results are real, not an install problem.
 
 ---
 
