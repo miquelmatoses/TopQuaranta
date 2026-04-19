@@ -1,100 +1,162 @@
 # Model comparison results
 
-## Ground truth: 19 clips (10 instrumental Patinet + 9 staff-verified Catalan vocals)
+## Project framing (important!)
+
+TopQuaranta's goal is a catalogue of **Catalan-language music**. The filter is
+**binary**: `ca` vs everything else (other languages, instrumentals,
+ambiguous). We don't care what Whisper hallucinates for an instrumental as
+long as that hallucination isn't `ca`. So the metric that matters is:
+
+- **Precision(ca) — of everything the classifier accepts as `ca`, how much
+  really is `ca`?** This must approach 100% or the catalogue gets polluted.
+- **Recall(ca)** — of true Catalan tracks, how many pass the filter? Lower
+  recall just means staff review rescues more, which is fine.
+
+Everything below — vocal/instrumental detection, gender tagging — is
+secondary and was explored for its own sake.
+
+---
+
+# Language Identification (LID) — 48 clips
+
+## Ground truth
+
+48 clips = 23 Catalan vocals + 5 Spanish + 5 English + 2 French + 2 Italian +
+1 Portuguese + 10 Patinet instrumentals (label `ca=—`, must not get
+classified as `ca`).
+
+Catalan clips span: pop (Remei, Borrissol, Wildside), folk (Maria del Mar
+Bonet), rock (Sopa de Cabra live, Germans Tanner), hardcore (Wildside, SX3),
+cantautor (David Torné, Andreu Valor), female-lead (Clara Bonfill, Laia dels
+Vents, Martina Burón), prog live (Companyia Elèctrica Dharma), feat. tracks
+(Jonatan Penalba + Pepe Moreno).
+
+Foreign clips are Deezer search hits by famous single-language artists
+(Rosalía, Bad Bunny, C. Tangana, Rozalén, Ed Sheeran, Billie Eilish, Taylor
+Swift, The Weeknd, Adele, Stromae, Angèle, Måneskin, Pausini, Caetano Veloso).
+
+## Whisper large-v3 (faster-whisper, CPU int8) — PRIMARY MODEL
+
+`detect_language()` on the raw 30 s clip. No source separation.
+
+**Binary confusion matrix (ca vs no-ca, 48 clips):**
+
+|  | **Predicted ca** | **Predicted no-ca** |
+|---|---:|---:|
+| **Is ca (23)** | 17 (TP) | 6 (FN) |
+| **Not ca (25)** | **0 (FP)** | 25 (TN) |
+
+**Precision(ca) = 17/17 = 100 %**
+**Recall(ca)    = 17/23 = 73.9 %**
+**Specificity   = 25/25 = 100 %**
+
+### The 6 Catalan false negatives (by what Whisper saw)
+
+| Track | Predicted | p(ca) | p(predicted) | Hypothesis |
+|---|---|---:|---:|---|
+| Jofre Bardagí — *Ja Tens l'Amor* | es | 0.15 | 0.71 | Quiet acoustic, low vocal energy, ca/es phoneme drift |
+| Jonatan Penalba — *Batre de Pepe Moreno* (feat.) | es | 0.07 | 0.83 | Feat. verse may actually be Spanish |
+| Martina Burón — *In The Rain* | en | 0.00 | 0.81 | **English title — likely bilingual/actually English lyric.** Recommend staff re-verification. |
+| Marc Parrot — *Visions Tàctils* | en | 0.00 | 0.74 | Marc Parrot has bilingual catalogue; this specific track may be English. Recommend re-verification. |
+| Jonatan Penalba — *Tarquim* | es | 0.04 | 0.72 | Similar to Batre pattern |
+| Adrien Broadway — *Tape - Remix* | es | 0.02 | 0.44 | English title, Whisper also sees Italian (0.23). Recommend re-verification. |
+
+Three of the six (*In The Rain*, *Visions Tàctils*, *Tape - Remix*) have
+English titles and very low `p(ca)` — plausibly **genuine label errors in
+our DB**, not model errors. If true, effective recall on correct labels is
+86–90 %.
+
+### The 25 non-Catalan clips — maximum p(ca) observed
+
+All 25 stay safely below any reasonable threshold:
+
+| Clip group | max p(ca) observed | predicted language at max |
+|---|---:|---|
+| 10 Patinet instrumentals | ≤ 0.05 | always `en` (Whisper default hallucination) |
+| 5 Spanish (Rosalía, Bad Bunny, C. Tangana, Manuel Carrasco, Rozalén) | 0.01 | always `es` |
+| 5 English | ≤ 0.02 | always `en` |
+| 2 French (Stromae, Angèle) | < 0.01 | always `fr` |
+| 2 Italian (Måneskin, Pausini) | < 0.01 | always `it` |
+| 1 Portuguese (Caetano) | < 0.01 | `pt` |
+
+### Threshold calibration
+
+Whisper's natural top-1 rule (`predicted == "ca"`) gives precision 100 % and
+recall 74 % on this set. Relaxing to `p(ca) ≥ 0.10` would recover *Ja Tens
+l'Amor* (+1 TP) without introducing any FP. `p(ca) ≥ 0.05` would also
+recover *Batre de Pepe Moreno*. Below that, risk of FPs rises.
+
+### Recommended pipeline
+
+```
+Deezer 30s preview → WAV 16 kHz mono → faster-whisper large-v3 .detect_language()
+
+if predicted_language == "ca":            accept (auto)
+elif p(ca) >= 0.10 and p(ca) - p(es) >= 0.05:  accept + staff review
+else:                                     reject (but staff can override)
+```
+
+- Primary cost: ~27 s/clip on CPU (Hetzner CX22). 8 000 tracks = ~60 h one-
+  shot, or bounded via nightly cron of a few hundred new tracks per day.
+- Model storage: 1.5 GB for large-v3 int8 (`~/.cache/huggingface`).
+- Could move to `large-v3-turbo` (distilled) if speed becomes a problem —
+  community benchmarks suggest 2–3× faster with marginal LID degradation.
+
+### Honest caveats
+
+- 48 clips is small. Foreign-language sample is especially small (5 es, 5 en,
+  2 fr, 2 it, 1 pt). Fine for a go/no-go decision; not fine for a formal
+  benchmark.
+- The 6 false negatives might hide label errors in our catalogue. Staff
+  should listen to *In The Rain*, *Visions Tàctils*, *Tape - Remix* to
+  confirm they really are in Catalan.
+- We have not tested the **hardest adversarial case**: Catalan songs with a
+  long Spanish/English featured verse that dominates the 30 s preview. If
+  such tracks exist, they'd be Catalan by album attribution but sound
+  foreign to Whisper.
+- Untested: Demucs-vocals preprocessing. Community claim is it helps on
+  mixed mastering; we saw 100 % precision without it, so there's no
+  motivation to add complexity.
+
+---
+
+# Vocal / instrumental detection — 19 clips (legacy, superseded)
+
+**Superseded by the simpler LID framing above.** If Whisper rejects an
+instrumental as non-Catalan, we don't need a separate instrumental filter.
+
+Kept for reference — the MusicNN `male voice` / `female voice` tags remain
+potentially useful for a future "% female voice" metric.
 
 | Model | Instr. vocal_p max | Vocal vocal_p min | Gap | Speed/clip | Verdict |
 |---|---:|---:|---:|---:|---|
 | **Silero VAD** | 0.00 (47 clips eval) | 0.10 (51% below) | — | 0.5s | ❌ Speech-only; structurally wrong for singing. Reverted 2026-04-18. |
 | **inaSpeechSegmenter** | "music" 100% | "music" 100% | 0 | 3.0s | ❌ Distinguishes podcast-vs-music, not instr-vs-vocal in music. |
 | **Spleeter (2stems)** | 0.366 | 0.242 | **−0.124** | 13s | ⚠ Overlap zone. 1 false positive, 1 borderline. Discarded. |
-| **Demucs (htdemucs)** | 0.161 | 0.178 | **+0.017** | 55s | ✅ 100% separation, tight gap. Slow (7h for 8k tracks). |
-| **MusicNN (MTT_musicnn)** | 0.086 | 0.114 | **+0.028** | 4s | ✅ 100% separation, widest gap. 13× faster than Demucs. |
+| **Demucs (htdemucs)** | 0.161 | 0.178 | **+0.017** | 55s | ✅ 100% separation, tight gap. |
+| **MusicNN (MTT_musicnn)** | 0.086 | 0.114 | **+0.028** | 4s | ✅ 100% separation, widest gap. |
 
-## Raw data
+Full per-clip numbers in git history at
+`scripts/model_comparison/resultats.md` commit `9c83908`.
 
-### MusicNN per-clip (vocal_p tag = "vocal" + "vocals" mean probability over time segments)
+---
 
-```
-Instrumental (Patinet, 10 clips):
-  17723 v=0.019   1 de Maig
-  17739 v=0.035   1 de Maig (Versió Ionic South)
-  17703 v=0.013   450 Mulberry Street
-  10338 v=0.013   A Flash In The Pan
-  17751 v=0.023   All You Need Is Glub
-  17769 v=0.086   A Merry Free For All      ← max
-  17706 v=0.011   Antarctic Day
-   9811 v=0.007   A Phoney Situation        ← min
-  17725 v=0.008   Arribant a l'Illa
-  17787 v=0.012   Astrosurfing
+# Recommendation for TopQuaranta
 
-Vocal (staff-verified, 9 clips):
-  19801 v=0.118   Va Com Va — Remei de Ca la Fresca
-  20623 v=0.147   Murs d'Altaveus — Sobre Mi Gata
-  13111 v=0.534   Sense Tu, No És el Mar — Clara Bonfill   ← max
-  23438 v=0.358   Sota una Estrella — Sopa de Cabra
-  23574 v=0.114   Ja Tens l'Amor — Jofre Bardagí           ← min
-   9965 v=0.155   He Pecat — Borrissol
-  16754 v=0.450   Batre de Pepe Moreno — Jonatan Penalba
-  16791 v=0.516   Yoga els Dimecres — Jordi Maranges
-  22028 v=0.251   Tota la Nit (Demo) — Wildside
-```
+**Integrate faster-whisper large-v3 LID** as a new staff signal on `Canco`:
 
-Threshold `vocal_p ≥ 0.10` classifies 19/19 correctly on this set.
+1. Schema: `Canco.whisper_lang` (CharField(max_length=3, blank=True)) +
+   `Canco.whisper_p` (FloatField(null=True)) + `Canco.whisper_processat_at`.
+2. Management command `analitzar_whisper` — batched over
+   `Canco.objects.filter(whisper_processat_at__isnull=True)`, nightly cron.
+3. Staff triage badge on `/staff/cancons/`: red flag if
+   `whisper_lang != "ca"` and staff hasn't yet reviewed. Faster false-
+   negative cleanup (*Ja Tens l'Amor*-type cases).
+4. ML feature (after backfill): `whisper_p_ca` as an extra input to the RF
+   classifier — no extra ground-truth labelling needed.
+5. No hard rejection — staff verification remains the source of truth. This
+   is a **signal**, not a gate.
 
-### MusicNN bonus tags: male/female voice
-
-MusicNN also emits `male voice` and `female voice` probabilities. Reasonable
-correlation with known gender on the ground-truth clips:
-
-- Sopa de Cabra (male lead): m=0.358, f=0.078 ✓
-- Clara Bonfill (female lead): m=0.121, f=0.442 ✓
-- Jonatan Penalba (male lead): m=0.510, f=0.042 ✓
-- Jordi Maranges (male lead): m=0.235, f=0.182 ✓
-- Borrissol (mixed, male-dominant in this track): m=0.143, f=0.016 ✓
-
-Potentially useful for a future "% female voice in the ranking" metric
-**without any additional model** — free side channel from the same inference.
-
-### Demucs per-clip (vocal_p = vocal stem RMS / total RMS)
-
-```
-Instrumental range: 0.098 – 0.161 (max: A Merry Free For All)
-Vocal        range: 0.178 – 0.421 (min: Ja Tens l'Amor)
-```
-
-### Spleeter per-clip (2stems, vocal stem RMS ratio)
-
-```
-Instrumental range: 0.097 – 0.366 (max: A Merry Free For All)
-Vocal        range: 0.242 – 0.481 (min: Ja Tens l'Amor)
-```
-
-Note: *A Merry Free For All* is the hardest instrumental for every model —
-it's Patinet's most "band-like" arrangement with brass and percussion. Ja
-Tens l'Amor is the most understated vocal — acoustic ballad, low voice in
-the mix.
-
-## Earlier evaluations (superseded)
-
-### Silero VAD (reverted 2026-04-18)
-
-Measured against 47 staff-verified Catalan vocal tracks (different set from
-the current manifest, pre-dates this harness):
-
-- 51% of vocal tracks scored **<10% voice probability** → false negatives.
-- Sopa de Cabra live recordings (known vocal): 0–7%.
-- Katarrama (hardcore with screaming): 1.7%.
-- Aquarella "Aire Pur" (clear female vocal): 0%.
-
-Silero is trained on speech (phone calls, podcasts). Singing phonemes are
-stretched and pitched; speech VAD features collapse. Structural mismatch,
-not a tuning issue.
-
-Also discarded: **inaSpeechSegmenter** (INA France) — classifies all music
-as "music", no instr/vocal distinction within music.
-
-## Next candidate: song language identification (Whisper / VoxLingua107)
-
-See `runners/run_whisper_lid.py` (TODO). Expected separation task: 9 Catalan
-vocals vs ≥5 Spanish/English control clips. Target metric: `p(ca) ≥ 0.7`
-with `p(ca) − p(es) ≥ 0.15`.
+**Do NOT integrate MusicNN instrumental detection** as a primary filter —
+LID subsumes it. MusicNN may come back later as a source for `male_voice` /
+`female_voice` probabilities when we need the % female metric.
