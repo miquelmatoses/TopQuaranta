@@ -10,10 +10,98 @@ Dates are UTC.
 
 ## [Unreleased]
 
-Phase 9 wrap-up + groundwork for ML feature extraction + Whisper LID
-integration (Sessió 16).
+Phase 9 wrap-up + Whisper LID integration (Sessió 16) + Sessió 17
+cleanup sweep (audit → safeguards + state-machine split + consistency
+fixes across the whole Whisper + fusionar + pendents surfaces).
 
-### Added
+### Added (Sessió 17 — cleanup sweep)
+
+- **`Artista.pendent_review`** (migration `0042`) as the authoritative
+  "in staff triage queue" flag, separate from `auto_descobert` which
+  is now immutable discovery provenance. A `CheckConstraint` forbids
+  `(aprovat=True, pendent_review=True)` at the DB level; a composite
+  index on `(pendent_review, aprovat)` keeps the list fast.
+  RunPython backfill (a) flipped `pendent_review=True` on everyone
+  in the old queue (2 291 rows), (b) surfaced 2 orphans with verified
+  tracks that had no queue flag, (c) deleted 40 legacy-migration rows
+  (`font_descoberta='legacy'`, zero Cançons) that had been invisible
+  since the Wagtail import. Total: 4 259 → 4 209.
+- **`StaffAuditLog.ACTION_CHOICES`** gains `artista_crear` (migration
+  `0043`) so the audit-log filter surfaces manual creations.
+- **`music/utils.py::normalize_nom`** as the single home for the
+  accent/case-insensitive fold used by the `duplicats=si` filter and
+  the artist-create duplicate guard.
+- **`deezer_artist_url` template tag** in `staff_tags.py` consolidates
+  `https://www.deezer.com/artist/{id}`.
+
+### Fixed (Sessió 17)
+
+- **`api_aprovar` 500 on Deezer-id collision**: entering a Deezer id
+  that already belongs to another artist now returns a JSON 409 that
+  names the owner artist, instead of leaking an `IntegrityError`
+  from the `ArtistaDeezer.deezer_id` unique constraint. Wrapped in a
+  nested savepoint so only the Deezer insert rolls back.
+- **Fusionar artistes: HistorialRevisio migration**: the
+  `ratio_rebuig_artista` ML feature keys on `artista_nom`, so without
+  this the target silently inherited zero rejection history from the
+  merged-away duplicate. `HistorialRevisio.objects.filter(artista_nom=
+  source.nom).update(artista_nom=target.nom)` now runs inside the
+  merge transaction.
+- **Fusionar artistes: principal invariant**: after the merge we
+  guarantee exactly one `ArtistaDeezer(principal=True)` on the target.
+  Previously `.update(artista=target, principal=False)` on the source
+  rows could leave target with zero principals, making
+  `deezer_id_principal` a random `.first()`.
+- **Whisper features training vs inference divergence**: the
+  `_whisper_features()` fallback (used when `whisper_all_probs` is
+  NULL) returned `margin_ca = p(top-1)` which didn't match the
+  full-distribution value. The fallback now returns `0.0` for
+  margin when it can't compute it correctly, so the RF learns to
+  rely on margin only where it's informed.
+- **Whisper features zeroed for merged tracks**: `_whisper_features_
+  from_historial` now falls back to ISRC when `canco_deezer_id`
+  misses — previously all merged-track historial rows got a zero
+  vector and silently polluted training data.
+- **Heuristic classifier threshold drift**: `_heuristic_classificar`
+  now uses `ML_CLASSE_A_THRESHOLD` / `ML_CLASSE_B_THRESHOLD` (0.7 /
+  0.4) instead of its own 0.65/0.35 hard-codes, so an RF-load
+  failure doesn't silently reclassify tracks at a different
+  boundary.
+- **`api_descartar` ML recalc**: calls `recalcular_ml_si_cal()` on
+  the keep branch, consistent with the other descartar paths.
+- **`obtenir_metadata` filter**: switched from the stale
+  `deezer_no_trobat=False` cache flag to `deezer_ids__isnull=True`
+  (the source-of-truth relation), so artists whose Deezer link was
+  deleted/merged get re-queried correctly.
+- **`obtenir_novetats`, `obtenir_metadata` (×2), `fix_artista_principal`**:
+  every Artista-creating path now sets `pendent_review=True`
+  alongside `auto_descobert=True`, so provenance stays intact when
+  staff approves/descartars.
+- **`fetch_clips.py`**: exits `1` when every fetch failed and
+  nothing was already cached (was `0`).
+- **Staff CSS**: `html { font-size: 93.75% }` — everything scales
+  6 % down so the staff tables fit on laptop viewports.
+
+### Changed (Sessió 17)
+
+- `pendents.llista` filter uses `pendent_review=True`.
+- `api_aprovar` / `api_descartar` toggle `pendent_review`, not
+  `auto_descobert`.
+- `pendents.audit_log.action_taken` label updated:
+  `kept_auto_descobert_false` → `kept_pendent_review_false`.
+
+### Deferred (Sessió 17)
+
+- Shared locality-cascade JS module (audit finding #11). Shipping
+  dead infrastructure without migrating the two existing consumers
+  is worse than the current duplication; the refactor lands the
+  next time `pendents.html` or `artista_edit.html` needs real work.
+- `deezer_no_trobat` column removal. The filter no longer reads it
+  and a signal keeps it in sync, but the writers in
+  `obtenir_metadata` still update it for backwards compat — a full
+  sweep + removal migration is a later cleanup.
+
+### Added (Sessió 16 — Whisper LID + harness)
 
 - **Model-comparison harness** at `scripts/model_comparison/` — ground-
   truth manifest of 48 clips (21 Catalan vocals + 15 foreign-language

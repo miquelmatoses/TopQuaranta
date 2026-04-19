@@ -28,17 +28,43 @@ Identity: `spotify_id` (legacy), `deezer_id` (nullable BigInteger), `slug`.
 
 | Group | Fields |
 |---|---|
-| Core | `nom`, `slug`, `lastfm_nom`, `lastfm_mbid` |
-| Approval | `aprovat` ✦, `auto_descobert`, `font_descoberta` |
-| Discovery | `deezer_no_trobat`, `last_checked_deezer` |
+| Core | `nom`, `slug`, `lastfm_nom` |
+| Approval state | `aprovat` ✦, `pendent_review` ✦ |
+| Discovery provenance (immutable) | `auto_descobert`, `font_descoberta` |
+| Discovery cache | `deezer_no_trobat`, `last_checked_deezer` |
 | Deezer meta | `deezer_nb_fan`, `deezer_nb_album`, `deezer_nom`, `deezer_nom_similitud` |
+| Last.fm | `lastfm_te_scrobbles` ✦ |
 | Territories | `territoris` M2M (auto-synced) |
-| Legacy location | `localitat`, `comarca`, `provincia` (kept for backwards compat) |
 | Social links | 10 URLFields, listed in `SOCIAL_LINK_FIELDS` |
 | Genre | `genere` (free text), `percentatge_femeni` (choices) |
 | `created_at` | auto_now_add |
 
-✦ = `db_index=True` (added in migration `0026`).
+✦ = `db_index=True`.
+
+### Approval state machine (since migration 0042)
+
+`aprovat` and `pendent_review` are orthogonal and ENFORCED by
+`CheckConstraint("artista_no_aprovat_pendent_review")`:
+
+| `aprovat` | `pendent_review` | Meaning |
+|---|---|---|
+| ✅ True  | ❌ False | **Live.** Tracks can enter the ranking. |
+| ❌ False | ✅ True  | **In the pendents queue** (`/staff/artistes/pendents/`). |
+| ❌ False | ❌ False | **Descartat.** Row kept for FK integrity; not in any queue. |
+| ✅ True  | ✅ True  | **FORBIDDEN** by the DB constraint. |
+
+`auto_descobert` is a separate immutable record of *how* the artist
+got into the system (True for feat.-resolution / Viasona / auto
+sources, False for manual creation and legacy imports). It is NEVER
+flipped by the approval flow — historical code used it as a
+queue-membership flag, a conflation the 0042 migration resolved.
+
+`deezer_no_trobat` is a cache: "Deezer search failed for this
+artist, don't re-query immediately". The pendents filter no longer
+reads it (uses `deezer_ids__isnull` directly); it remains a write-path
+hint for `obtenir_novetats` / `obtenir_metadata`. A `post_save`
+receiver on `ArtistaDeezer` clears the flag whenever a real Deezer
+link appears.
 
 **Relations (related_name):**
 - `localitats` — reverse of `ArtistaLocalitat.artista`
@@ -88,14 +114,23 @@ Territory derived via `artista.territoris ∪ artistes_col.territoris`.
 |---|---|
 | Identity | `spotify_id`, `deezer_id`, `isrc`, `slug`? (no — only album) |
 | Relations | `album` FK, `artista` FK, `artistes_col` M2M |
-| Names | `nom`, `lastfm_nom`, `lastfm_mbid` |
-| Flags | `verificada` ✦, `activa` ✦, `lastfm_verificat` |
+| Names | `nom`, `lastfm_nom` |
+| Flags | `verificada` ✦, `activa` ✦, `lastfm_confirmed` |
 | Dates | `data_llancament` ✦, `created_at` |
 | Metadata | `durada_ms`, `preview_url` |
 | ML | `ml_classe` ✦ (A/B/C), `ml_confianca` (float) |
+| Whisper LID | `whisper_lang` ✦, `whisper_p`, `whisper_all_probs` (JSON), `whisper_processat_at` ✦ |
 
 - `lastfm_lookup_nom` (property) — falls back to `nom` if `lastfm_nom` is empty
 - `get_territoris()` — returns union of main + collaborator territories
+
+**Whisper fields** (populated nightly by `analitzar_whisper` at 01:30
+UTC). `whisper_all_probs` is the full 99-language distribution —
+richer than the top-1 shortcut (`whisper_lang` + `whisper_p`) and fed
+into the RF classifier as 4 features (`whisper_p_ca`, `whisper_p_es`,
+`whisper_p_en`, `whisper_margin_ca`). Eval on a 48-clip ground-truth
+set (`scripts/model_comparison/resultats.md`): precision(ca) = 100 %,
+recall(ca) = 81 %, specificity = 100 %.
 
 ### `HistorialRevisio` — `music_historialrevisio`
 Immutable audit trail of every approval / rejection. Read-only by convention;

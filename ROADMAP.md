@@ -1,13 +1,14 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-19 — Sessió 16: Whisper LID integrated (precision
-> 100 %, recall 81 % on 48 ground-truth clips), permanent model-comparison
-> harness at `scripts/model_comparison/`, rich per-language features (99
-> probs) plumbed into the RF classifier (now at 223 features, retrain
-> triggered by the same day's 2 223 staff decisions), cron table finally
-> versioned in the repo, manual artist creation + duplicate-name filter +
-> `/staff/artistes/pendents/` UX fixes.
+> Last updated: 2026-04-19 — Sessió 17 audit cleanup sweep: split
+> `aprovat` from `pendent_review` (migration 0042, `CheckConstraint`
+> guarding the forbidden state), HistorialRevisio now moves on merge
+> (critical for RF feature continuity), `api_aprovar` 500 → 409 on
+> Deezer-id collision, Whisper feature fallback no longer diverges
+> between training and inference, heuristic classifier unified with
+> RF thresholds, 40 legacy-migration orphans removed + 2 others
+> surfaced. Previous session (16) integrated Whisper LID end-to-end.
 
 ---
 
@@ -33,9 +34,22 @@ behind `@staff_required`.
 - Saturday 08:00: `calcular_ranking` (official weekly).
 
 **Database**: PostgreSQL. 25 tables, 44 MB. All legacy tables + views dropped
-in Phase 8. 10 Territoris, 1,825 Municipis, ~4,300 Artistes (≥2,288
-approved), ~19,937 Cançons (~10,800 verified), 10,082 SenyalDiari rows,
-~3,900 HistorialRevisio decisions feeding the ML model.
+in Phase 8. 10 Territoris, 1,825 Municipis, 4,209 Artistes (1,917 live
++ 2,292 in review queue), ~19,937 Cançons (~10,800 verified), 10,082
+SenyalDiari rows, ~3,900 HistorialRevisio decisions feeding the ML model.
+
+**Artista state machine** (enforced by `CheckConstraint` on
+`music_artista`):
+
+```
+            pendent_review=True          pendent_review=False
+aprovat=False   queue (2292)             descartat (kept for FK, 0 today)
+aprovat=True    FORBIDDEN                live (1917)
+```
+
+`auto_descobert` + `font_descoberta` record how the artist entered the
+system (immutable after creation) and are no longer overwritten by the
+approval flow — see CLAUDE_MODELS.md §Artista.
 
 **ML classifier** (`music/ml.py`) — RandomForestClassifier + TF-IDF
 vectoriser cached with mtime invalidation. **223 features**: 19 metadata
@@ -159,6 +173,24 @@ Tactical items not tied to specific CLAUDE_EXCELLENCE findings:
       `music/constants.py`.
 - [ ] Consolidate reject-action handling; some inline styles in staff
       templates could become CSS classes.
+
+### Sessió 17 follow-ups (from the cleanup sweep)
+
+- [ ] **Remove `Artista.deezer_no_trobat` column**. The pendents and
+      staff filters no longer read it; a signal keeps it in sync. The
+      only remaining writers are in `obtenir_metadata.py`
+      (lines 199-203, 230-231, 253-256). Once those lines are pruned
+      a migration can drop the column. Blocked on a confident test
+      run: the write side still marks artists Deezer-rejected so an
+      audit trail survives on failure.
+- [ ] **Migrate `pendents.html` + `artista_edit.html` to a shared
+      `locality-cascade.js` module** (the deferred finding). The JS
+      pattern is now duplicated across both templates; extract when
+      either gets real work next time.
+- [ ] **Drop `Album.lastfm_mbid`, `Canco.lastfm_mbid` references
+      from CLAUDE_MODELS.md** — they were removed in D2 (2026-04-17)
+      but the doc still mentions them in the Canco fields table. The
+      wider sweep above already fixed the Artista row.
 
 ### Sessió 16 follow-ups
 

@@ -112,17 +112,42 @@ with `verificada=False`; `classificar_i_guardar(canco)` applies the ML class.
 ```bash
 python manage.py obtenir_metadata [--artista-id N] [--force] [--dry-run] [--limit N]
 ```
-For approved artists, resolves Deezer ID (name search + ISRC cross-validation)
-and pulls albums + tracks. If validation fails, sets `deezer_no_trobat=True`
-and skips the artist next time.
+For approved artists without an `ArtistaDeezer` link, resolves the
+Deezer ID (name search + ISRC cross-validation) and pulls albums +
+tracks. Previously the filter was `deezer_no_trobat=False`, but that
+flag is a stale cache — the signal-cleared M2M relation is the source
+of truth, so the command now targets `deezer_ids__isnull=True`
+artists. The flag is still written on the failure path for
+backwards-compat readers.
 
-### 3.6 `netejar_caducades` — daily 04:00
+Not in the cron by default — run on demand when staff approves a
+batch of new artists without Deezer ids, or before a marketing push
+that needs fresh fan counts.
+
+### 3.6 `analitzar_whisper` — nightly 01:30 UTC
+```bash
+python manage.py analitzar_whisper [--limit N] [--refresh-older-than DAYS]
+                                    [--canco-id PK] [--dry-run]
+```
+Runs `faster-whisper large-v3 .detect_language()` on each Canco's
+30-second Deezer preview. Populates `Canco.whisper_lang`,
+`whisper_p`, `whisper_all_probs` (99-lang JSON), `whisper_processat_at`.
+Processes tracks never analysed first, optionally re-analyses rows
+older than N days. Cron window is 01:30 → ~06:45 UTC with
+`--limit 700` (~27 s/track on CPU, 15-min buffer before the 07:00
+provisional ranking). Full backfill ETA ≈ 9 days for ~6 300 pending
+tracks from a cold start.
+
+See `scripts/model_comparison/resultats.md` for the eval numbers
+that justified this integration.
+
+### 3.7 `netejar_caducades` — daily 04:00
 ```bash
 python manage.py netejar_caducades
 ```
 Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 
-### 3.7 Utility / ad-hoc commands (not cron-scheduled)
+### 3.8 Utility / ad-hoc commands (not cron-scheduled)
 - `fix_album_dates`, `fix_artista_principal` — one-off corrections from Deezer.
 - `deduplicar_isrc` — merges Cancons that share an ISRC.
 - `backfill_deezer_artistes`, `backfill_preview_url` — populate new fields.
@@ -200,7 +225,9 @@ No external services. Everything is file-based on the server.
 
 1. **Deezer contributor detection** — `obtenir_novetats` P3 reads an album's
    tracks; unknown contributors get created as
-   `Artista(aprovat=False, auto_descobert=True, font_descoberta="collaborador")`.
+   `Artista(aprovat=False, auto_descobert=True, pendent_review=True,
+   font_descoberta="collaborador")` — `pendent_review=True` enqueues
+   it for staff review; `auto_descobert` is immutable provenance.
 2. **User proposal** — `PropostaArtista` submitted via `/compte/artista/proposta/`;
    staff approves via `/staff/propostes/<pk>/` which creates the Artista
    together with its Deezer IDs + locations in one transaction.
