@@ -1,10 +1,13 @@
 """Staff views for approved artist management."""
 
 import json
+import unicodedata
+from collections import Counter
 
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.functions import Lower
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -29,6 +32,27 @@ ARTISTES_ORDER_FIELDS = {
     "nom": "nom",
     "genere": "genere",
 }
+
+
+def _normalize_nom(s: str) -> str:
+    """Fold a name for duplicate detection: strip accents, lowercase, collapse whitespace."""
+    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
+    return " ".join(s.lower().split())
+
+
+def _duplicate_nom_pks() -> list[int]:
+    """Return the pks of every Artista whose normalised name is shared with
+    at least one other Artista. Merge candidates, essentially.
+
+    Runs a single values_list('pk', 'nom') over the full Artista table and
+    does the grouping in Python — cheaper than a group-by + self-join at
+    the current scale (~4 300 rows, <10 ms).
+    """
+    pairs = list(Artista.objects.values_list("pk", "nom"))
+    keys = [(pk, _normalize_nom(nom)) for pk, nom in pairs]
+    counts = Counter(k for _pk, k in keys)
+    dupe_keys = {k for k, c in counts.items() if c > 1}
+    return [pk for pk, k in keys if k in dupe_keys]
 
 
 @staff_required
@@ -63,10 +87,24 @@ def llista(request: HttpRequest) -> HttpResponse:
     if cerca:
         qs = qs.filter(nom__icontains=cerca)
 
+    # Duplicate-name filter: surface merge candidates. When active we
+    # override the default ordering so that near-duplicates sit together
+    # in the list (case-only and accent-only variants cluster after
+    # lowercasing; true accent folding would need the unaccent extension
+    # but this is good enough to spot the pairs at a glance).
+    duplicats = request.GET.get("duplicats", "")
+    if duplicats == "si":
+        qs = qs.filter(pk__in=_duplicate_nom_pks())
+
     qs = qs.distinct()
-    qs, current_order, current_dir = apply_ordering(
-        request, qs, ARTISTES_ORDER_FIELDS, default="nom"
-    )
+    default_order = "nom" if duplicats != "si" else None
+    if duplicats == "si" and not request.GET.get("order"):
+        qs = qs.order_by(Lower("nom"), "nom", "pk")
+        current_order, current_dir = "nom", "asc"
+    else:
+        qs, current_order, current_dir = apply_ordering(
+            request, qs, ARTISTES_ORDER_FIELDS, default=default_order or "nom"
+        )
     page = paginate(request, qs)
 
     return render(
@@ -78,6 +116,7 @@ def llista(request: HttpRequest) -> HttpResponse:
             "aprovat": aprovat,
             "deezer": deezer,
             "territori": territori,
+            "duplicats": duplicats,
             "cerca": cerca,
             "current_order": current_order,
             "current_dir": current_dir,

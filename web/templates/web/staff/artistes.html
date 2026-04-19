@@ -20,6 +20,10 @@
     <option value="si"{% if deezer == "si" %} selected{% endif %}>Amb Deezer</option>
     <option value="no"{% if deezer == "no" %} selected{% endif %}>Sense Deezer</option>
   </select>
+  <select name="duplicats" class="staff-action-select" onchange="this.form.submit()">
+    <option value="">Duplicats: Tots</option>
+    <option value="si"{% if duplicats == "si" %} selected{% endif %}>Només duplicats (noms repetits)</option>
+  </select>
   <select name="territori" class="staff-action-select" onchange="this.form.submit()">
     <option value="">Territori: Tots</option>
     <option value="CAT"{% if territori == "CAT" %} selected{% endif %}>CAT</option>
