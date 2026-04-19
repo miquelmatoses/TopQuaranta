@@ -1,0 +1,652 @@
+/* TopQuaranta — yellow+black theme (Sessió 18).
+ *
+ * Loaded AFTER style.css so its tokens win. The goal is cercol.team's
+ * clean, card-centric, whitespace-heavy aesthetic, swapping the blue
+ * accent for yellow and using a black header bar for contrast.
+ *
+ * Design decisions:
+ *   - Page bg stays near-white (`--tq-bg`) so content cards read.
+ *   - Nav + footer are black — high contrast, easy to orient from
+ *     anywhere on the page.
+ *   - Yellow is the interactive accent (links, CTAs, active states,
+ *     focus rings). Never used as a background for body text — it's
+ *     a small-surface color.
+ *   - Typography tokens reuse `--mm-text-*`; we don't re-pick sizes.
+ *   - Logo horitzontal white on black; the existing stacked logo
+ *     is kept in /img/ for any single-color print context.
+ */
+
+:root {
+  /* ── Palette (yellow + black, cercol-spacing) ── */
+  --tq-color-yellow:            #facc15;  /* primary accent */
+  --tq-color-yellow-soft:       #fde68a;  /* backgrounds/hover */
+  --tq-color-yellow-deep:       #ca8a04;  /* hover/active */
+
+  --tq-color-ink:               #0a0a0a;  /* near-black for type */
+  --tq-color-ink-soft:          #1f2937;  /* nav/footer bg */
+  --tq-color-ink-muted:         #6b7280;  /* secondary text */
+
+  --tq-color-bg:                #fafafa;  /* page */
+  --tq-color-surface:           #ffffff;  /* cards */
+  --tq-color-border:            #e5e7eb;
+  --tq-color-border-strong:     #111827;
+
+  /* Override mm-design tokens used across TopQuaranta templates so
+     every existing style auto-inherits the new palette without us
+     having to grep-and-replace. These remain overridable per-territory
+     for the rankings (body.territori-*). */
+  --mm-color-primary:           var(--tq-color-yellow);
+  --mm-color-primary-hover:     var(--tq-color-yellow-deep);
+  --mm-color-background:        var(--tq-color-bg);
+  --mm-color-text-primary:      var(--tq-color-ink);
+  --mm-color-text-secondary:    var(--tq-color-ink-muted);
+  --mm-color-border:            var(--tq-color-border);
+  --mm-color-surface:           var(--tq-color-surface);
+
+  /* Layout */
+  --tq-width-site:              75rem;   /* 1200px, was already here */
+  --tq-radius-sm:               0.375rem;
+  --tq-radius-md:               0.5rem;
+  --tq-radius-lg:               0.75rem;
+  --tq-shadow-sm:               0 1px 2px rgba(0,0,0,.05);
+  --tq-shadow-md:               0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --tq-shadow-lg:               0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.05);
+}
+
+html, body {
+  background: var(--tq-color-bg);
+  color: var(--tq-color-ink);
+}
+
+/* Container: uniform max width across pages.
+   Cercol uses 80rem; we stay at 75rem (1200px) to match the previous
+   --tq-width-site value — TopQuaranta ranking content is denser. */
+.container {
+  max-width: var(--tq-width-site);
+  margin-inline: auto;
+  padding-inline: var(--mm-space-4);
+  width: 100%;
+}
+
+/* ─── Header ─────────────────────────────────────────────────── */
+
+.site-header {
+  background: var(--tq-color-ink-soft);
+  color: #fff;
+  border-bottom: 2px solid var(--tq-color-yellow);
+}
+
+.site-header .header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mm-space-4);
+  padding: var(--mm-space-4) 0;
+}
+
+.site-header a,
+.site-header .nav-link,
+.site-header .header-cta {
+  color: #fff;
+}
+
+.site-header .site-logo {
+  height: 2.5rem;       /* ~40px */
+  width: auto;
+  color: #fff;          /* drives SVG currentColor */
+  display: block;
+}
+
+/* Hide the territory accent bar — we have a yellow border on the
+   header itself now; the double line was noisy. */
+.site-header .header-accent {
+  display: none;
+}
+
+/* ─── Nav panel ──────────────────────────────────────────────── */
+
+.site-header .nav-panel {
+  /* On desktop render inline; on mobile use the hamburger pattern
+     that was already there. */
+}
+
+.site-header .nav-links {
+  display: flex;
+  gap: var(--mm-space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: center;
+}
+
+.site-header .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border-radius: var(--tq-radius-sm);
+  font-size: var(--mm-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color .15s ease;
+}
+
+.site-header .nav-link:hover,
+.site-header .nav-link:focus {
+  background: rgba(255,255,255,.08);
+}
+
+.site-header .nav-link[aria-current="page"] {
+  color: var(--tq-color-yellow);
+}
+
+/* Header CTA (yellow pill) */
+.site-header .header-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  padding: var(--mm-space-2) var(--mm-space-4);
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink) !important;
+  font-weight: 600;
+  font-size: var(--mm-text-sm);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: background-color .15s ease;
+}
+
+.site-header .header-cta:hover {
+  background: var(--tq-color-yellow-deep);
+  color: #fff !important;
+}
+
+/* Hamburger (mobile) */
+.site-header .nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  padding: var(--mm-space-2);
+  border-radius: var(--tq-radius-sm);
+  cursor: pointer;
+}
+
+.site-header .nav-toggle .icon-close { display: none; }
+.site-header .nav-toggle[aria-expanded="true"] .icon-hamburger { display: none; }
+.site-header .nav-toggle[aria-expanded="true"] .icon-close { display: block; }
+
+@media (max-width: 48rem) {
+  .site-header .nav-toggle { display: inline-flex; align-items: center; }
+  .site-header .nav-panel {
+    display: none;
+    flex-basis: 100%;
+    order: 3;
+    padding: var(--mm-space-2) 0 var(--mm-space-4);
+  }
+  .site-header .nav-panel.is-open { display: block; }
+  .site-header .nav-links {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--mm-space-1);
+  }
+  .site-header .nav-link {
+    padding: var(--mm-space-3) var(--mm-space-3);
+  }
+}
+
+/* ─── Main ──────────────────────────────────────────────────── */
+
+main.container {
+  padding-block: var(--mm-space-8) var(--mm-space-12);
+  min-height: 60vh;
+}
+
+/* ─── Footer ────────────────────────────────────────────────── */
+
+.site-footer {
+  background: var(--tq-color-ink);
+  color: #fff;
+  padding-block: var(--mm-space-12) var(--mm-space-6);
+  margin-top: var(--mm-space-12);
+}
+
+.site-footer a { color: #fff; }
+.site-footer a:hover { color: var(--tq-color-yellow); }
+
+.site-footer .footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--mm-space-8);
+  padding-bottom: var(--mm-space-8);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+@media (max-width: 48rem) {
+  .site-footer .footer-grid { grid-template-columns: 1fr; gap: var(--mm-space-6); }
+}
+
+.site-footer .footer-mission-title {
+  font-family: var(--mm-font-display, 'Playfair Display', Georgia, serif);
+  font-size: var(--mm-text-xl);
+  font-weight: 700;
+  margin: 0 0 var(--mm-space-3);
+}
+
+.site-footer .footer-mission-text {
+  font-size: var(--mm-text-sm);
+  line-height: 1.6;
+  color: rgba(255,255,255,.78);
+  max-width: 42em;
+  margin: 0 0 var(--mm-space-4);
+}
+
+.site-footer .footer-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  padding: var(--mm-space-2) var(--mm-space-4);
+  border: 1px solid var(--tq-color-yellow);
+  color: var(--tq-color-yellow) !important;
+  font-weight: 600;
+  font-size: var(--mm-text-sm);
+  border-radius: 9999px;
+  text-decoration: none;
+  transition: all .15s ease;
+}
+
+.site-footer .footer-cta:hover {
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink) !important;
+}
+
+.site-footer .footer-nav-title {
+  font-weight: 700;
+  font-size: var(--mm-text-sm);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: rgba(255,255,255,.6);
+  margin: 0 0 var(--mm-space-3);
+}
+
+.site-footer .footer-nav-list {
+  list-style: none;
+  padding: 0; margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-space-2);
+}
+
+.site-footer .footer-nav-link {
+  font-size: var(--mm-text-sm);
+  text-decoration: none;
+  color: rgba(255,255,255,.85);
+}
+
+.site-footer .footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--mm-space-6);
+  flex-wrap: wrap;
+  gap: var(--mm-space-4);
+}
+
+.site-footer .footer-copy {
+  font-size: var(--mm-text-sm);
+  color: rgba(255,255,255,.6);
+  margin: 0;
+}
+
+.site-footer .footer-logo {
+  height: 1.5rem;
+  width: auto;
+  color: #fff;
+  opacity: .85;
+}
+
+/* ─── Cards (cercol-inspired, reusable) ──────────────────────── */
+
+/* Shared card pattern for use in templates that want the new look.
+   Use: <div class="tq-card"> … </div>.
+   Existing templates keep their current patterns; we migrate
+   progressively. */
+.tq-card {
+  background: var(--tq-color-surface);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-lg);
+  padding: var(--mm-space-5);
+  box-shadow: var(--tq-shadow-sm);
+}
+
+.tq-card--hover {
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.tq-card--hover:hover {
+  box-shadow: var(--tq-shadow-md);
+  transform: translateY(-1px);
+}
+
+.tq-card__title {
+  font-family: var(--mm-font-display, 'Playfair Display', Georgia, serif);
+  font-size: var(--mm-text-xl);
+  font-weight: 700;
+  margin: 0 0 var(--mm-space-2);
+  color: var(--tq-color-ink);
+}
+
+.tq-card__meta {
+  font-size: var(--mm-text-sm);
+  color: var(--tq-color-ink-muted);
+}
+
+/* ─── Generic buttons ────────────────────────────────────────── */
+
+.tq-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mm-space-2);
+  padding: var(--mm-space-2) var(--mm-space-4);
+  border-radius: var(--tq-radius-md);
+  font-size: var(--mm-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.tq-btn--primary {
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink);
+}
+.tq-btn--primary:hover { background: var(--tq-color-yellow-deep); color: #fff; }
+.tq-btn--ghost {
+  background: transparent;
+  color: var(--tq-color-ink);
+  border-color: var(--tq-color-border);
+}
+.tq-btn--ghost:hover { border-color: var(--tq-color-ink); }
+
+/* ─── Staff panel overrides ──────────────────────────────────── */
+
+.staff-panel-layout {
+  /* staff pages reuse base.html's header + footer; content area
+     follows the same cercol-like card pattern. */
+}
+
+.staff-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--mm-space-2);
+  margin-bottom: var(--mm-space-5);
+}
+
+/* Staff secondary navigation — pill row with yellow active state. */
+.staff-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-space-1);
+  align-items: center;
+  padding: var(--mm-space-3);
+  margin-bottom: var(--mm-space-6);
+  background: var(--tq-color-surface);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-lg);
+  box-shadow: var(--tq-shadow-sm);
+}
+
+.staff-nav .staff-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--mm-space-1) var(--mm-space-3);
+  background: var(--tq-color-ink);
+  color: #fff;
+  font-size: var(--mm-text-xs);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  margin-right: var(--mm-space-2);
+}
+
+.staff-nav .staff-nav-link {
+  padding: var(--mm-space-1) var(--mm-space-3);
+  font-size: var(--mm-text-sm);
+  font-weight: 500;
+  color: var(--tq-color-ink);
+  text-decoration: none;
+  border-radius: var(--tq-radius-sm);
+  transition: background-color .12s;
+}
+
+.staff-nav .staff-nav-link:hover {
+  background: var(--tq-color-yellow-soft);
+}
+
+.staff-nav .staff-nav-link.is-active {
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink);
+  font-weight: 600;
+}
+
+/* Staff messages (flash). */
+.staff-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-space-2);
+  margin-bottom: var(--mm-space-4);
+}
+.staff-msg {
+  padding: var(--mm-space-3) var(--mm-space-4);
+  border-radius: var(--tq-radius-md);
+  border: 1px solid var(--tq-color-border);
+  font-size: var(--mm-text-sm);
+  background: var(--tq-color-surface);
+}
+.staff-msg--success { background: #f0fdf4; border-color: #86efac; color: #166534; }
+.staff-msg--error   { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+.staff-msg--warning { background: var(--tq-color-yellow-soft); border-color: var(--tq-color-yellow-deep); color: #713f12; }
+.staff-msg--info    { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+
+/* Staff table — cercol-ish: white card, subtle borders, yellow hover. */
+.staff-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--mm-text-sm);
+  background: var(--tq-color-surface);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-md);
+  overflow: hidden;
+}
+.staff-table thead th {
+  background: #f3f4f6;
+  text-align: left;
+  font-weight: 600;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border-bottom: 1px solid var(--tq-color-border);
+  color: var(--tq-color-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: var(--mm-text-xs);
+}
+.staff-table tbody td {
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border-bottom: 1px solid var(--tq-color-border);
+  vertical-align: middle;
+}
+.staff-table tbody tr:last-child td { border-bottom: none; }
+.staff-table tbody tr:hover { background: var(--tq-color-yellow-soft); }
+
+.staff-table-wrap {
+  overflow-x: auto;
+  margin-bottom: var(--mm-space-4);
+}
+
+/* Staff filters row. */
+.staff-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-space-2);
+  align-items: center;
+  padding: var(--mm-space-3);
+  margin-bottom: var(--mm-space-4);
+  background: var(--tq-color-surface);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-md);
+}
+
+.staff-action-select, .filter-search {
+  padding: var(--mm-space-1) var(--mm-space-2);
+  font-size: var(--mm-text-sm);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-sm);
+  background: var(--tq-color-surface);
+  color: var(--tq-color-ink);
+}
+.staff-action-select:focus, .filter-search:focus {
+  outline: 2px solid var(--tq-color-yellow);
+  outline-offset: 1px;
+  border-color: var(--tq-color-yellow-deep);
+}
+
+.filter-btn {
+  padding: var(--mm-space-1) var(--mm-space-3);
+  font-size: var(--mm-text-sm);
+  font-weight: 600;
+  background: var(--tq-color-ink);
+  color: #fff;
+  border: 1px solid var(--tq-color-ink);
+  border-radius: var(--tq-radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-1);
+}
+.filter-btn:hover { background: var(--tq-color-yellow); color: var(--tq-color-ink); border-color: var(--tq-color-yellow); }
+
+.staff-btn--danger { background: #991b1b; border-color: #991b1b; }
+.staff-btn--danger:hover { background: #7f1d1d; border-color: #7f1d1d; color: #fff; }
+.staff-btn--cancel { background: transparent; color: var(--tq-color-ink); border-color: var(--tq-color-border); }
+.staff-btn--cancel:hover { background: var(--tq-color-bg); color: var(--tq-color-ink); border-color: var(--tq-color-ink); }
+
+/* Badge system used in staff rows (ml_badge, whisper_badge). */
+.staff-ml {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem var(--mm-space-2);
+  border-radius: var(--tq-radius-sm);
+  font-size: var(--mm-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.staff-ml--good    { background: #dcfce7; color: #166534; }
+.staff-ml--caution { background: var(--tq-color-yellow-soft); color: #854d0e; }
+.staff-ml--bad     { background: #fee2e2; color: #991b1b; }
+.staff-ml--none    { background: var(--tq-color-bg); color: var(--tq-color-ink-muted); }
+
+.staff-badge-ok { background: #dcfce7; color: #166534; padding: .15rem var(--mm-space-2); border-radius: var(--tq-radius-sm); font-size: var(--mm-text-xs); font-weight: 600; }
+.staff-badge-no { background: var(--tq-color-bg); color: var(--tq-color-ink-muted); padding: .15rem var(--mm-space-2); border-radius: var(--tq-radius-sm); font-size: var(--mm-text-xs); font-weight: 600; }
+
+/* Ranking header on staff pages (reused elsewhere). */
+.ranking-header {
+  margin-bottom: var(--mm-space-5);
+  padding-bottom: var(--mm-space-3);
+  border-bottom: 2px solid var(--tq-color-ink);
+}
+.ranking-title {
+  font-family: var(--mm-font-display, 'Playfair Display', Georgia, serif);
+  font-size: var(--mm-text-3xl);
+  font-weight: 800;
+  margin: 0;
+  color: var(--tq-color-ink);
+}
+.ranking-date {
+  font-size: var(--mm-text-sm);
+  color: var(--tq-color-ink-muted);
+  margin: var(--mm-space-1) 0 0;
+}
+.ranking-empty {
+  padding: var(--mm-space-6);
+  text-align: center;
+  color: var(--tq-color-ink-muted);
+  font-size: var(--mm-text-sm);
+  background: var(--tq-color-bg);
+  border-radius: var(--tq-radius-md);
+}
+
+/* Action bar inside staff list pages. */
+.staff-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-space-2);
+  align-items: center;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  margin-bottom: var(--mm-space-3);
+  background: var(--tq-color-bg);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-md);
+  font-size: var(--mm-text-sm);
+}
+
+.staff-cell-muted  { color: var(--tq-color-ink-muted); }
+.staff-cell-mono   { font-family: var(--mm-font-mono, ui-monospace, Menlo, monospace); font-size: var(--mm-text-xs); }
+.staff-cell-links  { white-space: nowrap; }
+.staff-cell-links a { font-size: var(--mm-text-xs); margin-right: var(--mm-space-1); }
+.staff-edit-link   { color: var(--tq-color-ink); text-decoration: none; border-bottom: 1px dotted var(--tq-color-ink-muted); }
+.staff-edit-link:hover { color: var(--tq-color-yellow-deep); border-bottom-color: var(--tq-color-yellow-deep); }
+
+/* Staff confirm actions (bottom of edit forms). */
+.staff-confirm-actions {
+  display: flex;
+  gap: var(--mm-space-2);
+  align-items: center;
+  padding-top: var(--mm-space-4);
+  border-top: 1px solid var(--tq-color-border);
+  margin-top: var(--mm-space-4);
+}
+
+/* Sort link in table headers. */
+.staff-sort-link {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-space-1);
+}
+.staff-sort-link:hover { color: var(--tq-color-yellow-deep); }
+.staff-sort-link.is-active { color: var(--tq-color-ink); }
+
+/* Form fields on edit pages. */
+.form-field { margin-bottom: var(--mm-space-4); }
+.form-label {
+  display: block;
+  font-size: var(--mm-text-sm);
+  font-weight: 600;
+  margin-bottom: var(--mm-space-1);
+  color: var(--tq-color-ink);
+}
+.form-field input[type="text"],
+.form-field input[type="url"],
+.form-field input[type="email"],
+.form-field input[type="date"],
+.form-field input[type="number"],
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  max-width: 560px;
+  padding: var(--mm-space-2) var(--mm-space-3);
+  border: 1px solid var(--tq-color-border);
+  border-radius: var(--tq-radius-sm);
+  font-size: var(--mm-text-sm);
+  background: var(--tq-color-surface);
+}
+.form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+  outline: 2px solid var(--tq-color-yellow);
+  outline-offset: 1px;
+  border-color: var(--tq-color-yellow-deep);
+}
+.form-hint { font-size: var(--mm-text-xs); color: var(--tq-color-ink-muted); margin: var(--mm-space-1) 0 0; }

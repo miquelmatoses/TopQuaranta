@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="{% static 'mm-design/components/button/button.css' %}">
   <link rel="stylesheet" href="{% static 'mm-design/components/section-label/section-label.css' %}">
   <link rel="stylesheet" href="{% static 'web/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'web/css/theme.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if territori_actiu %}territori-{{ territori_actiu|lower }}{% endif %}">
@@ -47,7 +48,7 @@
       <div class="header-bar">
         <!-- Logo SVG -->
         <a href="{% url 'web:homepage' %}" aria-label="TopQuaranta — Inici">
-          <img class="site-logo" src="{% static 'web/img/logo-topquaranta.svg' %}" alt="TopQuaranta" height="40">
+          <img class="site-logo" src="{% static 'web/img/logo-topquaranta-horitzontal.svg' %}" alt="TopQuaranta">
         </a>
 
         <!-- Desktop nav (shown inline on lg+) + Mobile hamburger -->
@@ -168,7 +169,7 @@
 
       <div class="footer-bottom">
         <p class="footer-copy">&copy; {{ current_year }} TopQuaranta</p>
-        <img class="footer-logo" src="{% static 'web/img/logo-topquaranta.svg' %}" alt="TopQuaranta" height="20">
+        <img class="footer-logo" src="{% static 'web/img/logo-topquaranta-horitzontal.svg' %}" alt="TopQuaranta">
       </div>
     </div>
   </footer>
