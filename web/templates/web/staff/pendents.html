@@ -6,7 +6,7 @@
 {% block staff_content %}
 <section class="ranking-header">
   <h2 class="ranking-title">Artistes pendents</h2>
-  <p class="ranking-date">{{ total }} artistes auto-descoberts per revisar (pàgina {{ page.number }}/{{ page.paginator.num_pages }})</p>
+  <p class="ranking-date"><span id="pendents-total">{{ total }}</span> artistes auto-descoberts per revisar (pàgina {{ page.number }}/{{ page.paginator.num_pages }})</p>
 </section>
 
 <div class="staff-table-wrap">
@@ -144,6 +144,24 @@ function updateAprovarBtn(id) {
   btn.disabled = !loc.value;
 }
 
+// Remove a row after a successful aprovar/descartar and decrement the counter.
+function removeRow(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+  row.remove();
+  const counter = document.getElementById('pendents-total');
+  if (counter) {
+    const n = parseInt(counter.textContent, 10);
+    if (!isNaN(n) && n > 0) counter.textContent = String(n - 1);
+  }
+  // If the table body is now empty, show the same "no pendents" placeholder
+  // the server-side template renders.
+  const tbody = document.querySelector('.staff-table tbody');
+  if (tbody && !tbody.querySelector('tr')) {
+    tbody.innerHTML = '<tr><td colspan="8" class="ranking-empty">No hi ha artistes pendents.</td></tr>';
+  }
+}
+
 // Approve — resolve municipi PK first, then send to api_aprovar
 document.querySelectorAll('.tq-aprovar').forEach(btn => {
   btn.addEventListener('click', async function() {
@@ -178,9 +196,7 @@ document.querySelectorAll('.tq-aprovar').forEach(btn => {
       });
       const data = await resp.json();
       if (data.ok) {
-        const row = document.getElementById(`row-${id}`);
-        row.style.opacity = '0.3';
-        row.querySelectorAll('button,select').forEach(el => el.disabled = true);
+        removeRow(id);
       } else {
         alert(data.error || 'Error');
       }
@@ -202,9 +218,7 @@ document.querySelectorAll('.tq-descartar').forEach(btn => {
       });
       const data = await resp.json();
       if (data.ok) {
-        const row = document.getElementById(`row-${id}`);
-        row.style.opacity = '0.3';
-        row.querySelectorAll('button,select').forEach(el => el.disabled = true);
+        removeRow(id);
       }
     } catch(e) {
       alert('Error de connexió');

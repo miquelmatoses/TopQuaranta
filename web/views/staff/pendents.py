@@ -41,7 +41,7 @@ def llista(request: HttpRequest) -> HttpResponse:
     )
 
     qs, current_order, current_dir = apply_ordering(
-        request, qs, PENDENTS_ORDER_FIELDS, default="nom"
+        request, qs, PENDENTS_ORDER_FIELDS, default="-nb_verif"
     )
     page = paginate(request, qs, per_page=50)
 
