@@ -15,6 +15,14 @@
 
 /* ── Project-level tokens ── */
 
+/* Scale the whole typographic system down one notch so dense staff tables
+   fit on laptop-class screens without horizontal scroll. Every `rem`-based
+   value (mm-design tokens included) rides on this base. 1rem was 16px;
+   now 15px → ~6 % smaller. Undo by removing this rule. */
+html {
+  font-size: 93.75%;
+}
+
 :root {
   --tq-width-site: 75rem;       /* 1200px */
   --tq-cover-sm: 48px;
