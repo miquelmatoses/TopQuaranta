@@ -26,7 +26,14 @@ PENDENTS_ORDER_FIELDS = {
 
 @staff_required
 def llista(request: HttpRequest) -> HttpResponse:
-    """List pending auto-discovered artists."""
+    """List artists awaiting staff review.
+
+    Filter: `aprovat=False AND auto_descobert=True`. The `auto_descobert`
+    flag is read here as "in the pendents queue" rather than strictly
+    "auto-discovered" — it is also set by the bulk-un-approval action
+    that sweeps approved artists missing Deezer or localitat data back
+    into this list for re-review.
+    """
     qs = (
         Artista.objects.filter(aprovat=False, auto_descobert=True)
         .select_related()
@@ -45,6 +52,33 @@ def llista(request: HttpRequest) -> HttpResponse:
     )
     page = paginate(request, qs, per_page=50)
 
+    # Pre-populate data for JS: per-pk deezer_id + localitat principal.
+    existing_data = {}
+    for artista in page.object_list:
+        loc = artista.localitats.select_related("municipi__territori").first()
+        entry = {
+            "deezer_id": artista.deezer_id_principal or "",
+            "loc": None,
+        }
+        if loc:
+            if loc.municipi:
+                entry["loc"] = {
+                    "municipi_id": loc.municipi.pk,
+                    "municipi_nom": loc.municipi.nom,
+                    "comarca": loc.municipi.comarca,
+                    "territori": loc.municipi.territori_id,
+                    "manual": "",
+                }
+            elif loc.localitat_manual:
+                entry["loc"] = {
+                    "municipi_id": None,
+                    "municipi_nom": "",
+                    "comarca": "",
+                    "territori": "ALT",
+                    "manual": loc.localitat_manual,
+                }
+        existing_data[artista.pk] = entry
+
     return render(
         request,
         "web/staff/pendents.html",
@@ -54,13 +88,21 @@ def llista(request: HttpRequest) -> HttpResponse:
             "total": qs.count(),
             "current_order": current_order,
             "current_dir": current_dir,
+            "existing_data_json": json.dumps(existing_data),
         },
     )
 
 
 @staff_required
 def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
-    """AJAX: approve a pending artist with location."""
+    """AJAX: approve a pending artist, optionally adding Deezer id + location.
+
+    Accepts in the JSON body:
+      - `deezer_id`   (optional): new Deezer artist id to attach. Skipped
+        if the artist already has that id.
+      - `municipi_id` / `comarca` + `localitat` (optional if the artist
+        already has a localitat, required otherwise).
+    """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -68,48 +110,84 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
     except Artista.DoesNotExist:
         return JsonResponse({"error": "Artista not found"}, status=404)
 
+    from music.models import ArtistaDeezer  # avoid circular
+
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
         data = {}
 
+    deezer_id_raw = str(data.get("deezer_id", "")).strip()
     municipi_id = data.get("municipi_id")
     comarca = data.get("comarca", "").strip()
     localitat = data.get("localitat", "").strip()
 
-    if not municipi_id and (not comarca or not localitat):
+    cascade_selected = bool(municipi_id) or (bool(comarca) and bool(localitat))
+    has_existing_loc = artista.localitats.exists()
+    if not cascade_selected and not has_existing_loc:
         return JsonResponse({"error": "Cal seleccionar un municipi"}, status=400)
 
+    deezer_id: int | None = None
+    if deezer_id_raw:
+        try:
+            deezer_id = int(deezer_id_raw)
+        except ValueError:
+            return JsonResponse({"error": "Deezer ID invàlid"}, status=400)
+
+    audit_loc = None
+    territori = None
+
     with transaction.atomic():
-        # R11: only ArtistaLocalitat is updated; legacy fields are gone.
-        if municipi_id:
-            try:
-                municipi = Municipi.objects.get(pk=int(municipi_id))
-            except Municipi.DoesNotExist:
-                return JsonResponse({"error": "Municipi no trobat"}, status=404)
-            ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
-            audit_loc = f"{municipi.nom}, {municipi.comarca}"
-            territori = municipi.territori_id
-        else:
-            # Fallback: try to match by name+comarca
-            try:
-                municipi = Municipi.objects.get(nom=localitat, comarca=comarca)
+        # ── Deezer link (optional; skipped if duplicate) ──
+        if deezer_id is not None:
+            if not artista.deezer_ids.filter(deezer_id=deezer_id).exists():
+                ArtistaDeezer.objects.create(
+                    artista=artista,
+                    deezer_id=deezer_id,
+                    principal=not artista.deezer_ids.exists(),
+                )
+                # Signal `clear_deezer_no_trobat_on_ad_save` also syncs
+                # the legacy flag.
+
+        # ── Localitat (optional if artist already has one) ──
+        if cascade_selected:
+            if municipi_id:
+                try:
+                    municipi = Municipi.objects.get(pk=int(municipi_id))
+                except Municipi.DoesNotExist:
+                    return JsonResponse({"error": "Municipi no trobat"}, status=404)
                 ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
                 audit_loc = f"{municipi.nom}, {municipi.comarca}"
                 territori = municipi.territori_id
-            except Municipi.DoesNotExist:
-                # Manual entry — Municipi unknown, store free text
-                ArtistaLocalitat.objects.create(
-                    artista=artista,
-                    municipi=None,
-                    localitat_manual=f"{localitat}, {comarca}",
-                )
-                audit_loc = f"{localitat}, {comarca} (manual)"
+            else:
+                try:
+                    municipi = Municipi.objects.get(nom=localitat, comarca=comarca)
+                    ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
+                    audit_loc = f"{municipi.nom}, {municipi.comarca}"
+                    territori = municipi.territori_id
+                except Municipi.DoesNotExist:
+                    ArtistaLocalitat.objects.create(
+                        artista=artista,
+                        municipi=None,
+                        localitat_manual=f"{localitat}, {comarca}",
+                    )
+                    audit_loc = f"{localitat}, {comarca} (manual)"
+                    territori = "ALT"
+        else:
+            loc = artista.localitats.select_related("municipi__territori").first()
+            if loc and loc.municipi:
+                audit_loc = f"{loc.municipi.nom}, {loc.municipi.comarca} (existent)"
+                territori = loc.municipi.territori_id
+            elif loc:
+                audit_loc = f"{loc.localitat_manual} (existent, manual)"
                 territori = "ALT"
 
         artista.aprovat = True
-        artista.save(update_fields=["aprovat"])
-        # Signal auto-syncs territories
+        # Also clear auto_descobert so the artist drops out of the pendents
+        # queue (symmetric with the descartar-with-verified-tracks path).
+        artista.auto_descobert = False
+        artista.save(update_fields=["aprovat", "auto_descobert"])
+        # Signal auto-syncs territories from localitats.
 
     log_staff_action(
         request,
@@ -117,6 +195,7 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
         target=artista,
         territori=territori,
         localitat=audit_loc,
+        deezer_id_afegit=deezer_id,
     )
     return JsonResponse({"ok": True, "territori": territori})
 
