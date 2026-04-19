@@ -121,7 +121,6 @@ class TestIngestarMetadataDeezer:
 
         artista.refresh_from_db()
         assert artista.deezer_id_principal == 98469
-        assert artista.deezer_no_trobat is False
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_search_fails(self, mock_deezer):
@@ -132,8 +131,9 @@ class TestIngestarMetadataDeezer:
         call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
-        assert artista.deezer_no_trobat is True
+        # No Deezer link created; last_checked_deezer is set.
         assert artista.deezer_id_principal is None
+        assert artista.last_checked_deezer is not None
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_marks_not_found_when_isrc_validation_fails(self, mock_deezer):
@@ -171,8 +171,8 @@ class TestIngestarMetadataDeezer:
         call_command("obtenir_metadata", artista_id=artista.pk)
 
         artista.refresh_from_db()
-        assert artista.deezer_no_trobat is True
         assert artista.deezer_id_principal is None
+        assert artista.last_checked_deezer is not None
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_skips_unapproved_artist(self, mock_deezer):
@@ -245,14 +245,27 @@ class TestIngestarMetadataDeezer:
         assert canco.isrc == "NEW123"
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
-    def test_skips_deezer_no_trobat_artists(self, mock_deezer):
-        artista = _make_artista(deezer_id=None)
-        artista.deezer_no_trobat = True
-        artista.save()
+    def test_skips_artists_with_existing_deezer_link(self, mock_deezer):
+        """Artists that already have an ArtistaDeezer row are skipped —
+        they're the source of truth that the artist is resolved. The
+        legacy `deezer_no_trobat` cache flag is no longer consulted by
+        the default filter (audit finding #7, Sessió 17)."""
+        _make_artista(deezer_id=98469)  # ArtistaDeezer row gets created
 
         call_command("obtenir_metadata")
 
         mock_deezer.search_artist.assert_not_called()
+
+    @patch("ingesta.management.commands.obtenir_metadata.deezer")
+    def test_processes_artists_without_deezer_link(self, mock_deezer):
+        """Artists with no ArtistaDeezer row get queried — the M2M
+        relation is the source of truth for "has Deezer"."""
+        _make_artista(deezer_id=None)
+        mock_deezer.search_artist.return_value = None  # still not found
+
+        call_command("obtenir_metadata")
+
+        mock_deezer.search_artist.assert_called()
 
     @patch("ingesta.management.commands.obtenir_metadata.deezer")
     def test_accepts_name_match_without_isrc(self, mock_deezer):

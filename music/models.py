@@ -84,10 +84,6 @@ class Artista(models.Model):
         blank=True,
         help_text="Auto-synced from ArtistaLocalitat. Do not edit directly.",
     )
-    deezer_no_trobat = models.BooleanField(
-        default=False,
-        help_text="True if Deezer search failed ISRC validation — skip in future runs.",
-    )
     # Discovery provenance (immutable after creation).
     auto_descobert = models.BooleanField(
         default=False,
@@ -182,7 +178,7 @@ class Artista(models.Model):
             # The four (aprovat, pendent_review) states are documented on
             # the `pendent_review` field docstring.
             models.CheckConstraint(
-                check=~models.Q(aprovat=True, pendent_review=True),
+                condition=~models.Q(aprovat=True, pendent_review=True),
                 name="artista_no_aprovat_pendent_review",
             ),
         ]

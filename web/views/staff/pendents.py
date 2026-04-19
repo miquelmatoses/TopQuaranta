@@ -176,8 +176,6 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
                         },
                         status=409,
                     )
-                # Signal `clear_deezer_no_trobat_on_ad_save` also syncs
-                # the legacy flag.
 
         # ── Localitat (optional if artist already has one) ──
         if cascade_selected:

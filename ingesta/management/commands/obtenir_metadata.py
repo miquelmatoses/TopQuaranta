@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from ingesta.clients import deezer
 from music.constants import DIES_CADUCITAT
@@ -65,14 +66,8 @@ class Command(BaseCommand):
             if not qs.exists():
                 raise CommandError(f"No approved Artista with pk={artista_id}.")
         else:
-            # Skip artists that already have an ArtistaDeezer link, so
-            # we only re-query Deezer for those genuinely unresolved.
-            # We previously filtered on `deezer_no_trobat=False` — but
-            # that flag is a stale cache (see audit finding #7): if a
-            # merge or delete removes the ArtistaDeezer row, the flag
-            # doesn't flip back, so artists that need re-discovery get
-            # permanently skipped.  The source-of-truth filter is the
-            # relation itself.
+            # Only re-query Deezer for artists genuinely unresolved
+            # (no ArtistaDeezer link); --force re-checks everyone.
             if not force:
                 qs = qs.filter(deezer_ids__isnull=True)
 
@@ -195,12 +190,9 @@ class Command(BaseCommand):
         """
         result = deezer.search_artist(artista.nom)
         if not result:
-            logger.info(
-                "Deezer: no match for '%s' — marking deezer_no_trobat", artista.nom
-            )
-            with transaction.atomic():
-                artista.deezer_no_trobat = True
-                artista.save(update_fields=["deezer_no_trobat"])
+            logger.info("Deezer: no match for '%s'", artista.nom)
+            artista.last_checked_deezer = timezone.now()
+            artista.save(update_fields=["last_checked_deezer"])
             return None
 
         candidate_id = result["id"]
@@ -226,9 +218,8 @@ class Command(BaseCommand):
                     candidate_id,
                     known_track.isrc,
                 )
-                with transaction.atomic():
-                    artista.deezer_no_trobat = True
-                    artista.save(update_fields=["deezer_no_trobat"])
+                artista.last_checked_deezer = timezone.now()
+                artista.save(update_fields=["last_checked_deezer"])
                 return None
             logger.info(
                 "Deezer ISRC validated for '%s' → '%s' (id=%d)",
@@ -250,10 +241,10 @@ class Command(BaseCommand):
 
         try:
             with transaction.atomic():
-                artista.deezer_no_trobat = False
+                artista.last_checked_deezer = timezone.now()
                 artista.save(
                     update_fields=[
-                        "deezer_no_trobat",
+                        "last_checked_deezer",
                         "deezer_nb_fan",
                         "deezer_nb_album",
                         "deezer_nom",
@@ -267,8 +258,7 @@ class Command(BaseCommand):
                 )
         except IntegrityError:
             logger.warning(
-                "Deezer ID %d already assigned to another artist — "
-                "skipping '%s' (not marking deezer_no_trobat)",
+                "Deezer ID %d already assigned to another artist — skipping '%s'",
                 candidate_id,
                 artista.nom,
             )

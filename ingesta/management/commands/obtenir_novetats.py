@@ -165,7 +165,6 @@ class Command(BaseCommand):
                 Artista.objects.filter(
                     aprovat=True,
                     deezer_ids__isnull=False,
-                    deezer_no_trobat=False,
                 )
                 .distinct()
                 .order_by(F("last_checked_deezer").asc(nulls_first=True))

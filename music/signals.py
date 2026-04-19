@@ -18,7 +18,7 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
-from music.models import ArtistaDeezer, ArtistaLocalitat, Canco
+from music.models import ArtistaLocalitat, Canco
 
 
 def _resync(artista_id: int) -> None:
@@ -74,24 +74,3 @@ def prevent_self_collab(sender, instance, action, pk_set, reverse, **kwargs):
                 "D5: an artist cannot be listed as a collaborator on "
                 "their own track."
             )
-
-
-@receiver(post_save, sender=ArtistaDeezer)
-def clear_deezer_no_trobat_on_ad_save(sender, instance, created, **kwargs):
-    """Clear the stale `Artista.deezer_no_trobat` flag when a real Deezer
-    link appears.
-
-    The flag was originally a cache for "we searched Deezer and couldn't
-    find this artist — don't re-query every run". But the artist can
-    later be discovered via auto-descoberta, staff action, or feat.
-    attribution, any of which creates an ArtistaDeezer row. Before this
-    signal, the flag stayed True and the staff "sense Deezer" filter
-    showed artists that clearly had a Deezer id — exactly the case of
-    Àlex Blat surfaced on 2026-04-19.
-    """
-    if not created:
-        return
-    artista = instance.artista
-    if artista.deezer_no_trobat:
-        artista.deezer_no_trobat = False
-        artista.save(update_fields=["deezer_no_trobat"])

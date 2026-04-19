@@ -51,8 +51,8 @@ def rebutjar_album(album: Album, motiu: str) -> int:
 
 def rebutjar_artista(artista: Artista, motiu: str) -> int:
     """
-    Reject an artist: delete all unverified tracks, clear deezer_id,
-    mark deezer_no_trobat=True, mark all albums as descartat.
+    Reject an artist: delete all unverified tracks, clear the Deezer
+    M2M, mark all albums as descartat.
     Returns number of tracks deleted.
     """
     cancons = Canco.objects.filter(artista=artista, verificada=False)
@@ -63,8 +63,6 @@ def rebutjar_artista(artista: Artista, motiu: str) -> int:
 
     # R10: ArtistaDeezer is the sole source of truth; clearing it is enough.
     artista.deezer_ids.all().delete()
-    artista.deezer_no_trobat = True
-    artista.save(update_fields=["deezer_no_trobat"])
     Album.objects.filter(artista=artista).update(descartat=True)
 
     return deleted
