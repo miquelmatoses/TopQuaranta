@@ -32,10 +32,16 @@ assets inaccessible. The public website is the distribution channel instead.
 
 - **Server:** Hetzner CX22 (`188.245.60.20`), Ubuntu 22.04.
 - **Runtime:** Python 3.10, Django 5.2, PostgreSQL 14.
-- **Reverse proxy:** Caddy (auto TLS). Config: `/etc/caddy/Caddyfile`.
+- **Reverse proxy:** Caddy (auto TLS). Config: `/etc/caddy/Caddyfile`
+  (source of truth: `deploy/Caddyfile`).
 - **Process:** `topquaranta-web.service` → gunicorn :8083, settings
   `topquaranta.settings.web_server`, user `topquaranta`. Single gunicorn serves
-  the public web **and** the staff panel.
+  the public web **and** the staff panel. (source: `deploy/topquaranta-web.service`)
+- **Cron:** `/etc/cron.d/topquaranta` (source: `deploy/cron.topquaranta`).
+  Redeploy with `sudo install -o root -g root -m 644
+  deploy/cron.topquaranta /etc/cron.d/topquaranta` — cron reloads on its own.
+- **Logrotate:** `/etc/logrotate.d/topquaranta` (source:
+  `deploy/logrotate.topquaranta`).
 - **DB:** `topquaranta` on localhost, user `topquaranta`. 25 tables, 44 MB.
 - **Working dir:** `/home/topquaranta/app/`. Virtualenv: `.venv/`.
 - **Repo:** `github.com/miquelmatoses/TopQuaranta` (private).
