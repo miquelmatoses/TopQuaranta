@@ -137,8 +137,13 @@ def _refresh_preview_url(deezer_track_id: int) -> str | None:
 
 def analyze_preview(
     preview_url: str | None, deezer_track_id: int | None = None
-) -> tuple[str, float] | None:
-    """Download + analyse a Deezer preview, return (lang, probability).
+) -> tuple[str, float, dict[str, float]] | None:
+    """Download + analyse a Deezer preview, return (lang, prob, all_probs).
+
+    `all_probs` is the full distribution over Whisper's 99 languages. The
+    caller uses (lang, prob) for fast staff-badge rendering and all_probs
+    as a richer ML signal that captures near-miss languages (e.g. a clip
+    predicted it=0.50 ca=0.45 is very different from it=0.95 ca=0.01).
 
     None if:
       - Preview URL is missing and cannot be refreshed.
@@ -163,8 +168,4 @@ def analyze_preview(
             return None
         if not _mp3_to_wav(mp3, wav):
             return None
-        result = _detect_language(wav)
-        if result is None:
-            return None
-        lang, prob, _all = result
-        return lang, prob
+        return _detect_language(wav)

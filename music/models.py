@@ -462,6 +462,10 @@ class Canco(models.Model):
     # `whisper_p` is the top-1 language probability in [0, 1].
     whisper_lang = models.CharField(max_length=3, blank=True, db_index=True)
     whisper_p = models.FloatField(null=True, blank=True)
+    # Full language → probability map over Whisper's 99 languages. Richer
+    # signal than (lang, p): a prediction it=0.50 ca=0.45 vs it=0.95 ca=0.01
+    # tell the classifier very different stories. Stored as JSONB.
+    whisper_all_probs = models.JSONField(null=True, blank=True)
     whisper_processat_at = models.DateTimeField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

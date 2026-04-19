@@ -57,6 +57,14 @@ FEATURE_NAMES = [
     "isrc_any",
     "isrc_prefix_q",
     "artista_aprovat",
+    # Whisper LID features. Extracted from Canco.whisper_all_probs (the
+    # full 99-language distribution) to capture near-miss cases like
+    # "Whisper says it=0.50 ca=0.45" — a much weaker rejection signal
+    # than "it=0.95 ca=0.01". Missing data falls back to 0.0.
+    "whisper_p_ca",  # p(ca)
+    "whisper_p_es",  # p(es) — primary confusion neighbour
+    "whisper_p_en",  # p(en) — second confusion neighbour
+    "whisper_margin_ca",  # p(ca) − max(p over non-ca) in [-1, 1]
 ] + [f"tfidf_{i}" for i in range(200)]
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
@@ -183,6 +191,25 @@ def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> flo
     return decs.filter(decisio="rebutjada").count() / total
 
 
+def _whisper_features(
+    all_probs: dict | None, fallback_lang: str = "", fallback_p: float = 0.0
+) -> list[float]:
+    """Pull the 4 Whisper LID features from an all_probs JSON dict.
+
+    If `all_probs` is missing, we synthesize a minimal one-language dict
+    from `fallback_lang`/`fallback_p` so tracks processed before the
+    JSON field was added still contribute partial signal instead of zeros.
+    """
+    if not all_probs:
+        all_probs = {fallback_lang: float(fallback_p or 0.0)} if fallback_lang else {}
+    p_ca = float(all_probs.get("ca", 0.0))
+    p_es = float(all_probs.get("es", 0.0))
+    p_en = float(all_probs.get("en", 0.0))
+    non_ca_max = max((float(v) for k, v in all_probs.items() if k != "ca"), default=0.0)
+    margin = p_ca - non_ca_max
+    return [p_ca, p_es, p_en, margin]
+
+
 def _build_features(canco) -> list[float]:
     """Extract feature vector from a Canco."""
     from music.models import Canco  # lazy: ml.py may be imported before apps ready
@@ -194,31 +221,39 @@ def _build_features(canco) -> list[float]:
     nb_col = canco.artistes_col.count()
     nb_approved = Canco.objects.filter(artista=artista, verificada=True).count()
 
-    return [
-        float(es),
-        float(digital),
-        float(intl),
-        float(empty),
-        float(artista.deezer_nb_fan or 0),
-        float(artista.deezer_nb_album or 0),
-        float(
-            artista.deezer_nom_similitud
-            if artista.deezer_nom_similitud is not None
-            else 0.5
-        ),
-        float(len(artista.nom)),
-        float(nb_decisions),
-        float(ratio_reb),
-        float(_get_isrc_prefix_rejection_ratio(isrc)),
-        float(nb_col),
-        float(canco.data_llancament.month if canco.data_llancament else 0),
-        float(canco.data_llancament.year if canco.data_llancament else 0),
-        float(nb_approved),
-        float(_get_registrant_rejection_ratio(isrc)),
-        float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
-        float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
-        float(1 if artista.aprovat else 0),
-    ] + _tfidf_features(canco.nom)
+    return (
+        [
+            float(es),
+            float(digital),
+            float(intl),
+            float(empty),
+            float(artista.deezer_nb_fan or 0),
+            float(artista.deezer_nb_album or 0),
+            float(
+                artista.deezer_nom_similitud
+                if artista.deezer_nom_similitud is not None
+                else 0.5
+            ),
+            float(len(artista.nom)),
+            float(nb_decisions),
+            float(ratio_reb),
+            float(_get_isrc_prefix_rejection_ratio(isrc)),
+            float(nb_col),
+            float(canco.data_llancament.month if canco.data_llancament else 0),
+            float(canco.data_llancament.year if canco.data_llancament else 0),
+            float(nb_approved),
+            float(_get_registrant_rejection_ratio(isrc)),
+            float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
+            float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
+            float(1 if artista.aprovat else 0),
+        ]
+        + _whisper_features(
+            canco.whisper_all_probs,
+            fallback_lang=canco.whisper_lang,
+            fallback_p=canco.whisper_p,
+        )
+        + _tfidf_features(canco.nom)
+    )
 
 
 def _build_features_from_historial(rec) -> list[float]:
@@ -249,29 +284,58 @@ def _build_features_from_historial(rec) -> list[float]:
     else:
         ratio_prefix = 0.5
 
-    return [
-        float(es),
-        float(digital),
-        float(intl),
-        float(empty),
-        float(rec.artista_deezer_nb_fan or 0),
-        float(rec.artista_deezer_nb_album or 0),
-        float(
-            rec.artista_nom_similitud if rec.artista_nom_similitud is not None else 0.5
-        ),
-        float(len(rec.artista_nom)),
-        float(total_others),
-        float(ratio_reb),
-        float(ratio_prefix),
-        0.0,  # nb_collaboradors not available in historial
-        float(rec.data_llancament.month if rec.data_llancament else 0),
-        float(rec.data_llancament.year if rec.data_llancament else 0),
-        0.0,  # nb_cancons_aprovades not available in historial
-        float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
-        float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
-        float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
-        float(_artista_aprovat_from_historial(rec)),
-    ] + _tfidf_features(rec.canco_nom)
+    return (
+        [
+            float(es),
+            float(digital),
+            float(intl),
+            float(empty),
+            float(rec.artista_deezer_nb_fan or 0),
+            float(rec.artista_deezer_nb_album or 0),
+            float(
+                rec.artista_nom_similitud
+                if rec.artista_nom_similitud is not None
+                else 0.5
+            ),
+            float(len(rec.artista_nom)),
+            float(total_others),
+            float(ratio_reb),
+            float(ratio_prefix),
+            0.0,  # nb_collaboradors not available in historial
+            float(rec.data_llancament.month if rec.data_llancament else 0),
+            float(rec.data_llancament.year if rec.data_llancament else 0),
+            0.0,  # nb_cancons_aprovades not available in historial
+            float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
+            float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
+            float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
+            float(_artista_aprovat_from_historial(rec)),
+        ]
+        + _whisper_features_from_historial(rec)
+        + _tfidf_features(rec.canco_nom)
+    )
+
+
+def _whisper_features_from_historial(rec) -> list[float]:
+    """Pull Whisper LID features for a historial record.
+
+    HistorialRevisio has no whisper_* columns (the track's Canco holds
+    them). Look up the current Canco by deezer_id and reuse its
+    whisper_all_probs. If no matching Canco (deleted / never had one),
+    return the neutral zero vector — the RF handles absent signal as
+    "no evidence either way".
+    """
+    from music.models import Canco
+
+    canco = None
+    if rec.canco_deezer_id:
+        canco = Canco.objects.filter(deezer_id=rec.canco_deezer_id).first()
+    if canco is None:
+        return _whisper_features(None)
+    return _whisper_features(
+        canco.whisper_all_probs,
+        fallback_lang=canco.whisper_lang,
+        fallback_p=canco.whisper_p,
+    )
 
 
 def _artista_aprovat_from_historial(rec) -> int:

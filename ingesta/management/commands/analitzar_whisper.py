@@ -105,12 +105,18 @@ class Command(BaseCommand):
                 fail += 1
                 # Leave whisper_processat_at NULL → retry next run.
                 continue
-            lang, prob = result
+            lang, prob, all_probs = result
             canco.whisper_lang = lang
             canco.whisper_p = prob
+            canco.whisper_all_probs = all_probs
             canco.whisper_processat_at = timezone.now()
             canco.save(
-                update_fields=["whisper_lang", "whisper_p", "whisper_processat_at"]
+                update_fields=[
+                    "whisper_lang",
+                    "whisper_p",
+                    "whisper_all_probs",
+                    "whisper_processat_at",
+                ]
             )
             ok += 1
             if lang == "ca":
