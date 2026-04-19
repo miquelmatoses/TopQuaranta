@@ -26,20 +26,76 @@ integration (Sessió 16).
   MusicNN, inaSpeechSegmenter, Whisper large-v3, VoxLingua107 ECAPA).
   Commits `9c83908`, `04db69e`, `4ba4bb5`, `ee58e8c`.
 - **Whisper LID** (`ingesta/clients/whisper.py`,
-  `ingesta/management/commands/analitzar_whisper.py`, migration `0040`)
-  — `faster-whisper large-v3` via `detect_language()` on the 30-second
-  Deezer preview. New fields on `Canco`: `whisper_lang`, `whisper_p`,
-  `whisper_processat_at`. Evaluated on the 48-clip harness after human
-  correction of 2 ground-truth labels: **precision(ca) = 100 %**,
-  recall(ca) = 81 %, specificity = 100 %. Zero false positives on the
-  dangerous class — no foreign-language or instrumental clip got
-  `p(ca) > 0.05`. Deliberately a staff **signal, not a hard gate**:
-  a new badge + dropdown on `/staff/cancons/` flags tracks where
-  `whisper_lang != ca`, making catalogue audit work the routine case
-  rather than the exception. Runs nightly at 02:30 via cron, limit
-  500 tracks/night (≈3h45m at ~27 s/track CPU).
+  `ingesta/management/commands/analitzar_whisper.py`, migration `0040`,
+  commit `f455054`) — `faster-whisper large-v3` via `detect_language()`
+  on the 30-second Deezer preview. Initial fields on `Canco`:
+  `whisper_lang`, `whisper_p`, `whisper_processat_at`. Evaluated on the
+  48-clip harness after human correction of 2 ground-truth labels:
+  **precision(ca) = 100 %**, recall(ca) = 81 %, specificity = 100 %.
+  Zero false positives on the dangerous class — no foreign-language or
+  instrumental clip got `p(ca) > 0.05`. Deliberately a staff **signal,
+  not a hard gate**: a new badge + dropdown on `/staff/cancons/` flags
+  tracks where `whisper_lang != ca`. Runs nightly via cron (see below).
+- **Rich Whisper features** (`1cb8d47`) — added `Canco.whisper_all_probs`
+  JSONField (migration 0041) storing the full 99-language probability
+  dictionary alongside the top-1 shortcut. Extracted 4 new ML features
+  into `music/ml.py` (total 219 → 223):
+    - `whisper_p_ca`       — p(ca)
+    - `whisper_p_es`       — p(es), primary confusion neighbour
+    - `whisper_p_en`       — p(en)
+    - `whisper_margin_ca`  — p(ca) − max(p over non-ca) in [−1, +1]
+  A prediction `it=0.50 ca=0.45` now reaches the RF classifier as a
+  very different signal from `it=0.95 ca=0.01` — the top-1 view
+  flattens both to the same "non-Catalan", but the richer features
+  encode the confidence gap. First automatic retrain after the ≥5-
+  decision threshold lifted the Whisper features to ranks #10 and #11
+  of 223 (importance ≈0.012 each) ahead of all 200 TF-IDF tokens.
 - **Staff template tag** `whisper_badge` + filter dropdown "Idioma" +
   table column on `/staff/cancons/`.
+- **Versioned cron at `deploy/cron.topquaranta`** (`222b3a3`) — the
+  cron table had been hand-edited on the server through Silero add,
+  revert, and Whisper. Now lives in the repo byte-for-byte identical
+  to `/etc/cron.d/topquaranta` with `sudo install` deploy command
+  documented in the header and in `CLAUDE.md §2`. Also includes the
+  nightly `analitzar_whisper --limit 700` at 01:30 UTC (~5h 15m window,
+  ≥15 min buffer before the 07:00 provisional ranking).
+- **Staff `/staff/artistes/crear/`** (`601964e`) — manual artist
+  creation with a minimal 3-field form (`nom` required; `lastfm_nom`
+  and `deezer_id` optional). Surfaces duplicate-name hits before
+  creating; "Crear igualment" checkbox forces through when staff
+  confirms two different projects really share the name. After
+  create, redirects to the existing editar view so the staff
+  completes locations, social links, additional Deezer ids, etc.
+- **`duplicats=si` filter on `/staff/artistes/`** (`a71e909`) —
+  dropdown "Duplicats: Només duplicats (noms repetits)" shows artists
+  sharing a name under accent/case-insensitive normalisation. The
+  existing "Fusionar artistes" bulk action picks up right from there.
+
+### Fixed
+
+- **`/staff/artistes/` "sense Deezer" filter drifted** (`a94acf6`) —
+  Àlex Blat surfaced in the list despite having a live Deezer id. The
+  cause was an asymmetric filter (`deezer=si` read the current
+  `ArtistaDeezer` relation, `deezer=no` read the stale
+  `Artista.deezer_no_trobat` cache flag that was never cleared when
+  auto-descoberta or staff later linked a Deezer id). Two fixes:
+  the filter now uses `deezer_ids__isnull=True` symmetrically, and a
+  new `post_save` receiver on `ArtistaDeezer` clears
+  `deezer_no_trobat` automatically on any new link. Cleaned three
+  existing inconsistent rows (Àlex Blat, Pep Gimeno "Botifarra",
+  Vienna).
+- **`/staff/artistes/pendents/` UX** (`47e9114`) — rows now vanish
+  immediately after aprovar / descartar (were previously greyed out
+  until a manual reload) and the counter in the header decrements in
+  sync. Default ordering changed from alphabetical to
+  `-nb_verif` (most verified songs first) so staff spend review time
+  on the high-leverage candidates.
+- **Two catalogue errors surfaced by Whisper** (batched in `f455054`):
+  `pk=7925` Martina Burón "In The Rain" (was verificada=True
+  idioma=ca, actually English) and `pk=721` Marc Parrot "Visions
+  Tàctils" (was verificada=True, actually instrumental). Both
+  rebutjat with `motiu=no_catala`. They stayed hidden until the
+  harness pointed Whisper at them.
 
 ### Added (before Whisper)
 

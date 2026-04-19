@@ -1,35 +1,48 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-18 — Phase 9: 53 findings landed. Sessió 14 wrapped
-> up the small follow-ups (titlecase edge cases, R10c regression guard,
-> smarter Last.fm retry, `lastfm_te_scrobbles` flag). Next block opens a
-> new line of work: Silero VAD + language classifier as ML features for
-> the staff triage queue.
+> Last updated: 2026-04-19 — Sessió 16: Whisper LID integrated (precision
+> 100 %, recall 81 % on 48 ground-truth clips), permanent model-comparison
+> harness at `scripts/model_comparison/`, rich per-language features (99
+> probs) plumbed into the RF classifier (now at 223 features, retrain
+> triggered by the same day's 2 223 staff decisions), cron table finally
+> versioned in the repo, manual artist creation + duplicate-name filter +
+> `/staff/artistes/pendents/` UX fixes.
 
 ---
 
-## Current state (2026-04-16)
+## Current state (2026-04-19)
 
 **Public site**: `https://www.topquaranta.cat/` — homepage (PPCC ranking),
 per-territory rankings, artist directory, artist + album + song profiles,
 interactive territorial map (D3.js), user accounts, verified-artist portal.
 
-**Staff panel**: `/staff/` — tracks, albums, artists, pending artists,
-provisional ranking, historial, senyal, management requests, new-artist
-proposals, configuration. All behind `@staff_required`.
+**Staff panel**: `/staff/` — tracks, albums, artists (with manual `crear`
+and `duplicats` filter), pending artists, provisional ranking, historial,
+senyal, management requests, new-artist proposals, configuration. All
+behind `@staff_required`.
 
-**Pipeline** (daily/hourly cron, `/etc/cron.d/topquaranta`):
+**Pipeline** (daily/hourly cron, source of truth at
+`deploy/cron.topquaranta`, deployed to `/etc/cron.d/topquaranta`):
 - Hourly: `obtenir_novetats` (Deezer incremental).
+- **01:30**: `analitzar_whisper --limit 700` (LID over Deezer previews,
+  ~5h15m window, finishes before provisional ranking).
 - 04:00: `netejar_caducades` (drop unverified tracks > 12 months old).
 - 06:00 + 06:30: `obtenir_senyal` (Last.fm) + `actualitzar_score_entrada`.
 - 07:00: `calcular_ranking --provisional` (all eligible territories).
 - Saturday 08:00: `calcular_ranking` (official weekly).
 
 **Database**: PostgreSQL. 25 tables, 44 MB. All legacy tables + views dropped
-in Phase 8. 10 Territoris, 1,825 Municipis, 2,288 approved Artistes, 19,937
-Cançons (10,842 verified), 10,082 SenyalDiari rows, 1,448 HistorialRevisio
-decisions feeding the ML model (97.2% CV accuracy).
+in Phase 8. 10 Territoris, 1,825 Municipis, ~4,300 Artistes (≥2,288
+approved), ~19,937 Cançons (~10,800 verified), 10,082 SenyalDiari rows,
+~3,900 HistorialRevisio decisions feeding the ML model.
+
+**ML classifier** (`music/ml.py`) — RandomForestClassifier + TF-IDF
+vectoriser cached with mtime invalidation. **223 features**: 19 metadata
++ 4 Whisper LID (p_ca, p_es, p_en, margin_ca) + 200 TF-IDF tokens.
+Auto-retrains when ≥5 new staff decisions accumulate since the last
+recalc. Whisper LID backfill in progress at 700 tracks/night; ETA full
+coverage ~27-28 April.
 
 **Infrastructure**: single gunicorn on port 8083, Caddy TLS. Legacy Wagtail
 code is preserved at `/root/TopQuaranta/` but the service is disabled. No
@@ -52,7 +65,7 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (53 findings landed: Tier 1 security + Tier 2 reliability complete + Performance mostly done + Ops mostly done + SEO live + Architecture started + Process near-complete + Data model complete + Cultural docs (DEFINITION / MANIFEST / RETENTION / DEPRECATION / CC BY) landed) |
+| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (53 findings landed + Sessió 16 additions: Whisper LID staff signal, rich per-language ML features, permanent model-comparison harness, versioned cron, manual artist creation, duplicate-name filter, signal-based deezer_no_trobat sync, pendents UX polish) |
 | 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
 
 ---
@@ -146,6 +159,30 @@ Tactical items not tied to specific CLAUDE_EXCELLENCE findings:
       `music/constants.py`.
 - [ ] Consolidate reject-action handling; some inline styles in staff
       templates could become CSS classes.
+
+### Sessió 16 follow-ups
+
+- [ ] When the Whisper backfill finishes (~27-28 April) re-evaluate the
+      feature importances of the 4 Whisper features. If they climb into
+      top-5, consider trimming the 200 TF-IDF features — they may have
+      been carrying load Whisper now covers more cheaply.
+- [ ] **Demucs → Whisper pipeline** as a recall booster for the 3-4 false
+      negatives where Whisper hears `es` on Catalan tracks (Jonatan
+      Penalba × 2, Adrien Broadway). Source-separate vocals first, then
+      LID on `vocals.wav`. Cost ~55 s + 27 s per track (3× slower). Only
+      worth it if the backfill surfaces a significant cluster of FN
+      tracks that share the pattern. Deferred until we have data.
+- [ ] Audit the 39 `ja` (Japanese) Whisper predictions in the current
+      slice — suspicious cluster, likely Whisper hallucinating on
+      vocalises / long sustained vowels / certain instrumentals. If
+      the pattern is an indicator of *something* specific
+      (instrumentals? scat? hardcore screaming?) it could be a cheap
+      extra ML feature.
+- [ ] Record a snapshot of the pre-Whisper RF baseline before the next
+      retrain (`cp music/ml_model.joblib music/ml_model.baseline.joblib`)
+      so we can A/B the classifier's precision on the same 48-clip set
+      in a week and measure the real contribution of the Whisper
+      features in isolation.
 
 ### Post-Excellence (apuntat durant la fase 9)
 - [ ] **Naming consolidation**: unificar "ranking / rànquing / ranquing /
