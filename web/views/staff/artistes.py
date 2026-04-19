@@ -1,7 +1,6 @@
 """Staff views for approved artist management."""
 
 import json
-import unicodedata
 from collections import Counter
 
 from django.contrib import messages
@@ -21,10 +20,12 @@ from music.models import (
     ArtistaDeezer,
     ArtistaLocalitat,
     Canco,
+    HistorialRevisio,
     Municipi,
     Territori,
 )
 from music.services import rebutjar_artista
+from music.utils import normalize_nom as _normalize_nom
 
 from . import apply_ordering, paginate, staff_required
 
@@ -32,12 +33,6 @@ ARTISTES_ORDER_FIELDS = {
     "nom": "nom",
     "genere": "genere",
 }
-
-
-def _normalize_nom(s: str) -> str:
-    """Fold a name for duplicate detection: strip accents, lowercase, collapse whitespace."""
-    s = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode()
-    return " ".join(s.lower().split())
 
 
 def _duplicate_nom_pks() -> list[int]:
@@ -420,13 +415,23 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
 
             # Move albums
             Album.objects.filter(artista=source).update(artista=target)
-            # Move Deezer IDs
+            # Move Deezer IDs. Demote merged rows to principal=False so
+            # target keeps its existing principal; if target had none we
+            # fix that up after the loop ends.
             ArtistaDeezer.objects.filter(artista=source).update(
                 artista=target,
                 principal=False,
             )
             # Move UserArtista links
             UserArtista.objects.filter(artista=source).update(artista=target)
+            # Move HistorialRevisio. The ML classifier's
+            # `ratio_rebuig_artista` feature (top-5 importance) keys on
+            # `artista_nom` — without this the target artist loses the
+            # rejection history of its merged-away duplicate and the RF
+            # treats it as a fresh artist.
+            HistorialRevisio.objects.filter(artista_nom=source.nom).update(
+                artista_nom=target.nom,
+            )
             # Move ArtistaLocalitat entries (avoid duplicate municipis)
             target_municipis = set(
                 target.localitats.filter(municipi__isnull=False).values_list(
@@ -446,6 +451,17 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
                 target.genere = source.genere
             # Delete source artist (cascade deletes remaining relations)
             source.delete()
+
+        # Principal invariant: after all sources are merged, target must
+        # have exactly one ArtistaDeezer with principal=True if it has any
+        # ArtistaDeezer at all. Otherwise `deezer_id_principal` falls back
+        # to an arbitrary `.first()` and the staff panel shows a random
+        # Deezer link instead of the canonical one.
+        target_ads = list(target.deezer_ids.order_by("created_at"))
+        if target_ads and not any(ad.principal for ad in target_ads):
+            first = target_ads[0]
+            first.principal = True
+            first.save(update_fields=["principal"])
 
         target.save()
         # Signal syncs territories from merged localitats

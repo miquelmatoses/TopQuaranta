@@ -65,9 +65,16 @@ class Command(BaseCommand):
             if not qs.exists():
                 raise CommandError(f"No approved Artista with pk={artista_id}.")
         else:
-            # Skip artists already marked as not found on Deezer (unless --force)
+            # Skip artists that already have an ArtistaDeezer link, so
+            # we only re-query Deezer for those genuinely unresolved.
+            # We previously filtered on `deezer_no_trobat=False` — but
+            # that flag is a stale cache (see audit finding #7): if a
+            # merge or delete removes the ArtistaDeezer row, the flag
+            # doesn't flip back, so artists that need re-discovery get
+            # permanently skipped.  The source-of-truth filter is the
+            # relation itself.
             if not force:
-                qs = qs.filter(deezer_no_trobat=False)
+                qs = qs.filter(deezer_ids__isnull=True)
 
         total = qs.count()
         self.stdout.write(f"Artists to process: {total}")
@@ -354,6 +361,7 @@ class Command(BaseCommand):
             lastfm_nom=main_name,
             aprovat=False,
             auto_descobert=True,
+            pendent_review=True,
             font_descoberta="deezer_contributor",
         )
         ArtistaDeezer.objects.get_or_create(
@@ -435,6 +443,7 @@ class Command(BaseCommand):
                             lastfm_nom=c_name,
                             aprovat=False,
                             auto_descobert=True,
+                            pendent_review=True,
                             font_descoberta="collaborador",
                         )
                         ArtistaDeezer.objects.get_or_create(

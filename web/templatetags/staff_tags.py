@@ -40,6 +40,21 @@ def ml_badge(canco):
 
 
 @register.simple_tag
+def deezer_artist_url(deezer_id):
+    """Build a canonical Deezer artist URL.
+
+    Five staff templates had `https://www.deezer.com/artist/{{ dz }}`
+    hardcoded; this tag keeps the base URL in one place so a future
+    Deezer path migration doesn't require a grep-and-replace. Empty
+    input returns an empty string — `{% if dz %}` guards remain the
+    caller's responsibility.
+    """
+    if not deezer_id:
+        return ""
+    return format_html("https://www.deezer.com/artist/{}", deezer_id)
+
+
+@register.simple_tag
 def whisper_badge(canco):
     """Render a compact Whisper LID badge.
 

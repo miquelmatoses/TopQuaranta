@@ -196,12 +196,22 @@ def _whisper_features(
 ) -> list[float]:
     """Pull the 4 Whisper LID features from an all_probs JSON dict.
 
-    If `all_probs` is missing, we synthesize a minimal one-language dict
-    from `fallback_lang`/`fallback_p` so tracks processed before the
-    JSON field was added still contribute partial signal instead of zeros.
+    Returns [p_ca, p_es, p_en, margin_ca].
+
+    When `all_probs` is missing we can still derive p_ca/p_es/p_en from
+    the top-1 shortcut (fallback_lang + fallback_p) — a single-lang
+    dict. But `margin_ca` = p(ca) − max(p over non-ca) would be 0 or
+    equal to p(ca) in that degenerate dict, which diverges from the
+    value computed against the full 99-lang distribution. To keep
+    training and inference consistent across old/new rows, we zero
+    out margin_ca whenever we don't have the full distribution. The
+    RF then learns to rely on margin only when it's actually informed.
     """
     if not all_probs:
-        all_probs = {fallback_lang: float(fallback_p or 0.0)} if fallback_lang else {}
+        p_ca = float(fallback_p or 0.0) if fallback_lang == "ca" else 0.0
+        p_es = float(fallback_p or 0.0) if fallback_lang == "es" else 0.0
+        p_en = float(fallback_p or 0.0) if fallback_lang == "en" else 0.0
+        return [p_ca, p_es, p_en, 0.0]
     p_ca = float(all_probs.get("ca", 0.0))
     p_es = float(all_probs.get("es", 0.0))
     p_en = float(all_probs.get("en", 0.0))
@@ -319,16 +329,23 @@ def _whisper_features_from_historial(rec) -> list[float]:
     """Pull Whisper LID features for a historial record.
 
     HistorialRevisio has no whisper_* columns (the track's Canco holds
-    them). Look up the current Canco by deezer_id and reuse its
-    whisper_all_probs. If no matching Canco (deleted / never had one),
-    return the neutral zero vector — the RF handles absent signal as
-    "no evidence either way".
+    them). Look up the current Canco by deezer_id first, then ISRC as
+    a fallback — the latter is essential because a merge or a Deezer
+    reindex can leave historial rows pointing to a stale
+    `canco_deezer_id` even though the Canco still exists keyed by its
+    ISRC. Without this fallback, the RF was silently receiving zero
+    vectors for all merged-track history (per audit finding #5).
+
+    If neither lookup hits (track genuinely gone), return the neutral
+    zero vector — the RF handles absent signal as "no evidence".
     """
     from music.models import Canco
 
     canco = None
     if rec.canco_deezer_id:
         canco = Canco.objects.filter(deezer_id=rec.canco_deezer_id).first()
+    if canco is None and rec.canco_isrc:
+        canco = Canco.objects.filter(isrc=rec.canco_isrc).first()
     if canco is None:
         return _whisper_features(None)
     return _whisper_features(
@@ -503,9 +520,13 @@ def _heuristic_classificar(canco) -> dict:
             score += 0.2
 
     score = max(0.0, min(1.0, score))
-    if score >= 0.65:
+    # Use the same A/B/C boundaries as the RF path (constants.ML_CLASSE_*)
+    # so a fallback doesn't silently reclassify tracks at a different
+    # threshold — staff would see tracks moving between A/B/C just
+    # because the model file failed to load once.
+    if score >= ML_CLASSE_A_THRESHOLD:
         classe = "A"
-    elif score >= 0.35:
+    elif score >= ML_CLASSE_B_THRESHOLD:
         classe = "B"
     else:
         classe = "C"

@@ -88,17 +88,35 @@ class Artista(models.Model):
         default=False,
         help_text="True if Deezer search failed ISRC validation — skip in future runs.",
     )
-    # Discovery provenance
-    auto_descobert = models.BooleanField(default=False)
+    # Discovery provenance (immutable after creation).
+    auto_descobert = models.BooleanField(
+        default=False,
+        help_text="True if the artist was auto-discovered (feat. resolution, "
+        "Viasona ingest, etc.). Historical record of how the artist got "
+        "into the system — NOT to be used as an 'in pendents queue' flag. "
+        "Use `pendent_review` for that.",
+    )
     font_descoberta = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Source: 'viasona', 'collaborador', 'manual'.",
+        help_text="Source: 'viasona', 'collaborador', 'deezer_contributor', "
+        "'manual', 'legacy'.",
     )
     aprovat = models.BooleanField(
         default=True,
         db_index=True,
         help_text="False = pending human review in staff panel.",
+    )
+    # Staff review queue flag. Separate from `aprovat` so we can
+    # distinguish "needs triage" from "already triaged and rejected":
+    # - aprovat=True  pendent_review=False → live
+    # - aprovat=False pendent_review=True  → at /staff/artistes/pendents/
+    # - aprovat=False pendent_review=False → descartat (kept for FK integrity)
+    # - aprovat=True  pendent_review=True  → forbidden by CheckConstraint
+    pendent_review = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True = appears in /staff/artistes/pendents/ for review.",
     )
 
     # Deezer metadata (populated by obtenir_metadata)
@@ -159,6 +177,21 @@ class Artista(models.Model):
         ordering = ["nom"]
         verbose_name = "Artista"
         verbose_name_plural = "Artistes"
+        constraints = [
+            # An approved artist must not be sitting in the pendents queue.
+            # The four (aprovat, pendent_review) states are documented on
+            # the `pendent_review` field docstring.
+            models.CheckConstraint(
+                check=~models.Q(aprovat=True, pendent_review=True),
+                name="artista_no_aprovat_pendent_review",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["pendent_review", "aprovat"],
+                name="artista_pendent_review_idx",
+            ),
+        ]
 
     def __str__(self) -> str:
         codis = ",".join(self.territoris.values_list("codi", flat=True))
@@ -607,6 +640,7 @@ class StaffAuditLog(models.Model):
         ("artista_rebutjar", "Artista: rebutjar"),
         ("artista_marcar_sense_deezer", "Artista: marcar sense Deezer"),
         ("artista_fusionar", "Artista: fusionar"),
+        ("artista_crear", "Artista: crear"),
         ("artista_edit", "Artista: edició"),
         # Artistes pendents (auto-discovered)
         ("pendent_aprovar", "Pendent: aprovar"),

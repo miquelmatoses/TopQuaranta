@@ -2,13 +2,13 @@
 
 import json
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from music.audit import log_staff_action
-from music.models import Artista, ArtistaLocalitat, Municipi
+from music.models import Artista, ArtistaDeezer, ArtistaLocalitat, Municipi
 from web.api.views import (  # noqa: F401 — re-exported for staff URL routing
     api_comarques,
     api_municipi_lookup,
@@ -28,14 +28,14 @@ PENDENTS_ORDER_FIELDS = {
 def llista(request: HttpRequest) -> HttpResponse:
     """List artists awaiting staff review.
 
-    Filter: `aprovat=False AND auto_descobert=True`. The `auto_descobert`
-    flag is read here as "in the pendents queue" rather than strictly
-    "auto-discovered" — it is also set by the bulk-un-approval action
-    that sweeps approved artists missing Deezer or localitat data back
-    into this list for re-review.
+    Filter: `aprovat=False AND pendent_review=True`. `pendent_review` is
+    the dedicated queue flag introduced in migration 0042; previously
+    this filter used `auto_descobert`, which conflated discovery
+    provenance with queue membership and made it impossible to tell a
+    Viasona discovery from a bulk-rejected legacy row.
     """
     qs = (
-        Artista.objects.filter(aprovat=False, auto_descobert=True)
+        Artista.objects.filter(aprovat=False, pendent_review=True)
         .select_related()
         .prefetch_related("territoris", "deezer_ids", "localitats__municipi")
         .annotate(
@@ -110,8 +110,6 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
     except Artista.DoesNotExist:
         return JsonResponse({"error": "Artista not found"}, status=404)
 
-    from music.models import ArtistaDeezer  # avoid circular
-
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -141,11 +139,43 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
         # ── Deezer link (optional; skipped if duplicate) ──
         if deezer_id is not None:
             if not artista.deezer_ids.filter(deezer_id=deezer_id).exists():
-                ArtistaDeezer.objects.create(
-                    artista=artista,
-                    deezer_id=deezer_id,
-                    principal=not artista.deezer_ids.exists(),
-                )
+                # ArtistaDeezer.deezer_id is unique across the whole
+                # table. If the id is already attached to a different
+                # artist, create() raises IntegrityError and Django
+                # would rollback the whole atomic block → 500. Catch
+                # it and return a clean 409 that names the owner so
+                # staff can decide (merge the two artistes or pick a
+                # different id).
+                try:
+                    # Nested savepoint so only the Deezer insertion is
+                    # rolled back on conflict, not the rest of the
+                    # approval (which we then abort via the return).
+                    with transaction.atomic():
+                        ArtistaDeezer.objects.create(
+                            artista=artista,
+                            deezer_id=deezer_id,
+                            principal=not artista.deezer_ids.exists(),
+                        )
+                except IntegrityError:
+                    owner = (
+                        ArtistaDeezer.objects.filter(deezer_id=deezer_id)
+                        .select_related("artista")
+                        .first()
+                    )
+                    owner_nom = owner.artista.nom if owner else "?"
+                    owner_pk = owner.artista.pk if owner else None
+                    return JsonResponse(
+                        {
+                            "error": (
+                                f"Deezer ID {deezer_id} ja pertany a "
+                                f"«{owner_nom}» (pk={owner_pk}). Fusiona "
+                                "els dos artistes o canvia l'ID."
+                            ),
+                            "owner_pk": owner_pk,
+                            "owner_nom": owner_nom,
+                        },
+                        status=409,
+                    )
                 # Signal `clear_deezer_no_trobat_on_ad_save` also syncs
                 # the legacy flag.
 
@@ -183,10 +213,10 @@ def api_aprovar(request: HttpRequest, pk: int) -> JsonResponse:
                 territori = "ALT"
 
         artista.aprovat = True
-        # Also clear auto_descobert so the artist drops out of the pendents
-        # queue (symmetric with the descartar-with-verified-tracks path).
-        artista.auto_descobert = False
-        artista.save(update_fields=["aprovat", "auto_descobert"])
+        # Drop out of the pendents queue. `auto_descobert` stays as is —
+        # it's immutable provenance now.
+        artista.pendent_review = False
+        artista.save(update_fields=["aprovat", "pendent_review"])
         # Signal auto-syncs territories from localitats.
 
     log_staff_action(
@@ -212,13 +242,21 @@ def api_descartar(request: HttpRequest, pk: int) -> JsonResponse:
 
     has_verified = artista.cancons.filter(verificada=True).exists()
     if has_verified:
-        artista.auto_descobert = False
-        artista.save(update_fields=["auto_descobert"])
+        # Drop out of the pendents queue but keep the row (can't delete
+        # — verified tracks still reference it). `auto_descobert` stays
+        # untouched: we preserve discovery provenance.
+        artista.pendent_review = False
+        artista.save(update_fields=["pendent_review"])
+        # M14: a descartat artist shifts the rejection-ratio features;
+        # recalculate if enough decisions have accumulated.
+        from music.ml import recalcular_ml_si_cal
+
+        recalcular_ml_si_cal()
         log_staff_action(
             request,
             "pendent_descartar",
             target=artista,
-            action_taken="kept_auto_descobert_false",
+            action_taken="kept_pendent_review_false",
             reason="had verified tracks",
         )
         return JsonResponse({"ok": True, "action": "kept"})

@@ -102,7 +102,15 @@ def main() -> int:
     print(
         f"\n{ok} fetched, {skipped} already present, {failed} failed, {len(rows)} total."
     )
-    return 0 if failed == 0 else 1
+    # Exit codes:
+    #   0 — clean run (nothing failed, or at least something got fetched)
+    #   1 — every attempt failed (all previews expired, or Deezer down)
+    #   2 — mixed: some failures, some successes (investigate but not a disaster)
+    if failed == 0:
+        return 0
+    if ok == 0 and skipped == 0:
+        return 1
+    return 2
 
 
 if __name__ == "__main__":

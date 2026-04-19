@@ -40,6 +40,7 @@ def _get_or_create_artista(deezer_id: int, name: str) -> Artista | None:
             lastfm_nom=name,
             aprovat=False,
             auto_descobert=True,
+            pendent_review=True,
             font_descoberta="deezer_contributor",
         )
         ArtistaDeezer.objects.get_or_create(
