@@ -393,12 +393,31 @@ def _fusionar_artistes(request: HttpRequest, ids: list[str]) -> None:
 
     with transaction.atomic():
         for source in sources:
-            # Move cancons (main artist)
+            # Move cancons (main artist). Note: .update() skips signals by
+            # design, so it can silently create transient D5 violations
+            # when a canco had artista=source AND target in artistes_col;
+            # we repair those below.
             Canco.objects.filter(artista=source).update(artista=target)
-            # Move cancons (collaborator)
+
+            # Move cancons (collaborator).
             for canco in Canco.objects.filter(artistes_col=source):
                 canco.artistes_col.remove(source)
-                canco.artistes_col.add(target)
+                # D5: target can't be both the main artist and a collab
+                # on the same track. Skip the add when that would happen
+                # — target is already credited as main, no information
+                # lost.
+                if canco.artista_id != target.pk:
+                    canco.artistes_col.add(target)
+
+            # Repair post-.update() D5 violations: any canco now with
+            # artista=target AND target in artistes_col (possible if
+            # the source track already listed target as a collaborator
+            # before the merge) — remove target from the col side.
+            for canco in Canco.objects.filter(
+                artista=target, artistes_col=target
+            ).distinct():
+                canco.artistes_col.remove(target)
+
             # Move albums
             Album.objects.filter(artista=source).update(artista=target)
             # Move Deezer IDs
