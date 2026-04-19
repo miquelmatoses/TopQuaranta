@@ -18,6 +18,7 @@ urlpatterns = [
     # P4: Artistes
     path("artistes/", artistes.llista, name="artistes"),
     path("artistes/accio/", artistes.accio, name="artistes_accio"),
+    path("artistes/crear/", artistes.crear, name="artista_crear"),
     path("artistes/<int:pk>/editar/", artistes.editar, name="artista_editar"),
     # P5: Artistes pendents
     path("artistes/pendents/", pendents.llista, name="artistes_pendents"),

@@ -125,6 +125,95 @@ def llista(request: HttpRequest) -> HttpResponse:
 
 
 @staff_required
+def crear(request: HttpRequest) -> HttpResponse:
+    """Create a new Artista manually.
+
+    Minimal form: only `nom` is required. Everything else is optional and
+    can be filled in on the standard edit screen after creation. If the
+    user also supplies a Deezer ID, we wire it up as the principal
+    ArtistaDeezer row. On success we redirect to the full edit page so
+    the staff can add locations, social links, additional Deezer ids,
+    etc., from the familiar form.
+    """
+    if request.method == "POST":
+        nom = request.POST.get("nom", "").strip()
+        if not nom:
+            messages.error(request, "El nom és obligatori.")
+            return redirect("staff:artista_crear")
+
+        lastfm_nom = request.POST.get("lastfm_nom", "").strip() or nom
+        deezer_raw = request.POST.get("deezer_id", "").strip()
+        deezer_id = None
+        if deezer_raw:
+            try:
+                deezer_id = int(deezer_raw)
+            except ValueError:
+                messages.error(request, "Deezer ID ha de ser un nombre enter.")
+                return redirect("staff:artista_crear")
+
+        # Surface duplicate-name warning unless the user has acknowledged it.
+        force = request.POST.get("force") == "1"
+        if not force:
+            existing_pks = _duplicate_nom_pks()
+            hits = Artista.objects.filter(
+                pk__in=existing_pks, nom__iexact=nom
+            ) | Artista.objects.annotate(norm=Lower("nom")).filter(norm=nom.lower())
+            hits = hits.distinct()[:5]
+            hit_list = list(hits)
+            if hit_list:
+                return render(
+                    request,
+                    "web/staff/artista_crear.html",
+                    {
+                        "staff_section": "artistes",
+                        "form_values": {
+                            "nom": nom,
+                            "lastfm_nom": lastfm_nom,
+                            "deezer_id": deezer_raw,
+                        },
+                        "existing_duplicates": hit_list,
+                    },
+                )
+
+        with transaction.atomic():
+            artista = Artista.objects.create(
+                nom=nom,
+                lastfm_nom=lastfm_nom,
+                aprovat=True,
+                auto_descobert=False,
+                font_descoberta="manual",
+            )
+            if deezer_id is not None:
+                ArtistaDeezer.objects.create(
+                    artista=artista,
+                    deezer_id=deezer_id,
+                    principal=True,
+                )
+            log_staff_action(
+                request,
+                "artista_crear",
+                target=artista,
+                deezer_id=deezer_id,
+            )
+        messages.success(
+            request,
+            f"Artista «{artista.nom}» creat. Afegeix localitzacions i xarxes aquí.",
+        )
+        return redirect("staff:artista_editar", pk=artista.pk)
+
+    # GET
+    return render(
+        request,
+        "web/staff/artista_crear.html",
+        {
+            "staff_section": "artistes",
+            "form_values": {"nom": "", "lastfm_nom": "", "deezer_id": ""},
+            "existing_duplicates": None,
+        },
+    )
+
+
+@staff_required
 def editar(request: HttpRequest, pk: int) -> HttpResponse:
     """Edit a single artist with multiple locations, social links, multiple Deezer IDs."""
     artista = get_object_or_404(Artista, pk=pk)

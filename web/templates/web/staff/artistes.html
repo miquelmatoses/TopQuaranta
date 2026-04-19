@@ -7,6 +7,7 @@
 <section class="ranking-header">
   <h2 class="ranking-title">Artistes</h2>
   <p class="ranking-date">{{ page.paginator.count }} resultats</p>
+  <a href="{% url 'staff:artista_crear' %}" class="filter-btn" style="margin-top:var(--mm-space-2);display:inline-block">+ Crear artista</a>
 </section>
 
 <form method="get" class="staff-filters">
