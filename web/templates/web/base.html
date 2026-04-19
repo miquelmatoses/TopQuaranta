@@ -40,7 +40,7 @@
   <link rel="stylesheet" href="{% static 'web/css/theme.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
-<body class="{% if territori_actiu %}territori-{{ territori_actiu|lower }}{% endif %}">
+<body class="{% block body_class %}{% endblock %}{% if territori_actiu %} territori-{{ territori_actiu|lower }}{% endif %}">
 
   <!-- ═══ HEADER — editorial masthead ═══ -->
   <header class="site-header">

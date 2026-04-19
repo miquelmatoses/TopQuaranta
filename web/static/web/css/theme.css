@@ -1,121 +1,133 @@
-/* TopQuaranta — yellow+black theme (Sessió 18).
+/* TopQuaranta — yellow+black theme (Sessió 18, revised).
  *
- * Loaded AFTER style.css so its tokens win. The goal is cercol.team's
- * clean, card-centric, whitespace-heavy aesthetic, swapping the blue
- * accent for yellow and using a black header bar for contrast.
+ * Mirror of cercol.team's layout, with blue→yellow and white→black
+ * swapped. Loaded AFTER style.css so its tokens win; existing
+ * templates inherit the new palette automatically via the
+ * `--mm-color-*` overrides.
  *
- * Design decisions:
- *   - Page bg stays near-white (`--tq-bg`) so content cards read.
- *   - Nav + footer are black — high contrast, easy to orient from
- *     anywhere on the page.
- *   - Yellow is the interactive accent (links, CTAs, active states,
- *     focus rings). Never used as a background for body text — it's
- *     a small-surface color.
- *   - Typography tokens reuse `--mm-text-*`; we don't re-pick sizes.
- *   - Logo horitzontal white on black; the existing stacked logo
- *     is kept in /img/ for any single-color print context.
+ * Layout mapping (from cercol.team):
+ *
+ *                  cercol                         topquaranta
+ *   home         all-blue hero                   all-yellow hero
+ *   other pages  blue header + white bg          yellow header + black bg
+ *   logo         white on blue                   black on yellow
+ *   cards        white on white (borders)        white on black (floating)
+ *   body text    dark on white                   white on black (outside cards)
+ *   accent       blue                            yellow
+ *
+ * The logo SVG uses `currentColor`, so its colour follows whatever
+ * context it's rendered in (black on yellow header, black on yellow
+ * home-hero, white on black footer, etc.).
  */
 
 :root {
-  /* ── Palette (yellow + black, cercol-spacing) ── */
-  --tq-color-yellow:            #facc15;  /* primary accent */
-  --tq-color-yellow-soft:       #fde68a;  /* backgrounds/hover */
-  --tq-color-yellow-deep:       #ca8a04;  /* hover/active */
+  /* ── Palette ── */
+  --tq-color-yellow:            #facc15;  /* primary — the identity colour */
+  --tq-color-yellow-soft:       #fde68a;  /* hover/backgrounds */
+  --tq-color-yellow-deep:       #ca8a04;  /* active/pressed */
 
-  --tq-color-ink:               #0a0a0a;  /* near-black for type */
-  --tq-color-ink-soft:          #1f2937;  /* nav/footer bg */
-  --tq-color-ink-muted:         #6b7280;  /* secondary text */
+  --tq-color-ink:               #0a0a0a;  /* near-black; page bg & text-on-yellow */
+  --tq-color-ink-soft:          #1a1a1a;  /* slightly-lighter surfaces on black bg */
+  --tq-color-ink-muted:         #a1a1aa;  /* muted text on black bg */
 
-  --tq-color-bg:                #fafafa;  /* page */
-  --tq-color-surface:           #ffffff;  /* cards */
-  --tq-color-border:            #e5e7eb;
-  --tq-color-border-strong:     #111827;
+  --tq-color-surface:           #ffffff;  /* card bg — white, floats on black */
+  --tq-color-surface-muted:     #f4f4f5;  /* subtle surface on cards */
+  --tq-color-border:            #27272a;  /* dark border for cards-on-black */
+  --tq-color-border-strong:     #52525b;
 
-  /* Override mm-design tokens used across TopQuaranta templates so
-     every existing style auto-inherits the new palette without us
-     having to grep-and-replace. These remain overridable per-territory
-     for the rankings (body.territori-*). */
+  /* Override mm-design tokens so every template inherits the new
+     palette automatically. Keep `--mm-color-text-primary` as white
+     because body text is on the black page bg; inside cards, we set
+     an override. */
   --mm-color-primary:           var(--tq-color-yellow);
   --mm-color-primary-hover:     var(--tq-color-yellow-deep);
-  --mm-color-background:        var(--tq-color-bg);
-  --mm-color-text-primary:      var(--tq-color-ink);
+  --mm-color-background:        var(--tq-color-ink);
+  --mm-color-text-primary:      #ffffff;
   --mm-color-text-secondary:    var(--tq-color-ink-muted);
   --mm-color-border:            var(--tq-color-border);
   --mm-color-surface:           var(--tq-color-surface);
 
-  /* Layout */
-  --tq-width-site:              75rem;   /* 1200px, was already here */
+  /* Layout (cercol uses 80rem / 1280px; we follow). */
+  --tq-width-site:              80rem;
   --tq-radius-sm:               0.375rem;
   --tq-radius-md:               0.5rem;
   --tq-radius-lg:               0.75rem;
-  --tq-shadow-sm:               0 1px 2px rgba(0,0,0,.05);
-  --tq-shadow-md:               0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-  --tq-shadow-lg:               0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.05);
+  --tq-shadow-sm:               0 1px 2px rgba(0,0,0,.3);
+  --tq-shadow-md:               0 4px 6px -1px rgba(0,0,0,.3), 0 2px 4px -2px rgba(0,0,0,.3);
+  --tq-shadow-lg:               0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -4px rgba(0,0,0,.3);
 }
 
 html, body {
-  background: var(--tq-color-bg);
-  color: var(--tq-color-ink);
+  background: var(--tq-color-ink);
+  color: #ffffff;
 }
 
-/* Container: uniform max width across pages.
-   Cercol uses 80rem; we stay at 75rem (1200px) to match the previous
-   --tq-width-site value — TopQuaranta ranking content is denser. */
+body { min-height: 100vh; display: flex; flex-direction: column; }
+body > main, body > .main-wrap { flex: 1; }
+
+/* Container — uniform max width, centred. Cercol width. */
 .container {
   max-width: var(--tq-width-site);
   margin-inline: auto;
-  padding-inline: var(--mm-space-4);
+  padding-inline: var(--mm-space-6);
   width: 100%;
 }
 
-/* ─── Header ─────────────────────────────────────────────────── */
+/* ═══ Header — yellow bar ═══════════════════════════════════ */
 
 .site-header {
-  background: var(--tq-color-ink-soft);
-  color: #fff;
-  border-bottom: 2px solid var(--tq-color-yellow);
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: 0 1px 0 rgba(0,0,0,.1);
 }
 
 .site-header .header-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--mm-space-4);
-  padding: var(--mm-space-4) 0;
+  padding-block: var(--mm-space-3);
+  min-height: 4rem;
 }
 
-.site-header a,
-.site-header .nav-link,
-.site-header .header-cta {
-  color: #fff;
+.site-header a {
+  color: var(--tq-color-ink);
+  text-decoration: none;
 }
 
 .site-header .site-logo {
-  height: 2.5rem;       /* ~40px */
+  height: 2.25rem;   /* ~36px */
   width: auto;
-  color: #fff;          /* drives SVG currentColor */
+  color: var(--tq-color-ink);  /* drives SVG currentColor */
   display: block;
 }
 
-/* Hide the territory accent bar — we have a yellow border on the
-   header itself now; the double line was noisy. */
-.site-header .header-accent {
-  display: none;
+/* No accent bar under the header; the yellow bar is the accent. */
+.site-header .header-accent { display: none; }
+
+/* ─── Nav layout (cercol-style: logo → nav → CTA) ───────────── */
+
+.site-header .header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--mm-space-2);
+  order: 3;
 }
 
-/* ─── Nav panel ──────────────────────────────────────────────── */
-
 .site-header .nav-panel {
-  /* On desktop render inline; on mobile use the hamburger pattern
-     that was already there. */
+  display: flex;
+  margin-inline: auto;
 }
 
 .site-header .nav-links {
   display: flex;
-  gap: var(--mm-space-6);
-  margin: 0;
-  padding: 0;
+  gap: var(--mm-space-1);
   list-style: none;
+  padding: 0;
+  margin: 0;
   align-items: center;
 }
 
@@ -124,51 +136,52 @@ html, body {
   align-items: center;
   gap: var(--mm-space-2);
   padding: var(--mm-space-2) var(--mm-space-3);
-  border-radius: var(--tq-radius-sm);
   font-size: var(--mm-text-sm);
-  font-weight: 500;
-  text-decoration: none;
+  font-weight: 600;
+  border-radius: var(--tq-radius-sm);
   transition: background-color .15s ease;
+  color: var(--tq-color-ink);
 }
 
 .site-header .nav-link:hover,
 .site-header .nav-link:focus {
-  background: rgba(255,255,255,.08);
+  background: rgba(0,0,0,.08);
 }
 
 .site-header .nav-link[aria-current="page"] {
+  background: var(--tq-color-ink);
   color: var(--tq-color-yellow);
 }
 
-/* Header CTA (yellow pill) */
+/* User-access CTA (far right). Cercol: the "Compte" button uses
+   inverted colours — here: black pill on yellow bar. */
 .site-header .header-cta {
   display: inline-flex;
   align-items: center;
   gap: var(--mm-space-2);
   padding: var(--mm-space-2) var(--mm-space-4);
-  background: var(--tq-color-yellow);
-  color: var(--tq-color-ink) !important;
+  background: var(--tq-color-ink);
+  color: #ffffff !important;
   font-weight: 600;
   font-size: var(--mm-text-sm);
   border-radius: 9999px;
-  text-decoration: none;
   transition: background-color .15s ease;
 }
 
 .site-header .header-cta:hover {
-  background: var(--tq-color-yellow-deep);
-  color: #fff !important;
+  background: #000;
 }
 
-/* Hamburger (mobile) */
+/* Hamburger (mobile). */
 .site-header .nav-toggle {
   display: none;
   background: transparent;
-  border: 1px solid rgba(255,255,255,.2);
-  color: #fff;
+  border: 1px solid var(--tq-color-ink);
+  color: var(--tq-color-ink);
   padding: var(--mm-space-2);
   border-radius: var(--tq-radius-sm);
   cursor: pointer;
+  order: 4;
 }
 
 .site-header .nav-toggle .icon-close { display: none; }
@@ -180,8 +193,9 @@ html, body {
   .site-header .nav-panel {
     display: none;
     flex-basis: 100%;
-    order: 3;
+    order: 10;
     padding: var(--mm-space-2) 0 var(--mm-space-4);
+    margin: 0;
   }
   .site-header .nav-panel.is-open { display: block; }
   .site-header .nav-links {
@@ -189,28 +203,36 @@ html, body {
     align-items: stretch;
     gap: var(--mm-space-1);
   }
-  .site-header .nav-link {
-    padding: var(--mm-space-3) var(--mm-space-3);
-  }
+  .site-header .nav-link { padding: var(--mm-space-3) var(--mm-space-3); }
 }
 
-/* ─── Main ──────────────────────────────────────────────────── */
+/* ═══ Main — black background, white text ══════════════════════ */
 
 main.container {
   padding-block: var(--mm-space-8) var(--mm-space-12);
-  min-height: 60vh;
+  min-height: 50vh;
+  color: #ffffff;
 }
 
-/* ─── Footer ────────────────────────────────────────────────── */
+main.container a { color: var(--tq-color-yellow); }
+main.container a:hover { color: var(--tq-color-yellow-deep); }
+
+main.container h1, main.container h2, main.container h3,
+main.container h4, main.container h5, main.container h6 {
+  color: #ffffff;
+}
+
+/* ═══ Footer — same black as body, divider on top ═══ */
 
 .site-footer {
   background: var(--tq-color-ink);
-  color: #fff;
+  color: #ffffff;
   padding-block: var(--mm-space-12) var(--mm-space-6);
+  border-top: 1px solid var(--tq-color-border);
   margin-top: var(--mm-space-12);
 }
 
-.site-footer a { color: #fff; }
+.site-footer a { color: #ffffff; text-decoration: none; }
 .site-footer a:hover { color: var(--tq-color-yellow); }
 
 .site-footer .footer-grid {
@@ -218,7 +240,7 @@ main.container {
   grid-template-columns: 2fr 1fr 1fr;
   gap: var(--mm-space-8);
   padding-bottom: var(--mm-space-8);
-  border-bottom: 1px solid rgba(255,255,255,.12);
+  border-bottom: 1px solid var(--tq-color-border);
 }
 
 @media (max-width: 48rem) {
@@ -231,43 +253,33 @@ main.container {
   font-weight: 700;
   margin: 0 0 var(--mm-space-3);
 }
-
 .site-footer .footer-mission-text {
   font-size: var(--mm-text-sm);
   line-height: 1.6;
-  color: rgba(255,255,255,.78);
+  color: var(--tq-color-ink-muted);
   max-width: 42em;
   margin: 0 0 var(--mm-space-4);
 }
-
 .site-footer .footer-cta {
   display: inline-flex;
   align-items: center;
   gap: var(--mm-space-2);
   padding: var(--mm-space-2) var(--mm-space-4);
-  border: 1px solid var(--tq-color-yellow);
-  color: var(--tq-color-yellow) !important;
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink) !important;
   font-weight: 600;
   font-size: var(--mm-text-sm);
   border-radius: 9999px;
-  text-decoration: none;
-  transition: all .15s ease;
 }
-
-.site-footer .footer-cta:hover {
-  background: var(--tq-color-yellow);
-  color: var(--tq-color-ink) !important;
-}
-
+.site-footer .footer-cta:hover { background: #fff; color: var(--tq-color-ink) !important; }
 .site-footer .footer-nav-title {
   font-weight: 700;
   font-size: var(--mm-text-sm);
   text-transform: uppercase;
   letter-spacing: .06em;
-  color: rgba(255,255,255,.6);
+  color: var(--tq-color-ink-muted);
   margin: 0 0 var(--mm-space-3);
 }
-
 .site-footer .footer-nav-list {
   list-style: none;
   padding: 0; margin: 0;
@@ -275,13 +287,7 @@ main.container {
   flex-direction: column;
   gap: var(--mm-space-2);
 }
-
-.site-footer .footer-nav-link {
-  font-size: var(--mm-text-sm);
-  text-decoration: none;
-  color: rgba(255,255,255,.85);
-}
-
+.site-footer .footer-nav-link { font-size: var(--mm-text-sm); }
 .site-footer .footer-bottom {
   display: flex;
   justify-content: space-between;
@@ -290,41 +296,60 @@ main.container {
   flex-wrap: wrap;
   gap: var(--mm-space-4);
 }
-
 .site-footer .footer-copy {
   font-size: var(--mm-text-sm);
-  color: rgba(255,255,255,.6);
+  color: var(--tq-color-ink-muted);
   margin: 0;
 }
-
 .site-footer .footer-logo {
-  height: 1.5rem;
+  height: 1.25rem;
   width: auto;
-  color: #fff;
-  opacity: .85;
+  color: #ffffff;
+  opacity: .9;
 }
 
-/* ─── Cards (cercol-inspired, reusable) ──────────────────────── */
+/* ═══ Home — all yellow (mirror of cercol's all-blue home) ═══ */
 
-/* Shared card pattern for use in templates that want the new look.
-   Use: <div class="tq-card"> … </div>.
-   Existing templates keep their current patterns; we migrate
-   progressively. */
+/* Opt-in via `<body class="home-yellow">`. Everything above the
+   footer is yellow with ink (black) text; the footer keeps its
+   black identity to act as a visual terminator. */
+body.home-yellow {
+  background: var(--tq-color-yellow);
+  color: var(--tq-color-ink);
+}
+body.home-yellow main.container {
+  color: var(--tq-color-ink);
+}
+body.home-yellow main.container a {
+  color: var(--tq-color-ink);
+  text-decoration: underline;
+}
+body.home-yellow main.container h1,
+body.home-yellow main.container h2,
+body.home-yellow main.container h3 {
+  color: var(--tq-color-ink);
+}
+
+/* On the yellow home, the header's bottom edge disappears — no
+   shadow line between the yellow bar and the yellow canvas. */
+body.home-yellow .site-header {
+  box-shadow: none;
+}
+
+/* ═══ Cards — white on black, cercol-style ═══ */
+
 .tq-card {
   background: var(--tq-color-surface);
-  border: 1px solid var(--tq-color-border);
+  color: var(--tq-color-ink);
   border-radius: var(--tq-radius-lg);
   padding: var(--mm-space-5);
-  box-shadow: var(--tq-shadow-sm);
-}
-
-.tq-card--hover {
-  transition: box-shadow .15s ease, transform .15s ease;
-}
-.tq-card--hover:hover {
   box-shadow: var(--tq-shadow-md);
-  transform: translateY(-1px);
 }
+.tq-card a { color: var(--tq-color-ink); }
+.tq-card a:hover { color: var(--tq-color-yellow-deep); }
+
+.tq-card--hover { transition: box-shadow .15s ease, transform .15s ease; }
+.tq-card--hover:hover { box-shadow: var(--tq-shadow-lg); transform: translateY(-2px); }
 
 .tq-card__title {
   font-family: var(--mm-font-display, 'Playfair Display', Georgia, serif);
@@ -333,13 +358,12 @@ main.container {
   margin: 0 0 var(--mm-space-2);
   color: var(--tq-color-ink);
 }
-
 .tq-card__meta {
   font-size: var(--mm-text-sm);
   color: var(--tq-color-ink-muted);
 }
 
-/* ─── Generic buttons ────────────────────────────────────────── */
+/* ═══ Buttons ═══ */
 
 .tq-btn {
   display: inline-flex;
@@ -355,54 +379,30 @@ main.container {
   cursor: pointer;
   transition: background-color .15s, color .15s, border-color .15s;
 }
-.tq-btn--primary {
-  background: var(--tq-color-yellow);
-  color: var(--tq-color-ink);
-}
-.tq-btn--primary:hover { background: var(--tq-color-yellow-deep); color: #fff; }
-.tq-btn--ghost {
-  background: transparent;
-  color: var(--tq-color-ink);
-  border-color: var(--tq-color-border);
-}
-.tq-btn--ghost:hover { border-color: var(--tq-color-ink); }
+.tq-btn--primary { background: var(--tq-color-yellow); color: var(--tq-color-ink); }
+.tq-btn--primary:hover { background: #fff; }
+.tq-btn--ghost   { background: transparent; color: #ffffff; border-color: var(--tq-color-border-strong); }
+.tq-btn--ghost:hover { border-color: var(--tq-color-yellow); color: var(--tq-color-yellow); }
 
-/* ─── Staff panel overrides ──────────────────────────────────── */
+/* ═══ Staff panel — card-on-black, same palette ═══ */
 
-.staff-panel-layout {
-  /* staff pages reuse base.html's header + footer; content area
-     follows the same cercol-like card pattern. */
-}
-
-.staff-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--mm-space-2);
-  margin-bottom: var(--mm-space-5);
-}
-
-/* Staff secondary navigation — pill row with yellow active state. */
 .staff-nav {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mm-space-1);
   align-items: center;
-  padding: var(--mm-space-3);
+  padding: var(--mm-space-2) var(--mm-space-3);
   margin-bottom: var(--mm-space-6);
   background: var(--tq-color-surface);
-  border: 1px solid var(--tq-color-border);
   border-radius: var(--tq-radius-lg);
-  box-shadow: var(--tq-shadow-sm);
+  box-shadow: var(--tq-shadow-md);
 }
-
 .staff-nav .staff-badge {
   display: inline-flex;
   align-items: center;
   padding: var(--mm-space-1) var(--mm-space-3);
   background: var(--tq-color-ink);
-  color: #fff;
+  color: var(--tq-color-yellow);
   font-size: var(--mm-text-xs);
   font-weight: 700;
   letter-spacing: .06em;
@@ -410,7 +410,6 @@ main.container {
   border-radius: 9999px;
   margin-right: var(--mm-space-2);
 }
-
 .staff-nav .staff-nav-link {
   padding: var(--mm-space-1) var(--mm-space-3);
   font-size: var(--mm-text-sm);
@@ -420,18 +419,13 @@ main.container {
   border-radius: var(--tq-radius-sm);
   transition: background-color .12s;
 }
-
-.staff-nav .staff-nav-link:hover {
-  background: var(--tq-color-yellow-soft);
-}
-
+.staff-nav .staff-nav-link:hover { background: var(--tq-color-yellow-soft); }
 .staff-nav .staff-nav-link.is-active {
   background: var(--tq-color-yellow);
   color: var(--tq-color-ink);
   font-weight: 600;
 }
 
-/* Staff messages (flash). */
 .staff-messages {
   display: flex;
   flex-direction: column;
@@ -441,51 +435,60 @@ main.container {
 .staff-msg {
   padding: var(--mm-space-3) var(--mm-space-4);
   border-radius: var(--tq-radius-md);
-  border: 1px solid var(--tq-color-border);
   font-size: var(--mm-text-sm);
   background: var(--tq-color-surface);
+  color: var(--tq-color-ink);
 }
-.staff-msg--success { background: #f0fdf4; border-color: #86efac; color: #166534; }
-.staff-msg--error   { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-.staff-msg--warning { background: var(--tq-color-yellow-soft); border-color: var(--tq-color-yellow-deep); color: #713f12; }
-.staff-msg--info    { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+.staff-msg--success { background: #dcfce7; color: #166534; }
+.staff-msg--error   { background: #fee2e2; color: #991b1b; }
+.staff-msg--warning { background: var(--tq-color-yellow-soft); color: #713f12; }
+.staff-msg--info    { background: #dbeafe; color: #1e40af; }
 
-/* Staff table — cercol-ish: white card, subtle borders, yellow hover. */
+.staff-content {
+  background: var(--tq-color-surface);
+  color: var(--tq-color-ink);
+  padding: var(--mm-space-6);
+  border-radius: var(--tq-radius-lg);
+  box-shadow: var(--tq-shadow-md);
+}
+.staff-content a { color: var(--tq-color-ink); }
+.staff-content a:hover { color: var(--tq-color-yellow-deep); }
+.staff-content h1, .staff-content h2, .staff-content h3,
+.staff-content h4, .staff-content h5, .staff-content h6 {
+  color: var(--tq-color-ink);
+}
+
 .staff-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: var(--mm-text-sm);
   background: var(--tq-color-surface);
-  border: 1px solid var(--tq-color-border);
+  color: var(--tq-color-ink);
+  border: 1px solid #e5e7eb;
   border-radius: var(--tq-radius-md);
   overflow: hidden;
 }
 .staff-table thead th {
-  background: #f3f4f6;
+  background: var(--tq-color-surface-muted);
   text-align: left;
   font-weight: 600;
   padding: var(--mm-space-2) var(--mm-space-3);
-  border-bottom: 1px solid var(--tq-color-border);
-  color: var(--tq-color-ink-muted);
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: .04em;
   font-size: var(--mm-text-xs);
 }
 .staff-table tbody td {
   padding: var(--mm-space-2) var(--mm-space-3);
-  border-bottom: 1px solid var(--tq-color-border);
+  border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
 }
 .staff-table tbody tr:last-child td { border-bottom: none; }
 .staff-table tbody tr:hover { background: var(--tq-color-yellow-soft); }
+.staff-table-wrap { overflow-x: auto; margin-bottom: var(--mm-space-4); }
 
-.staff-table-wrap {
-  overflow-x: auto;
-  margin-bottom: var(--mm-space-4);
-}
-
-/* Staff filters row. */
 .staff-filters {
   display: flex;
   flex-wrap: wrap;
@@ -493,15 +496,15 @@ main.container {
   align-items: center;
   padding: var(--mm-space-3);
   margin-bottom: var(--mm-space-4);
-  background: var(--tq-color-surface);
-  border: 1px solid var(--tq-color-border);
+  background: var(--tq-color-surface-muted);
+  border: 1px solid #e5e7eb;
   border-radius: var(--tq-radius-md);
 }
 
 .staff-action-select, .filter-search {
   padding: var(--mm-space-1) var(--mm-space-2);
   font-size: var(--mm-text-sm);
-  border: 1px solid var(--tq-color-border);
+  border: 1px solid #d4d4d8;
   border-radius: var(--tq-radius-sm);
   background: var(--tq-color-surface);
   color: var(--tq-color-ink);
@@ -526,14 +529,13 @@ main.container {
   align-items: center;
   gap: var(--mm-space-1);
 }
-.filter-btn:hover { background: var(--tq-color-yellow); color: var(--tq-color-ink); border-color: var(--tq-color-yellow); }
+.filter-btn:hover { background: var(--tq-color-yellow); color: var(--tq-color-ink); }
 
 .staff-btn--danger { background: #991b1b; border-color: #991b1b; }
 .staff-btn--danger:hover { background: #7f1d1d; border-color: #7f1d1d; color: #fff; }
-.staff-btn--cancel { background: transparent; color: var(--tq-color-ink); border-color: var(--tq-color-border); }
-.staff-btn--cancel:hover { background: var(--tq-color-bg); color: var(--tq-color-ink); border-color: var(--tq-color-ink); }
+.staff-btn--cancel { background: transparent; color: var(--tq-color-ink); border-color: #d4d4d8; }
+.staff-btn--cancel:hover { background: var(--tq-color-surface-muted); color: var(--tq-color-ink); }
 
-/* Badge system used in staff rows (ml_badge, whisper_badge). */
 .staff-ml {
   display: inline-flex;
   align-items: center;
@@ -546,12 +548,11 @@ main.container {
 .staff-ml--good    { background: #dcfce7; color: #166534; }
 .staff-ml--caution { background: var(--tq-color-yellow-soft); color: #854d0e; }
 .staff-ml--bad     { background: #fee2e2; color: #991b1b; }
-.staff-ml--none    { background: var(--tq-color-bg); color: var(--tq-color-ink-muted); }
+.staff-ml--none    { background: var(--tq-color-surface-muted); color: #6b7280; }
 
 .staff-badge-ok { background: #dcfce7; color: #166534; padding: .15rem var(--mm-space-2); border-radius: var(--tq-radius-sm); font-size: var(--mm-text-xs); font-weight: 600; }
-.staff-badge-no { background: var(--tq-color-bg); color: var(--tq-color-ink-muted); padding: .15rem var(--mm-space-2); border-radius: var(--tq-radius-sm); font-size: var(--mm-text-xs); font-weight: 600; }
+.staff-badge-no { background: var(--tq-color-surface-muted); color: #6b7280; padding: .15rem var(--mm-space-2); border-radius: var(--tq-radius-sm); font-size: var(--mm-text-xs); font-weight: 600; }
 
-/* Ranking header on staff pages (reused elsewhere). */
 .ranking-header {
   margin-bottom: var(--mm-space-5);
   padding-bottom: var(--mm-space-3);
@@ -564,21 +565,16 @@ main.container {
   margin: 0;
   color: var(--tq-color-ink);
 }
-.ranking-date {
-  font-size: var(--mm-text-sm);
-  color: var(--tq-color-ink-muted);
-  margin: var(--mm-space-1) 0 0;
-}
+.ranking-date { font-size: var(--mm-text-sm); color: #6b7280; margin: var(--mm-space-1) 0 0; }
 .ranking-empty {
   padding: var(--mm-space-6);
   text-align: center;
-  color: var(--tq-color-ink-muted);
+  color: #6b7280;
   font-size: var(--mm-text-sm);
-  background: var(--tq-color-bg);
+  background: var(--tq-color-surface-muted);
   border-radius: var(--tq-radius-md);
 }
 
-/* Action bar inside staff list pages. */
 .staff-actions-bar {
   display: flex;
   flex-wrap: wrap;
@@ -586,30 +582,29 @@ main.container {
   align-items: center;
   padding: var(--mm-space-2) var(--mm-space-3);
   margin-bottom: var(--mm-space-3);
-  background: var(--tq-color-bg);
-  border: 1px solid var(--tq-color-border);
+  background: var(--tq-color-surface-muted);
+  border: 1px solid #e5e7eb;
   border-radius: var(--tq-radius-md);
   font-size: var(--mm-text-sm);
+  color: var(--tq-color-ink);
 }
 
-.staff-cell-muted  { color: var(--tq-color-ink-muted); }
+.staff-cell-muted  { color: #6b7280; }
 .staff-cell-mono   { font-family: var(--mm-font-mono, ui-monospace, Menlo, monospace); font-size: var(--mm-text-xs); }
 .staff-cell-links  { white-space: nowrap; }
 .staff-cell-links a { font-size: var(--mm-text-xs); margin-right: var(--mm-space-1); }
-.staff-edit-link   { color: var(--tq-color-ink); text-decoration: none; border-bottom: 1px dotted var(--tq-color-ink-muted); }
+.staff-edit-link   { color: var(--tq-color-ink); text-decoration: none; border-bottom: 1px dotted #6b7280; }
 .staff-edit-link:hover { color: var(--tq-color-yellow-deep); border-bottom-color: var(--tq-color-yellow-deep); }
 
-/* Staff confirm actions (bottom of edit forms). */
 .staff-confirm-actions {
   display: flex;
   gap: var(--mm-space-2);
   align-items: center;
   padding-top: var(--mm-space-4);
-  border-top: 1px solid var(--tq-color-border);
+  border-top: 1px solid #e5e7eb;
   margin-top: var(--mm-space-4);
 }
 
-/* Sort link in table headers. */
 .staff-sort-link {
   color: inherit;
   text-decoration: none;
@@ -620,7 +615,6 @@ main.container {
 .staff-sort-link:hover { color: var(--tq-color-yellow-deep); }
 .staff-sort-link.is-active { color: var(--tq-color-ink); }
 
-/* Form fields on edit pages. */
 .form-field { margin-bottom: var(--mm-space-4); }
 .form-label {
   display: block;
@@ -639,14 +633,15 @@ main.container {
   width: 100%;
   max-width: 560px;
   padding: var(--mm-space-2) var(--mm-space-3);
-  border: 1px solid var(--tq-color-border);
+  border: 1px solid #d4d4d8;
   border-radius: var(--tq-radius-sm);
   font-size: var(--mm-text-sm);
   background: var(--tq-color-surface);
+  color: var(--tq-color-ink);
 }
 .form-field input:focus, .form-field textarea:focus, .form-field select:focus {
   outline: 2px solid var(--tq-color-yellow);
   outline-offset: 1px;
   border-color: var(--tq-color-yellow-deep);
 }
-.form-hint { font-size: var(--mm-text-xs); color: var(--tq-color-ink-muted); margin: var(--mm-space-1) 0 0; }
+.form-hint { font-size: var(--mm-text-xs); color: #6b7280; margin: var(--mm-space-1) 0 0; }
