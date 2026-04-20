@@ -1,13 +1,13 @@
 /**
- * ComptePage — authenticated dashboard.
+ * ComptePage — authenticated dashboard, card-grid layout.
  *
- * Hides if the user isn't logged in (redirects to /compte/accedir).
- * Renders:
- *   - User identity chip + logout button
- *   - Primary stat block (if the user manages a verified artist)
- *   - List of artist-management links (UserArtista) with status badges
- *   - List of new-artist proposals (PropostaArtista) with status badges
- *   - CTAs to "Demanar gestió" and "Proposar artista nou"
+ * Layout:
+ *   - Row 1: Perfil card (editable via /compte/perfil) + stat tiles
+ *            when the user manages a verified artist.
+ *   - Row 2: "Els meus artistes" — grid of ArtistaCard + dashed
+ *            "Sol·licitar gestió" AddCard.
+ *   - Row 3: "Les meves propostes" — grid of PropostaCard + dashed
+ *            "Proposar artista" AddCard.
  */
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -20,9 +20,7 @@ const ESTAT_STYLES = {
   aprovat:  'bg-emerald-100 text-emerald-800',
   rebutjat: 'bg-red-100 text-red-800',
 }
-const ESTAT_LABEL = {
-  pendent: 'Pendent', aprovat: 'Aprovat', rebutjat: 'Rebutjat',
-}
+const ESTAT_LABEL = { pendent: 'Pendent', aprovat: 'Aprovat', rebutjat: 'Rebutjat' }
 
 function EstatBadge({ estat }) {
   return (
@@ -32,12 +30,116 @@ function EstatBadge({ estat }) {
   )
 }
 
-function StatCard({ label, value }) {
+function PerfilCard({ user, onLogout }) {
   return (
-    <div className="bg-white text-tq-ink rounded-lg p-4 shadow-sm">
-      <p className="text-3xl font-bold font-display tabular-nums">{value ?? '—'}</p>
-      <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">{label}</p>
-    </div>
+    <article className="bg-white text-tq-ink rounded-lg shadow-md p-5 flex flex-col">
+      <p className="text-xs uppercase tracking-wide text-gray-500">Perfil</p>
+      <h2 className="text-lg font-bold font-display mt-1 truncate" title={user?.email}>
+        {user?.email}
+      </h2>
+      {user?.username && user.username !== user.email && (
+        <p className="text-sm text-gray-500 truncate mt-0.5">@{user.username}</p>
+      )}
+      {user?.date_joined && (
+        <p className="text-xs text-gray-400 mt-1">
+          Membre des del {user.date_joined.slice(0, 10)}
+        </p>
+      )}
+      <div className="flex gap-2 mt-auto pt-4">
+        <Link
+          to="/compte/perfil"
+          className="flex-1 text-center px-3 py-1.5 bg-tq-yellow text-tq-ink rounded-md text-sm font-semibold"
+        >
+          Editar
+        </Link>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-100"
+        >
+          Sortir
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function StatsCard({ stats, artistaNom }) {
+  const tiles = [
+    { label: 'Setmanes',       value: stats.setmanes_al_ranking },
+    { label: 'Millor posició', value: stats.millor_posicio ? `#${stats.millor_posicio}` : '—' },
+    { label: 'Cançons',        value: stats.cancons_al_ranking },
+    { label: 'Territoris',     value: stats.territoris_presents },
+  ]
+  return (
+    <article className="bg-white text-tq-ink rounded-lg shadow-md p-5 md:col-span-2">
+      <p className="text-xs uppercase tracking-wide text-gray-500 mb-3">
+        {artistaNom} al top
+      </p>
+      <dl className="grid grid-cols-4 gap-2">
+        {tiles.map(t => (
+          <div key={t.label} className="text-center">
+            <dd className="text-2xl font-bold font-display tabular-nums">{t.value ?? '—'}</dd>
+            <dt className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5">{t.label}</dt>
+          </div>
+        ))}
+      </dl>
+    </article>
+  )
+}
+
+function ArtistaCard({ u }) {
+  return (
+    <Link
+      to={artistaUrl(u.artista.slug)}
+      className="group bg-white text-tq-ink rounded-lg shadow-md p-4 flex flex-col gap-2 hover:shadow-lg transition-all hover:-translate-y-0.5 min-h-[6.5rem]"
+    >
+      <p className="font-semibold truncate">{u.artista.nom}</p>
+      <div className="flex flex-wrap gap-1.5 mt-auto">
+        {u.verificat && (
+          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-semibold">
+            Verificat
+          </span>
+        )}
+        <EstatBadge estat={u.estat} />
+      </div>
+    </Link>
+  )
+}
+
+function PropostaCard({ p }) {
+  const inner = (
+    <>
+      <p className="font-semibold truncate">{p.nom}</p>
+      {p.justificacio && (
+        <p className="text-xs text-gray-500 line-clamp-2">{p.justificacio}</p>
+      )}
+      <div className="mt-auto flex items-center gap-2">
+        <EstatBadge estat={p.estat} />
+        {p.created_at && (
+          <span className="text-[10px] text-gray-400">{p.created_at.slice(0, 10)}</span>
+        )}
+      </div>
+    </>
+  )
+  const classes = "bg-white text-tq-ink rounded-lg shadow-md p-4 flex flex-col gap-2 min-h-[6.5rem] hover:shadow-lg transition-all hover:-translate-y-0.5"
+  return p.artista_creat ? (
+    <Link to={artistaUrl(p.artista_creat.slug)} className={classes}>{inner}</Link>
+  ) : (
+    <div className={classes}>{inner}</div>
+  )
+}
+
+function AddCard({ to, label }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-center bg-transparent border-2 border-dashed border-white/20 hover:border-tq-yellow hover:bg-white/5 text-white rounded-lg p-4 min-h-[6.5rem] transition-colors"
+    >
+      <span className="text-sm font-semibold">
+        <span className="text-tq-yellow mr-1.5">+</span> {label}
+      </span>
+    </Link>
   )
 }
 
@@ -66,128 +168,58 @@ export default function ComptePage() {
   }
 
   return (
-    <section className="max-w-4xl mx-auto text-white space-y-6">
-      {/* Identity */}
-      <header className="flex flex-wrap items-center gap-3">
-        <div className="flex-1">
-          <p className="text-xs text-tq-ink-muted uppercase tracking-wide">El meu compte</p>
-          <h1 className="text-2xl font-bold font-display">{profile.email}</h1>
-          {data?.user?.date_joined && (
-            <p className="text-xs text-tq-ink-muted mt-1">
-              Membre des del {data.user.date_joined.slice(0, 10)}
-            </p>
-          )}
-        </div>
-        {profile.is_staff && (
-          <Link
-            to="/staff"
-            className="px-4 py-2 bg-tq-yellow text-tq-ink rounded-full text-sm font-semibold"
-          >
-            Panell staff
-          </Link>
+    <section className="max-w-6xl mx-auto text-white space-y-8">
+      {/* Row 1 — Perfil + (stats when verificat) */}
+      <div className={
+        'grid gap-4 ' +
+        (data?.stats ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1')
+      }>
+        <PerfilCard user={data?.user || profile} onLogout={handleLogout} />
+        {data?.stats && data?.artista_verificat && (
+          <StatsCard stats={data.stats} artistaNom={data.artista_verificat.artista.nom} />
         )}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-semibold"
-        >
-          Sortir
-        </button>
-      </header>
+      </div>
 
-      {loading && <div className="h-32 bg-white/5 rounded-lg animate-pulse" />}
+      {/* Staff CTA — surface only for staff users */}
+      {profile.is_staff && (
+        <Link
+          to="/staff"
+          className="block bg-tq-yellow text-tq-ink rounded-lg p-4 font-semibold text-center hover:bg-tq-yellow-deep hover:text-white transition-colors"
+        >
+          Anar al panell staff →
+        </Link>
+      )}
+
+      {loading && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-28 bg-white/5 rounded-lg animate-pulse" />
+          ))}
+        </div>
+      )}
+
       {error && <div className="bg-red-100 text-red-800 p-3 rounded-md text-sm">{error}</div>}
 
       {!loading && !error && data && (
         <>
-          {/* Stats — only when we manage a verified artist */}
-          {data.stats && data.artista_verificat && (
-            <section>
-              <p className="text-xs uppercase tracking-wide text-tq-ink-muted mb-2">
-                {data.artista_verificat.artista.nom} al top
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard label="Setmanes" value={data.stats.setmanes_al_ranking} />
-                <StatCard label="Millor posició" value={data.stats.millor_posicio && `#${data.stats.millor_posicio}`} />
-                <StatCard label="Cançons" value={data.stats.cancons_al_ranking} />
-                <StatCard label="Territoris" value={data.stats.territoris_presents} />
-              </div>
-            </section>
-          )}
-
-          {/* Managed artists */}
-          <section className="bg-white text-tq-ink rounded-lg p-5 shadow-md">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-lg font-bold font-display">Artistes que gestiono</h2>
-              <Link
-                to="/compte/artista/gestio"
-                className="text-xs text-tq-yellow-deep underline"
-              >
-                Demanar gestió d&apos;un artista
-              </Link>
+          <section>
+            <header className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-bold font-display">Els meus artistes</h2>
+            </header>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {data.gestio_list.map(u => <ArtistaCard key={u.pk} u={u} />)}
+              <AddCard to="/compte/artista/gestio" label="Sol·licitar gestió" />
             </div>
-            {data.gestio_list.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Encara no tens cap artista vinculat. Si ets artista o representes algú
-                que ja apareix al directori, pots sol·licitar-ne la gestió.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {data.gestio_list.map(u => (
-                  <li key={u.pk} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0">
-                    <Link
-                      to={artistaUrl(u.artista.slug)}
-                      className="font-semibold hover:text-tq-yellow-deep flex-1 truncate"
-                    >
-                      {u.artista.nom}
-                    </Link>
-                    {u.verificat && (
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-semibold">
-                        Verificat
-                      </span>
-                    )}
-                    <EstatBadge estat={u.estat} />
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
 
-          {/* Proposals */}
-          <section className="bg-white text-tq-ink rounded-lg p-5 shadow-md">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-lg font-bold font-display">Propostes d&apos;artista</h2>
-              <Link
-                to="/compte/artista/proposta"
-                className="text-xs text-tq-yellow-deep underline"
-              >
-                Proposar un artista nou
-              </Link>
+          <section>
+            <header className="flex items-baseline justify-between mb-3">
+              <h2 className="text-lg font-bold font-display">Les meves propostes</h2>
+            </header>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {data.propostes_list.map(p => <PropostaCard key={p.pk} p={p} />)}
+              <AddCard to="/compte/artista/proposta" label="Proposar artista" />
             </div>
-            {data.propostes_list.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Coneixes algun artista en català que no hi sigui? Proposa-l&apos;hi.
-                Si la proposta s&apos;aprova, l&apos;afegim al catàleg.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {data.propostes_list.map(p => (
-                  <li key={p.pk} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0">
-                    {p.artista_creat ? (
-                      <Link
-                        to={artistaUrl(p.artista_creat.slug)}
-                        className="font-semibold hover:text-tq-yellow-deep flex-1 truncate"
-                      >
-                        {p.nom}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold flex-1 truncate">{p.nom}</span>
-                    )}
-                    <EstatBadge estat={p.estat} />
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
         </>
       )}

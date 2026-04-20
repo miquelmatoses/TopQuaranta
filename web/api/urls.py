@@ -19,6 +19,7 @@ urlpatterns = [
     path("auth/logout/", auth_views.logout_view, name="auth_logout"),
     # Authenticated user area
     path("compte/dashboard/", compte_views.dashboard, name="compte_dashboard"),
+    path("compte/perfil/", compte_views.perfil, name="compte_perfil"),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes

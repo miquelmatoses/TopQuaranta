@@ -12,6 +12,7 @@ import MapaPage from './pages/MapaPage'
 import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import ComptePage from './pages/ComptePage'
+import ComptePerfilPage from './pages/ComptePerfilPage'
 import AdminRoute from './components/AdminRoute'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 
@@ -69,6 +70,7 @@ function AppContent() {
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />
         <Route path="/compte" element={<ComptePage />} />
+        <Route path="/compte/perfil" element={<ComptePerfilPage />} />
         <Route
           path="/staff"
           element={
