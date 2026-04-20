@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
+import RankingPage from './pages/RankingPage'
 import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AdminRoute from './components/AdminRoute'
@@ -47,6 +48,7 @@ function AppContent() {
     <Layout>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/ranking" element={<RankingPage />} />
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />
         <Route
@@ -65,7 +67,9 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      {/* `basename` is derived from Vite's BASE_URL (set in vite.config.js).
+          During Sprint 1-3 this is `/beta/`; Sprint 4 flips it to `/`. */}
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <AuthProvider>
           <AppContent />
         </AuthProvider>
