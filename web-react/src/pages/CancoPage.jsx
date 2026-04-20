@@ -140,6 +140,7 @@ export default function CancoPage() {
             title={data.nom}
             artist={data.artista?.nom}
             deezerId={data.deezer_id}
+            isrc={data.isrc}
           />
         </div>
       </header>

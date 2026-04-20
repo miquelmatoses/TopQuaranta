@@ -20,7 +20,7 @@ function encode(q) {
   return encodeURIComponent((q || '').trim())
 }
 
-function buildLinks({ kind, title, artist, deezerId }) {
+function buildLinks({ kind, title, artist, deezerId, isrc }) {
   // Top-line search string — "artista titol" is the ordering DSPs
   // match best in our testing. For artist pages it's just the name.
   const q =
@@ -39,28 +39,35 @@ function buildLinks({ kind, title, artist, deezerId }) {
     artista: 'artists',
   }[kind]
 
+  // Spotify: for tracks with an ISRC, use its "isrc:" search filter —
+  // it returns exactly the matched track, so the effective behaviour
+  // is a deep link even though the URL is technically a /search/. We
+  // don't have album UPCs or artist MBIDs, so album/artist searches
+  // stay text-based.
+  const spotifyHref =
+    kind === 'canco' && isrc
+      ? `https://open.spotify.com/search/isrc%3A${encode(isrc)}`
+      : `https://open.spotify.com/search/${enc}${
+          spotifyPath ? `/${spotifyPath}` : ''
+        }`
+
+  // Deezer: direct URL when we hold the id (we do for 100% of Canço
+  // and Album after the legacy purge). Otherwise search.
+  const deezerHref =
+    deezerId && kind === 'canco'
+      ? `https://www.deezer.com/track/${deezerId}`
+      : deezerId && kind === 'album'
+      ? `https://www.deezer.com/album/${deezerId}`
+      : deezerId && kind === 'artista'
+      ? `https://www.deezer.com/artist/${deezerId}`
+      : `https://www.deezer.com/search/${enc}`
+
   return [
-    {
-      name: 'Spotify',
-      href: `https://open.spotify.com/search/${enc}${
-        spotifyPath ? `/${spotifyPath}` : ''
-      }`,
-    },
-    {
-      name: 'Deezer',
-      href:
-        deezerId && kind === 'canco'
-          ? `https://www.deezer.com/track/${deezerId}`
-          : deezerId && kind === 'album'
-          ? `https://www.deezer.com/album/${deezerId}`
-          : deezerId && kind === 'artista'
-          ? `https://www.deezer.com/artist/${deezerId}`
-          : `https://www.deezer.com/search/${enc}`,
-    },
-    {
-      name: 'YouTube',
-      href: `https://music.youtube.com/search?q=${enc}`,
-    },
+    { name: 'Spotify',     href: spotifyHref },
+    { name: 'Deezer',      href: deezerHref },
+    // YouTube doesn't expose ISRC via public search; text-based here.
+    { name: 'YouTube',     href: `https://music.youtube.com/search?q=${enc}` },
+    // Apple Music's web search parses plain text only (no isrc: filter).
     {
       name: 'Apple Music',
       href: `https://music.apple.com/search?term=${enc}${
@@ -87,9 +94,10 @@ export default function ExternalListenLinks({
   title,
   artist,
   deezerId = null,
+  isrc = null,
   className = '',
 }) {
-  const links = buildLinks({ kind, title, artist, deezerId })
+  const links = buildLinks({ kind, title, artist, deezerId, isrc })
 
   return (
     <div className={'flex flex-wrap items-center gap-2 ' + className}>
