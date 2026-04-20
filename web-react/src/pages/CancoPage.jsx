@@ -19,6 +19,7 @@ import {
 import { api } from '../lib/api'
 import { albumUrl } from '../lib/urls'
 import { useFeedbackTarget } from '../context/FeedbackContext'
+import ExternalListenLinks from '../components/ExternalListenLinks'
 
 const TERRITORI_COLORS = {
   PPCC: '#427c42', CAT: '#c99b0c', VAL: '#cf3339', BAL: '#0047ba',
@@ -133,15 +134,13 @@ export default function CancoPage() {
             {data.isrc && <span>ISRC: {data.isrc}</span>}
             {data.data_llancament && <span>Publicada: {data.data_llancament}</span>}
           </p>
-          {data.deezer_id && (
-            <a
-              href={`https://www.deezer.com/track/${data.deezer_id}`}
-              target="_blank" rel="noopener"
-              className="inline-block mt-3 text-sm underline hover:text-tq-yellow-deep"
-            >
-              Obrir a Deezer
-            </a>
-          )}
+          <ExternalListenLinks
+            className="mt-4"
+            kind="canco"
+            title={data.nom}
+            artist={data.artista?.nom}
+            deezerId={data.deezer_id}
+          />
         </div>
       </header>
 

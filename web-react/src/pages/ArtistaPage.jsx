@@ -15,6 +15,7 @@ import { api } from '../lib/api'
 import { albumUrl, cancoUrl } from '../lib/urls'
 import FeedbackButton from '../components/FeedbackButton'
 import { useFeedbackTarget } from '../context/FeedbackContext'
+import ExternalListenLinks from '../components/ExternalListenLinks'
 
 const TERRITORI_NOM = {
   CAT: 'Catalunya', VAL: 'País Valencià', BAL: 'Illes Balears',
@@ -110,18 +111,16 @@ export default function ArtistaPage() {
           </p>
         )}
 
-        {/* Links row */}
-        <div className="flex flex-wrap gap-3 mt-4 text-sm">
+        {/* Streaming links (replace the old single Deezer anchor). */}
+        <ExternalListenLinks
+          className="mt-4"
+          kind="artista"
+          artist={data.nom}
+          deezerId={data.deezer_ids?.[0]}
+        />
 
-          {data.deezer_ids?.[0] && (
-            <a
-              href={`https://www.deezer.com/artist/${data.deezer_ids[0]}`}
-              target="_blank" rel="noopener"
-              className="underline text-tq-ink hover:text-tq-yellow-deep"
-            >
-              Deezer
-            </a>
-          )}
+        {/* Social links + self-claim CTA */}
+        <div className="flex flex-wrap gap-3 mt-3 text-sm">
           {Object.entries(data.social || {}).map(([key, url]) => (
             <a
               key={key}

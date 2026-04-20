@@ -10,6 +10,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { cancoUrl } from '../lib/urls'
 import { useFeedbackTarget } from '../context/FeedbackContext'
+import ExternalListenLinks from '../components/ExternalListenLinks'
 
 function formatDuration(ms) {
   if (!ms) return '—'
@@ -90,15 +91,13 @@ export default function AlbumPage() {
             {data.data_llancament?.slice(0, 4) || '—'}
             {data.cancons?.length > 0 && <> · {data.cancons.length} cançons</>}
           </p>
-          {data.deezer_id && (
-            <a
-              href={`https://www.deezer.com/album/${data.deezer_id}`}
-              target="_blank" rel="noopener"
-              className="inline-block mt-3 text-sm underline hover:text-tq-yellow-deep"
-            >
-              Obrir a Deezer
-            </a>
-          )}
+          <ExternalListenLinks
+            className="mt-4"
+            kind="album"
+            title={data.nom}
+            artist={data.artista?.nom}
+            deezerId={data.deezer_id}
+          />
         </div>
       </header>
 
