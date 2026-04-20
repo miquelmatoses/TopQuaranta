@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import auth_views, ranking_views, views
+from . import album_views, artistes_views, auth_views, ranking_views, views
 
 app_name = "api"
 
@@ -11,6 +11,11 @@ urlpatterns = [
     path("auth/logout/", auth_views.logout_view, name="auth_logout"),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
+    # Artistes
+    path("artistes/", artistes_views.artistes_list, name="artistes_list"),
+    path("artistes/<slug:slug>/", artistes_views.artista_detail, name="artista_detail"),
+    # Albums
+    path("albums/<slug:slug>/", album_views.album_detail, name="album_detail"),
     # Mapa (existing)
     path("mapa/artistes/", views.mapa_artistes, name="mapa_artistes"),
     # Location API — reference data, no auth required

@@ -1,0 +1,142 @@
+/**
+ * AlbumPage — public album profile.
+ *
+ * Reads /api/v1/albums/<slug>/ and renders a cover + metadata block
+ * plus a track listing. Tracks that have ever appeared in a ranking
+ * show a small "top" badge.
+ */
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { api } from '../lib/api'
+
+function formatDuration(ms) {
+  if (!ms) return '—'
+  const totalSeconds = Math.floor(ms / 1000)
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export default function AlbumPage() {
+  const { slug } = useParams()
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    api.get(`/albums/${slug}/`)
+      .then(setData)
+      .catch(e => setError(e.status === 404 ? 'Àlbum no trobat.' : (e.message || 'Error')))
+      .finally(() => setLoading(false))
+  }, [slug])
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-4">
+        <div className="h-60 bg-white/5 rounded-lg animate-pulse" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-red-100 text-red-800 p-3 rounded-md text-sm">{error}</div>
+      </div>
+    )
+  }
+
+  if (!data) return null
+
+  return (
+    <article className="max-w-4xl mx-auto text-white space-y-6">
+      {/* Header */}
+      <header className="bg-white text-tq-ink rounded-lg p-6 shadow-md flex flex-col sm:flex-row gap-6">
+        {data.imatge_url ? (
+          <img
+            src={data.imatge_url}
+            alt=""
+            className="w-full sm:w-48 h-48 object-cover rounded-md shrink-0"
+          />
+        ) : (
+          <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-md shrink-0" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs uppercase tracking-wider text-gray-500">Àlbum</p>
+          <h1 className="text-3xl font-bold font-display mt-1">{data.nom}</h1>
+          {data.artista && (
+            <p className="mt-2 text-lg">
+              <Link
+                to={`/artista/${data.artista.slug}`}
+                className="hover:text-tq-yellow-deep"
+              >
+                {data.artista.nom}
+              </Link>
+            </p>
+          )}
+          <p className="text-sm text-gray-500 mt-2">
+            {data.data_llancament?.slice(0, 4) || '—'}
+            {data.cancons?.length > 0 && <> · {data.cancons.length} cançons</>}
+          </p>
+          {data.deezer_id && (
+            <a
+              href={`https://www.deezer.com/album/${data.deezer_id}`}
+              target="_blank" rel="noopener"
+              className="inline-block mt-3 text-sm underline hover:text-tq-yellow-deep"
+            >
+              Obrir a Deezer
+            </a>
+          )}
+        </div>
+      </header>
+
+      {/* Tracks */}
+      {data.cancons?.length > 0 && (
+        <section className="bg-white text-tq-ink rounded-lg p-6 shadow-md">
+          <h2 className="text-xl font-bold font-display mb-4">Cançons</h2>
+          <ol className="space-y-1">
+            {data.cancons.map((c, i) => (
+              <li
+                key={c.pk}
+                className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0"
+              >
+                <span className="w-8 text-right text-sm font-semibold text-gray-400 tabular-nums shrink-0">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{c.nom}</p>
+                  {c.artistes_col?.length > 0 && (
+                    <p className="text-xs text-gray-500 truncate">
+                      amb{' '}
+                      {c.artistes_col.map((col, j) => (
+                        <span key={col.slug}>
+                          {j > 0 ? ', ' : ''}
+                          <Link
+                            to={`/artista/${col.slug}`}
+                            className="underline hover:text-tq-yellow-deep"
+                          >
+                            {col.nom}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </div>
+                {c.al_top && (
+                  <span className="px-1.5 py-0.5 bg-tq-yellow text-tq-ink text-[10px] font-semibold rounded">
+                    TOP
+                  </span>
+                )}
+                <span className="text-xs text-gray-400 tabular-nums shrink-0 w-12 text-right">
+                  {formatDuration(c.durada_ms)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </article>
+  )
+}

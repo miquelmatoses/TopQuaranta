@@ -4,6 +4,10 @@ import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
 import TopPage from './pages/TopPage'
+import ArtistesPage from './pages/ArtistesPage'
+import ArtistaPage from './pages/ArtistaPage'
+import AlbumPage from './pages/AlbumPage'
+import MapaPage from './pages/MapaPage'
 import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AdminRoute from './components/AdminRoute'
@@ -49,6 +53,10 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/top" element={<TopPage />} />
+        <Route path="/artistes" element={<ArtistesPage />} />
+        <Route path="/artista/:slug" element={<ArtistaPage />} />
+        <Route path="/album/:slug" element={<AlbumPage />} />
+        <Route path="/mapa" element={<MapaPage />} />
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />
         <Route
