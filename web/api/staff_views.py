@@ -27,6 +27,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Count, Exists, F, OuterRef, Q
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
+from django.utils.dateparse import parse_date
 from django_otp.plugins.otp_static.models import StaticDevice
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework.decorators import api_view, permission_classes
@@ -685,7 +686,9 @@ def canco_detail(request: Request, pk: int) -> Response:
             canco.activa = bool(data["activa"])
         if "data_llancament" in data:
             raw = (data.get("data_llancament") or "").strip()
-            canco.data_llancament = raw if raw else None
+            # parse_date → date | None; avoids the "str has no isoformat"
+            # 500 when the response serializer re-reads the field after save.
+            canco.data_llancament = parse_date(raw) if raw else None
         if "deezer_id" in data:
             raw = str(data.get("deezer_id") or "").strip()
             if raw:
@@ -792,7 +795,12 @@ def album_detail(request: Request, pk: int) -> Response:
             album.nom = (data.get("nom") or "").strip()
         if "data_llancament" in data:
             raw = (data.get("data_llancament") or "").strip()
-            album.data_llancament = raw if raw else None
+            # Parse to a real date object. Assigning the raw string works
+            # for the SQL UPDATE (Django's DateField casts on write) but
+            # leaves the in-memory attribute as a str, and the response
+            # serializer below calls .isoformat() on it → 500. parse_date
+            # returns None on empty or on invalid input.
+            album.data_llancament = parse_date(raw) if raw else None
         if "tipus" in data:
             album.tipus = (data.get("tipus") or "").strip()
         if "deezer_id" in data:
