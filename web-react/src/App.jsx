@@ -14,7 +14,8 @@ import AuthCallbackPage from './pages/AuthCallbackPage'
 import ComptePage from './pages/ComptePage'
 import ComptePerfilPage from './pages/ComptePerfilPage'
 import AdminRoute from './components/AdminRoute'
-import AdminDashboardPage from './pages/AdminDashboardPage'
+import StaffLayout from './components/StaffLayout'
+import StaffDashboardPage from './pages/staff/StaffDashboardPage'
 
 /** Top-level error boundary — catches unexpected render errors and
  *  shows a minimal fallback with a reload button. */
@@ -71,11 +72,18 @@ function AppContent() {
         <Route path="/compte/callback" element={<AuthCallbackPage />} />
         <Route path="/compte" element={<ComptePage />} />
         <Route path="/compte/perfil" element={<ComptePerfilPage />} />
+        {/* Staff panel. All /staff/* routes sit under a shared
+            StaffLayout (dark sidebar) and require `is_staff`. As we
+            port each Django staff view we'll add a nested route. */}
         <Route
-          path="/staff"
+          path="/staff/*"
           element={
             <AdminRoute>
-              <AdminDashboardPage />
+              <StaffLayout>
+                <Routes>
+                  <Route path="/" element={<StaffDashboardPage />} />
+                </Routes>
+              </StaffLayout>
             </AdminRoute>
           }
         />

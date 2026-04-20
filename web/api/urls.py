@@ -7,6 +7,7 @@ from . import (
     canco_views,
     compte_views,
     ranking_views,
+    staff_views,
     views,
 )
 
@@ -20,6 +21,8 @@ urlpatterns = [
     # Authenticated user area
     path("compte/dashboard/", compte_views.dashboard, name="compte_dashboard"),
     path("compte/perfil/", compte_views.perfil, name="compte_perfil"),
+    # Staff (is_staff required)
+    path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes
