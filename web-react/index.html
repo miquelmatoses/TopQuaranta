@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TopQuaranta — Rànquing de música en català</title>
+    <meta name="description" content="El rànquing setmanal de música en català als Països Catalans. Mesurem què sona per demostrar que la nostra música no para de créixer." />
+    <script>
+      // Companion to public/404.html SPA redirect workaround.
+      // 404.html encodes the original path+search into ?p= so a deep
+      // link served as static falls back to / and JS routes from there.
+      (function () {
+        const p = new URLSearchParams(window.location.search).get('p')
+        if (p) {
+          window.history.replaceState(null, null, p + window.location.hash)
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

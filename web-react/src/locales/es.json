@@ -1,0 +1,16 @@
+{
+  "nav": {
+    "ranking": "Ranking",
+    "artistes": "Artistas",
+    "mapa": "Mapa",
+    "join": "Únete",
+    "logout": "Salir"
+  },
+  "home": {
+    "eyebrow": "El ranking semanal de música en catalán",
+    "headline": "La música que suena en los Países Catalanes, cada semana",
+    "body": "TopQuaranta mide qué escuchan de Cataluña a las Islas Baleares, del País Valenciano a la Cataluña Norte. 40 canciones. 4 territorios. Una lengua viva.",
+    "ctaRanking": "Ver el ranking",
+    "ctaJoin": "Únete al proyecto"
+  }
+}

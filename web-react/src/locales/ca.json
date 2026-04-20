@@ -1,0 +1,16 @@
+{
+  "nav": {
+    "ranking": "Rànquing",
+    "artistes": "Artistes",
+    "mapa": "Mapa",
+    "join": "Uneix-t'hi",
+    "logout": "Sortir"
+  },
+  "home": {
+    "eyebrow": "El rànquing setmanal de música en català",
+    "headline": "La música que sona als Països Catalans, cada setmana",
+    "body": "TopQuaranta mesura què escolten de Catalunya a les Illes Balears, del País Valencià a la Catalunya Nord. 40 cançons. 4 territoris. Una llengua viva.",
+    "ctaRanking": "Veure el rànquing",
+    "ctaJoin": "Uneix-t'hi al projecte"
+  }
+}

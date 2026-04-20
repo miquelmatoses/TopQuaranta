@@ -1,0 +1,16 @@
+{
+  "nav": {
+    "ranking": "Ranking",
+    "artistes": "Artists",
+    "mapa": "Map",
+    "join": "Sign up",
+    "logout": "Log out"
+  },
+  "home": {
+    "eyebrow": "The weekly ranking of Catalan-language music",
+    "headline": "The music that plays across the Catalan Countries, every week",
+    "body": "TopQuaranta measures what people listen to — from Catalonia to the Balearic Islands, from the Valencian Country to Northern Catalonia. 40 songs. 4 territories. A living language.",
+    "ctaRanking": "See the ranking",
+    "ctaJoin": "Join the project"
+  }
+}

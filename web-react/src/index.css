@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Roboto:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* TopQuaranta theme tokens. Tailwind v4 exposes these as
+   `bg-tq-yellow`, `text-tq-ink`, etc. via the `@theme` directive. */
+@theme {
+  --color-tq-yellow:      #facc15;
+  --color-tq-yellow-soft: #fde68a;
+  --color-tq-yellow-deep: #ca8a04;
+  --color-tq-ink:         #0a0a0a;
+  --color-tq-ink-soft:    #1a1a1a;
+  --color-tq-ink-muted:   #a1a1aa;
+  --color-tq-surface:     #ffffff;
+  --color-tq-border:      #27272a;
+
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans:    'Roboto', system-ui, sans-serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+html, body {
+  background: var(--color-tq-ink);
+  color: #ffffff;
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+button, input, textarea, select {
+  border-radius: 4px;
+}
+
+/* Utility hook: `data-theme="yellow"` on <body> paints the whole page
+   yellow with ink text. Homepage sets this via `useEffect`. */
+body[data-theme="yellow"] {
+  background: var(--color-tq-yellow);
+  color: var(--color-tq-ink);
+}
