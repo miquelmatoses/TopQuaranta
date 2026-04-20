@@ -134,7 +134,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       {/* `basename` is derived from Vite's BASE_URL (set in vite.config.js).
-          During Sprint 1-3 this is `/beta/`; Sprint 4 flips it to `/`. */}
+          Sprint 4 flipped this to `/` (was `/beta/` during 1-3). */}
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <AuthProvider>
           <AppContent />

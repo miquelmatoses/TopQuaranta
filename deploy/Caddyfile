@@ -5,26 +5,64 @@
 
 # — Apex → WWW (canònic)
 topquaranta.cat {
-    # envia HSTS també en la redirecció de l'apex
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-    }
-    redir https://www.topquaranta.cat{uri} 301
+	# envia HSTS també en la redirecció de l'apex
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+	redir https://www.topquaranta.cat{uri} 301
 }
 
-# — Lloc principal (new web)
+# — Lloc principal
+#
+# Routing (Sprint 4 post-flip):
+#   /static/*                       → Django staticfiles on disk
+#   /api/*, /sitemap.xml, /robots.txt → Django (API + SEO surfaces)
+#   /compte/2fa/*, /compte/activar/*,
+#   /compte/registre/, /compte/login/, /compte/logout/
+#                                   → Django (flows not yet in React)
+#   /beta, /beta/*                  → 301 redirect to the matching
+#                                     React path (kept for a while so
+#                                     in-flight bookmarks don't 404)
+#   everything else                 → React SPA `dist/` with an
+#                                     index.html fallback so client
+#                                     routes resolve
 www.topquaranta.cat {
 	encode zstd gzip
 
-	# Static files
+	# Django staticfiles (admin/OTP assets, legacy template CSS/JS).
 	handle_path /static/* {
 		root * /home/topquaranta/app/staticfiles
 		file_server
 	}
 
-	# All public routes → new web (port 8083)
-	handle {
+	# ── Django passthrough: only explicit paths still served by the
+	# old HTML backend. Everything else falls through to the SPA. ──
+	@django {
+		path /api/*
+		path /sitemap.xml
+		path /robots.txt
+		path /compte/2fa/*
+		path /compte/activar/*
+		path /compte/registre/
+		path /compte/login/
+		path /compte/logout/
+	}
+	handle @django {
 		reverse_proxy 127.0.0.1:8083
+	}
+
+	# Legacy /beta/* preview URLs redirect to the root. 302 so we can
+	# drop the rule later without SEO pain.
+	redir /beta /
+	redir /beta/* /{1} 302
+
+	# React SPA — primary UI. `try_files` + index.html fallback so
+	# deep links (/top, /artistes/..., /compte, /staff/...) hit the
+	# right client route on first load.
+	handle {
+		root * /home/topquaranta/app/web-react/dist
+		try_files {path} /index.html
+		file_server
 	}
 
 	# Security headers
@@ -33,29 +71,31 @@ www.topquaranta.cat {
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
-		# S6: explicit CSP. Directives:
+		# S6 CSP (directives):
 		#   default-src 'self'         — everything not listed below must
-		#                                come from the same origin
-		#   script-src                 — D3 from cdnjs (SRI-pinned in mapa.html);
-		#                                'unsafe-inline' kept because staff
-		#                                templates still have inline handlers —
-		#                                follow-up task: move to external files
-		#                                or use nonces.
-		#   style-src                  — Google Fonts stylesheet (imported by
-		#                                mm-design typography.css); unsafe-inline
-		#                                for the many style="" attributes.
+		#                                come from the same origin.
+		#   script-src                 — SPA bundle is same-origin; the
+		#                                'unsafe-inline' fragment below
+		#                                covers the Vite prod inline
+		#                                runtime + any legacy Django
+		#                                template still behind the 2FA
+		#                                allow-list above.
+		#   style-src                  — Google Fonts stylesheet (imported
+		#                                by mm-design); 'unsafe-inline'
+		#                                for React inline style props.
 		#   font-src                   — Google Fonts actual font files.
-		#   img-src                    — album art from Deezer CDN + arbitrary
-		#                                https for future sources; data: for SVG.
+		#   img-src                    — album art from Deezer CDN +
+		#                                arbitrary https; data: for the
+		#                                inline brand SVG.
 		#   connect-src                — fetch() only to same origin.
-		#   frame-ancestors            — redundant with X-Frame-Options DENY;
-		#                                sent for modern browsers.
-		#   form-action                — forms can only submit to same origin.
-		#   base-uri                   — prevents <base> tag injection from
-		#                                redirecting relative URLs.
+		#   frame-ancestors            — redundant with X-Frame-Options
+		#                                DENY; sent for modern browsers.
+		#   form-action                — forms can only submit to same
+		#                                origin.
+		#   base-uri                   — prevents <base> tag injection.
 		#   object-src 'none'          — no Flash/Java/plugin embeds.
 		#   upgrade-insecure-requests  — transparent http→https upgrade.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
 	}
 	log {
 		output file /var/log/caddy/topquaranta_access.log {

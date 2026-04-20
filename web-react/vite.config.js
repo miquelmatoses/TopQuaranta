@@ -4,10 +4,11 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // Temporary: during Sprint 1-3 we ship the React app under `/beta/`
-  // while Django keeps serving the old HTML at `/`. Sprint 4's Caddy
-  // flip moves React to `/` and this base becomes `/`.
-  base: '/beta/',
+  // Sprint 4: React is the primary UI served from the site root. The
+  // Django app still runs behind Caddy for `/api/*`, 2FA flows, email
+  // activation and sitemap/robots. Everything else falls through to
+  // the SPA index.
+  base: '/',
   server: {
     // During dev (`npm run dev`), proxy API calls to the local Django
     // gunicorn so the React app talks to the real backend without CORS.
