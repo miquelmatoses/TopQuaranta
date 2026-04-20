@@ -81,7 +81,9 @@ export default function StaffRankingPage() {
         <div className="flex flex-wrap gap-2 mb-3 p-2 bg-tq-yellow/90 text-tq-ink rounded">
           <span className="text-sm font-semibold">{sel.size} seleccionades</span>
           <Select value={motiu} onChange={e => setMotiu(e.target.value)}>
-            {data?.motius?.map(m => <option key={m} value={m}>{m}</option>)}
+            {/* MOTIUS_REBUIG arrives as [value, label] tuples. Unpack so
+                the <option value> holds the key the backend accepts. */}
+            {data?.motius?.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
           <Btn tone="danger" onClick={() => act('rebutjar_canco')} disabled={busy}>Rebutjar cançons</Btn>
           <Btn tone="danger" onClick={() => act('rebutjar_artista')} disabled={busy}>Rebutjar artistes</Btn>

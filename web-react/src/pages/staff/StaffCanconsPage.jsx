@@ -23,12 +23,14 @@ import {
   Tr,
 } from '../../components/staff/StaffTable'
 
+// Mirror of music.constants.MOTIUS_REBUIG (label/value pairs). Keep
+// this in sync when the backend list changes — the bulk-action
+// endpoint rejects anything outside this set with "Motiu invàlid".
 const MOTIUS = [
-  'llengua_incorrecta',
-  'artista_incorrecte',
-  'album_incorrecte',
-  'duplicat',
-  'altre',
+  ['no_catala',          'No és en català'],
+  ['artista_incorrecte', "El perfil Deezer no és el nostre artista"],
+  ['album_incorrecte',   'Àlbum incorrecte'],
+  ['no_musica',          'No és música'],
 ]
 
 export default function StaffCanconsPage() {
@@ -47,7 +49,7 @@ export default function StaffCanconsPage() {
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [sel, setSel] = useState(new Set())
-  const [motiu, setMotiu] = useState('llengua_incorrecta')
+  const [motiu, setMotiu] = useState('no_catala')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -171,7 +173,7 @@ export default function StaffCanconsPage() {
         <div className="flex flex-wrap gap-2 mb-3 p-2 bg-tq-yellow/90 text-tq-ink rounded">
           <span className="text-sm font-semibold">{sel.size} seleccionades</span>
           <Select value={motiu} onChange={e => setMotiu(e.target.value)}>
-            {MOTIUS.map(m => <option key={m} value={m}>{m}</option>)}
+            {MOTIUS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>
           <Btn onClick={() => act('aprovar')} disabled={busy}>Aprovar</Btn>
           <Btn tone="danger" onClick={() => act('rebutjar')} disabled={busy}>Rebutjar</Btn>

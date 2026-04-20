@@ -45,7 +45,8 @@ export default function HistorialPage() {
         </Select>
         <Select value={motiu} onChange={e => { setPage(1); setMotiu(e.target.value) }}>
           <option value="">Motiu: qualsevol</option>
-          {data?.motius?.map(m => <option key={m} value={m}>{m}</option>)}
+          {/* MOTIUS_REBUIG arrives as [value, label] tuples. */}
+          {data?.motius?.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </Select>
       </div>
 
