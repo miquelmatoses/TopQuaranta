@@ -5,7 +5,7 @@
  * verificada state, ml_classe, whisper, and free-text search.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import {
   Btn,
@@ -33,11 +33,16 @@ const MOTIUS = [
 
 export default function StaffCanconsPage() {
   const navigate = useNavigate()
-  const [q, setQ] = useState('')
-  const [verificada, setVerificada] = useState('0')
-  const [mlClasse, setMlClasse] = useState('')
-  const [whisper, setWhisper] = useState('')
-  const [sort, setSort] = useState('-ml_confianca')
+  // Seed filters from query string so deep links like
+  // `/staff/cancons?artista_pk=123&verificada=1` work as shareable
+  // URLs (pendents row → verified tracks, for example).
+  const [urlParams, setUrlParams] = useSearchParams()
+  const [q, setQ] = useState(urlParams.get('q') || '')
+  const [verificada, setVerificada] = useState(urlParams.get('verificada') || '0')
+  const [mlClasse, setMlClasse] = useState(urlParams.get('ml_classe') || '')
+  const [whisper, setWhisper] = useState(urlParams.get('whisper') || '')
+  const [sort, setSort] = useState(urlParams.get('sort') || '-ml_confianca')
+  const artistaPk = urlParams.get('artista_pk') || ''
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [sel, setSel] = useState(new Set())
@@ -49,10 +54,11 @@ export default function StaffCanconsPage() {
     const params = new URLSearchParams({
       q, verificada, ml_classe: mlClasse, whisper, sort, page,
     })
+    if (artistaPk) params.set('artista_pk', artistaPk)
     api.get(`/staff/cancons/?${params}`).then(setData).catch(() => setData(null))
   }
 
-  useEffect(load, [q, verificada, mlClasse, whisper, sort, page])
+  useEffect(load, [q, verificada, mlClasse, whisper, sort, page, artistaPk])
 
   const allSelected = data?.results?.length && data.results.every(r => sel.has(r.pk))
 
@@ -99,7 +105,30 @@ export default function StaffCanconsPage() {
 
   return (
     <section>
-      <PageHeader title="Cançons" subtitle={data ? `${data.total} cançons` : 'Carregant…'} />
+      <PageHeader
+        title="Cançons"
+        subtitle={
+          <>
+            {data ? `${data.total} cançons` : 'Carregant…'}
+            {artistaPk && data?.results?.[0]?.artista && (
+              <> · filtrant per <strong>{data.results[0].artista.nom}</strong>
+                {' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const p = new URLSearchParams(urlParams)
+                    p.delete('artista_pk')
+                    setUrlParams(p)
+                  }}
+                  className="underline ml-1 hover:text-tq-yellow"
+                >
+                  treure filtre
+                </button>
+              </>
+            )}
+          </>
+        }
+      />
 
       <div className="flex flex-wrap gap-2 mb-3">
         <Input placeholder="Cerca cançó o artista…" value={q} onChange={e => { setPage(1); setQ(e.target.value) }} />

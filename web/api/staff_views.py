@@ -565,6 +565,14 @@ def cancons_list(request: Request) -> Response:
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
+    # Scope to a single artist (used by the "X cançons verificades" link
+    # on the pendents page so staff can drill into exactly that list).
+    artista_pk = request.GET.get("artista_pk", "")
+    if artista_pk:
+        try:
+            qs = qs.filter(artista_id=int(artista_pk))
+        except ValueError:
+            pass
     # Sorting: `sort` accepts the same allow-list as the Django staff
     # view used to, prefixed with `-` for descending. Default keeps the
     # ML triage order so new users land on the highest-confidence work.

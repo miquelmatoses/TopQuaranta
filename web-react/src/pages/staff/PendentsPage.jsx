@@ -12,6 +12,7 @@
  * /api/v1/localitzacio/* endpoints so we don't over-fetch on mount.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import {
   Btn,
@@ -159,9 +160,51 @@ function Row({ a, onApproved, onDiscarded }) {
   return (
     <Tr>
       <Td>
-        <div className="font-semibold">{a.nom}</div>
-        <div className="text-xs opacity-60">
-          {a.nb_verif} cançons verificades · {a.font_descoberta}
+        {/* Clicking the artist name opens the standard staff edit page
+            — useful for fixing the name, Deezer IDs or localitats
+            before approval. */}
+        <Link
+          to={`/staff/artistes/${a.pk}`}
+          className="font-semibold underline hover:text-tq-yellow-deep"
+        >
+          {a.nom}
+        </Link>
+        <div className="text-xs opacity-60 flex flex-wrap items-center gap-1">
+          {/* Drill-down: clicking the verified-track count opens the
+              Cançons list pre-scoped to this artist + verificada=1. */}
+          {a.nb_verif > 0 ? (
+            <Link
+              to={`/staff/cancons?artista_pk=${a.pk}&verificada=1`}
+              className="underline hover:text-tq-ink"
+            >
+              {a.nb_verif} cançons verificades
+            </Link>
+          ) : (
+            <span>0 cançons verificades</span>
+          )}
+          <span>·</span>
+          <span>{a.font_descoberta}</span>
+          <span>·</span>
+          {/* External helpers so staff can cross-check a pendent
+              artist against Viasona (Catalan music database) and
+              Deezer (our metadata source) without leaving the row. */}
+          <a
+            href={`https://viasona.cat/cerca?que=${encodeURIComponent(a.nom)}`}
+            target="_blank"
+            rel="noopener"
+            className="underline hover:text-tq-ink"
+          >
+            Viasona ↗
+          </a>
+          <span>·</span>
+          <a
+            href={`https://www.deezer.com/search/${encodeURIComponent(a.nom)}`}
+            target="_blank"
+            rel="noopener"
+            className="underline hover:text-tq-ink"
+          >
+            Deezer ↗
+          </a>
         </div>
         {hasExistingLoc && (
           <div className="text-[11px] text-tq-ink/60 mt-0.5">
