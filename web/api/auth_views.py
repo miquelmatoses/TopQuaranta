@@ -21,10 +21,31 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 
-def _profile(user) -> dict:
-    """Shape matching what the React `AuthContext` expects."""
+def _profile(request_or_user) -> dict:
+    """Shape matching what the React `AuthContext` expects.
+
+    Accepts either a DRF request (preferred — we can read the session
+    OTP flag off its user) or a bare user. For staff users we also
+    expose `is_verified` (did the session pass the 2FA challenge) and
+    `has_totp` (is a confirmed TOTP device registered). React's
+    `AdminRoute` relies on those to bounce staff who authenticated
+    via the API into the Django 2FA flow.
+    """
+    user = getattr(request_or_user, "user", request_or_user)
     if not user or not user.is_authenticated:
         return {"is_authenticated": False}
+
+    is_verified = False
+    has_totp = False
+    if user.is_staff:
+        is_verified_fn = getattr(user, "is_verified", None)
+        if callable(is_verified_fn):
+            is_verified = bool(is_verified_fn())
+        # Lazy import so non-staff requests skip the query cost.
+        from django_otp.plugins.otp_totp.models import TOTPDevice
+
+        has_totp = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
+
     return {
         "id": user.pk,
         "email": user.email,
@@ -32,6 +53,8 @@ def _profile(user) -> dict:
         "is_staff": bool(user.is_staff),
         "is_superuser": bool(user.is_superuser),
         "is_authenticated": True,
+        "is_verified": is_verified,
+        "has_totp": has_totp,
     }
 
 
@@ -46,7 +69,7 @@ def me(request: Request) -> Response:
     POST requests. The React `lib/api.js` client reads that cookie and
     forwards it as `X-CSRFToken` automatically.
     """
-    return Response(_profile(request.user))
+    return Response(_profile(request))
 
 
 @api_view(["POST"])
@@ -77,7 +100,7 @@ def login_view(request: Request) -> Response:
         return Response({"error": "Credencials invàlides"}, status=401)
 
     login(request, user)
-    return Response(_profile(user))
+    return Response(_profile(request))
 
 
 @api_view(["POST"])
