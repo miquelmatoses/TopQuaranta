@@ -66,7 +66,7 @@ export default function AlbumEditPage() {
     <section>
       <PageHeader
         title={`Àlbum: ${a.nom}`}
-        subtitle={`de ${a.artista.nom}`}
+        subtitle={a.artista?.nom ? `de ${a.artista.nom}` : 'Sense artista assignat'}
         right={
           <>
             <Btn tone="secondary" size="md" onClick={() => navigate(-1)}>Tornar</Btn>
