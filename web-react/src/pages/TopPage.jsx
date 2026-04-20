@@ -1,26 +1,25 @@
 /**
- * RankingPage — weekly top 40 per territory.
+ * TopPage — weekly top 40 per territory.
  *
- * Reads ?t=CAT|VAL|BAL|PPCC|ALT from the URL; defaults to PPCC.
- * Fetches /api/v1/ranking/?territori=X and renders the top 40 as a
- * card list. This is the first page wired end-to-end React → Django
- * → Postgres.
+ * Reads ?t=<code> from the URL; defaults to PPCC ("general").
+ * Fetches /api/v1/ranking/?territori=X and renders a compact list.
  */
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import SectionLabel from '../components/ui/SectionLabel'
 
-const TERRITORIS = ['PPCC', 'CAT', 'VAL', 'BAL']
-const TERRITORI_NOM = {
-  PPCC: 'Països Catalans',
-  CAT:  'Catalunya',
-  VAL:  'País Valencià',
-  BAL:  'Illes Balears',
-  ALT:  'Altres',
-}
+const TERRITORIS = [
+  { codi: 'PPCC', nom: 'General' },
+  { codi: 'CAT',  nom: 'Catalunya' },
+  { codi: 'VAL',  nom: 'País Valencià' },
+  { codi: 'BAL',  nom: 'Illes Balears' },
+  { codi: 'CNO',  nom: 'Catalunya Nord' },
+  { codi: 'AND',  nom: 'Andorra' },
+  { codi: 'ALG',  nom: "L'Alguer" },
+]
+const TERRITORI_NOM = Object.fromEntries(TERRITORIS.map(t => [t.codi, t.nom]))
 
-export default function RankingPage() {
+export default function TopPage() {
   const [params, setParams] = useSearchParams()
   const territori = (params.get('t') || 'PPCC').toUpperCase()
 
@@ -38,36 +37,34 @@ export default function RankingPage() {
   }, [territori])
 
   return (
-    <section className="py-8 text-white">
-      {/* Territory selector */}
-      <nav className="flex flex-wrap gap-2 mb-6" aria-label="Territoris">
+    <section className="max-w-5xl mx-auto text-white">
+      <nav className="flex flex-wrap gap-1.5 mb-5" aria-label="Territoris">
         {TERRITORIS.map(t => (
           <button
-            key={t}
+            key={t.codi}
             type="button"
-            onClick={() => setParams({ t: t.toLowerCase() })}
+            onClick={() => setParams({ t: t.codi.toLowerCase() })}
             className={
-              'px-4 py-2 rounded-full text-sm font-semibold transition-colors ' +
-              (t === territori
+              'px-3 py-1 rounded-full text-xs font-semibold transition-colors ' +
+              (t.codi === territori
                 ? 'bg-tq-yellow text-tq-ink'
                 : 'bg-white/10 text-white hover:bg-white/20')
             }
           >
-            {TERRITORI_NOM[t]}
+            {t.nom}
           </button>
         ))}
       </nav>
 
-      <header className="mb-6">
-        <SectionLabel color="yellow">
-          Rànquing setmanal — {TERRITORI_NOM[territori] || territori}
-        </SectionLabel>
-        <h1 className="text-4xl font-bold mt-2">Top 40</h1>
+      <header className="mb-4">
+        <h1 className="text-3xl font-bold">
+          Top {TERRITORI_NOM[territori] || territori}
+        </h1>
         {data?.setmana && (
-          <p className="text-sm text-tq-ink-muted mt-1">
+          <p className="text-xs text-tq-ink-muted mt-1">
             Setmana del {data.setmana}
             {data.es_provisional && (
-              <span className="ml-2 px-2 py-0.5 bg-tq-yellow/20 text-tq-yellow text-xs font-semibold rounded">
+              <span className="ml-2 px-1.5 py-0.5 bg-tq-yellow/20 text-tq-yellow text-[10px] font-semibold rounded">
                 provisional
               </span>
             )}
@@ -76,40 +73,40 @@ export default function RankingPage() {
       </header>
 
       {loading && (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="h-14 bg-white/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-12 bg-white/5 rounded-md animate-pulse" />
           ))}
         </div>
       )}
 
       {error && (
-        <div className="bg-red-100 text-red-800 p-4 rounded-md">
+        <div className="bg-red-100 text-red-800 p-3 rounded-md text-sm">
           {error}
         </div>
       )}
 
       {!loading && !error && data?.entries && (
-        <ol className="space-y-1.5">
+        <ol className="space-y-1">
           {data.entries.map(e => (
-            <li key={e.posicio} className="group">
-              <div className="flex items-center gap-4 bg-white text-tq-ink rounded-lg px-4 py-3 shadow-md transition-shadow hover:shadow-lg">
-                <span className="w-10 text-center text-3xl font-bold font-display">
+            <li key={e.posicio}>
+              <div className="flex items-center gap-3 bg-white text-tq-ink rounded-md px-3 py-2 shadow-sm hover:shadow-md transition-shadow">
+                <span className="w-8 text-center text-xl font-bold font-display">
                   {e.posicio}
                 </span>
                 {e.album?.imatge_url && (
                   <img
                     src={e.album.imatge_url}
                     alt=""
-                    width="48"
-                    height="48"
+                    width="40"
+                    height="40"
                     className="rounded-sm object-cover"
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{e.canco.nom}</p>
+                  <p className="text-sm font-semibold truncate">{e.canco.nom}</p>
                   {e.artista && (
-                    <p className="text-sm text-gray-600 truncate">
+                    <p className="text-xs text-gray-500 truncate">
                       {e.artista.slug ? (
                         <Link
                           to={`/artista/${e.artista.slug}`}
@@ -123,7 +120,7 @@ export default function RankingPage() {
                     </p>
                   )}
                 </div>
-                <span className="text-xs text-gray-400 tabular-nums">
+                <span className="text-[10px] text-gray-400 tabular-nums">
                   {e.score?.toFixed(1)}
                 </span>
               </div>
@@ -133,7 +130,7 @@ export default function RankingPage() {
       )}
 
       {!loading && !error && data?.entries?.length === 0 && (
-        <p className="text-tq-ink-muted">No hi ha encara rànquing per a aquest territori.</p>
+        <p className="text-tq-ink-muted text-sm">No hi ha encara top per a aquest territori.</p>
       )}
     </section>
   )

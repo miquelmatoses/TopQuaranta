@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
-import RankingPage from './pages/RankingPage'
+import TopPage from './pages/TopPage'
 import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AdminRoute from './components/AdminRoute'
@@ -48,7 +48,7 @@ function AppContent() {
     <Layout>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/ranking" element={<RankingPage />} />
+        <Route path="/top" element={<TopPage />} />
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />
         <Route

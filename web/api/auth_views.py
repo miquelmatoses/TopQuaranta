@@ -62,9 +62,17 @@ def login_view(request: Request) -> Response:
     if not email or not password:
         return Response({"error": "Missing credentials"}, status=400)
 
-    # Custom Usuari model uses `email` as USERNAME_FIELD; authenticate
-    # expects the USERNAME_FIELD as the `username` kwarg.
-    user = authenticate(request, username=email, password=password)
+    # Usuari inherits AbstractUser (USERNAME_FIELD="username"), but we
+    # expose a single email field in the UI. Look the user up by email
+    # first, then authenticate by their actual username so ModelBackend
+    # + django-axes both work untouched.
+    from comptes.models import Usuari
+
+    lookup = Usuari.objects.filter(email__iexact=email).first()
+    if lookup is None:
+        return Response({"error": "Credencials invàlides"}, status=401)
+
+    user = authenticate(request, username=lookup.username, password=password)
     if user is None:
         return Response({"error": "Credencials invàlides"}, status=401)
 

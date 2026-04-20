@@ -1,35 +1,27 @@
 /**
  * Layout — persistent shell wrapping every route.
  *
- * Header: yellow bar on tq-yellow with ink (black) text.
- *   Left:   TopQuaranta horizontal logo (ink, via currentColor)
- *   Center: public nav (Rànquing / Artistes / Mapa)
- *   Right:  AccountButton, LanguageToggle, mobile hamburger
+ * Monolingual: the project is Catalan-only, so no LanguageToggle.
+ * Account button is icon-only (user silhouette) — an inline CTA is
+ * noise on a branded yellow bar.
  *
- * Body: black (tq-ink). Cards inside are white surfaces.
- * Homepage (`/`) opts into the all-yellow theme via `data-theme="yellow"`
- * on `<body>` — set inside HomePage.jsx with a useEffect so the rest
- * of the app stays black.
+ * Footer: a single line in the page's own colour context — "Open
+ * source · GitHub · Privacy". No big black box.
  */
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import TopQuarantaLogo from './TopQuarantaLogo'
 import AccountButton from './AccountButton'
-import LanguageToggle from './LanguageToggle'
 import { useAuth } from '../context/AuthContext'
 
 function Hamburger({ open }) {
-  if (open) {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-           strokeLinejoin="round" aria-hidden="true">
-        <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-      </svg>
-    )
-  }
-  return (
+  return open ? (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+         strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+    </svg>
+  ) : (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
          strokeLinejoin="round" aria-hidden="true">
@@ -41,19 +33,18 @@ function Hamburger({ open }) {
 }
 
 export default function Layout({ children }) {
-  const { t } = useTranslation()
   const { profile } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navLinks = [
-    { to: '/ranking',   label: t('nav.ranking',   'Rànquing')  },
-    { to: '/artistes',  label: t('nav.artistes',  'Artistes')  },
-    { to: '/mapa',      label: t('nav.mapa',      'Mapa')      },
+    { to: '/top',      label: 'Top'      },
+    { to: '/artistes', label: 'Artistes' },
+    { to: '/mapa',     label: 'Mapa'     },
     ...(profile?.is_staff ? [{ to: '/staff', label: 'Staff' }] : []),
   ]
 
   const linkClass = ({ isActive }) =>
-    'shrink-0 text-sm font-semibold px-3 py-2 rounded-sm transition-colors whitespace-nowrap ' +
+    'shrink-0 text-xs font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap ' +
     (isActive
       ? 'bg-tq-ink text-tq-yellow'
       : 'text-tq-ink/80 hover:text-tq-ink hover:bg-tq-ink/10')
@@ -62,9 +53,9 @@ export default function Layout({ children }) {
     <>
       {/* ── Yellow header ── */}
       <header className="bg-tq-yellow text-tq-ink sticky top-0 z-40">
-        <div className="max-w-[80rem] mx-auto h-16 flex items-center gap-6 px-6 lg:px-8">
+        <div className="h-12 flex items-center gap-6 px-6 lg:px-12">
           <Link to="/" className="shrink-0 text-tq-ink" aria-label="TopQuaranta — Inici">
-            <TopQuarantaLogo className="h-9 w-auto" />
+            <TopQuarantaLogo className="h-7 w-auto" />
           </Link>
 
           <nav
@@ -78,9 +69,8 @@ export default function Layout({ children }) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0 ml-auto md:ml-0">
+          <div className="flex items-center gap-2 shrink-0 ml-auto md:ml-0">
             <AccountButton />
-            <LanguageToggle />
             <button
               type="button"
               onClick={() => setMenuOpen(o => !o)}
@@ -95,8 +85,7 @@ export default function Layout({ children }) {
 
         {menuOpen && (
           <div className="md:hidden border-t border-tq-ink/10">
-            <nav className="flex flex-col px-4 py-3 gap-1 max-w-[80rem] mx-auto"
-                 aria-label="Navegació mòbil">
+            <nav className="flex flex-col px-4 py-2 gap-0.5" aria-label="Navegació mòbil">
               {navLinks.map(({ to, label }) => (
                 <NavLink
                   key={to}
@@ -112,19 +101,28 @@ export default function Layout({ children }) {
         )}
       </header>
 
-      {/* ── Main content ── */}
-      <main className="max-w-[80rem] mx-auto px-6 lg:px-8 py-8 min-h-[60vh]">
+      {/* ── Main — full-width container with lg side padding ── */}
+      <main className="px-6 lg:px-12 py-6 min-h-[60vh]">
         {children}
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="bg-tq-ink text-white border-t border-tq-border mt-12 py-10">
-        <div className="max-w-[80rem] mx-auto px-6 lg:px-8 flex flex-wrap items-baseline justify-between gap-4">
-          <p className="text-sm text-tq-ink-muted m-0">
-            © {new Date().getFullYear()} TopQuaranta
-          </p>
-          <TopQuarantaLogo className="h-5 w-auto text-white/80" />
-        </div>
+      {/* ── Inline footer — single line, body colour context ── */}
+      <footer className="px-6 lg:px-12 py-6 text-xs opacity-60">
+        <p>
+          Open source ·{' '}
+          <a
+            href="https://github.com/miquelmatoses/TopQuaranta"
+            target="_blank"
+            rel="noopener"
+            className="underline hover:opacity-100"
+          >
+            GitHub
+          </a>
+          {' '}·{' '}
+          <Link to="/privacitat" className="underline hover:opacity-100">
+            Privacitat
+          </Link>
+        </p>
       </footer>
     </>
   )
