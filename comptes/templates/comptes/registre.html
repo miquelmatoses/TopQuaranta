@@ -1,30 +1,79 @@
-{% extends "web/base.html" %}
+{% extends "comptes/_base_auth.html" %}
 
-{% block title %}Registre — TopQuaranta{% endblock %}
+{% block title %}Crear compte — TopQuaranta{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Normalise Django's auto-rendered form widgets so they match
+     the rest of the _base_auth.html inputs. */
+  .tq-djform input[type="text"],
+  .tq-djform input[type="email"],
+  .tq-djform input[type="password"] {
+    background: #fff;
+    color: var(--tq-ink);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 14px;
+    width: 100%;
+  }
+  .tq-djform input:focus {
+    outline: 2px solid var(--tq-focus);
+    outline-offset: 1px;
+  }
+  .tq-djform .errorlist {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    color: #fca5a5;
+    font-size: 11px;
+  }
+  .tq-djform .helptext {
+    color: var(--tq-ink-muted);
+    font-size: 11px;
+    display: block;
+    margin-top: 4px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="ranking-header">
-  <h2 class="ranking-title">Crear compte</h2>
-</section>
+<div class="tq-card tq-djform">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Crear compte</h1>
+  <p class="tq-sub">
+    Amb un compte pots proposar artistes, demanar la gestió d'un artista
+    existent i rebre actualitzacions del ranking.
+  </p>
 
-<form class="auth-form" method="post">
-  {% csrf_token %}
-  {% for field in form %}
-  <div class="form-field">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field }}
-    {% if field.errors %}
-      {% for error in field.errors %}
-        <p class="form-error">{{ error }}</p>
-      {% endfor %}
-    {% endif %}
-  </div>
-  {% endfor %}
   {% if form.non_field_errors %}
     {% for error in form.non_field_errors %}
-      <p class="form-error">{{ error }}</p>
+      <div class="tq-msg tq-msg--error">{{ error }}</div>
     {% endfor %}
   {% endif %}
-  <button class="filter-btn" type="submit">Registrar-se</button>
-</form>
+
+  <form method="post" class="tq-stack">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="tq-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+          <span class="tq-hint">{{ field.help_text|safe }}</span>
+        {% endif %}
+        {% if field.errors %}
+          {% for error in field.errors %}
+            <span class="tq-err">{{ error }}</span>
+          {% endfor %}
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="tq-btn">Registrar-se</button>
+  </form>
+
+  <p class="tq-small" style="margin-top:24px;text-align:center">
+    Ja tens compte? <a href="/compte/accedir">Entra aquí</a>.
+  </p>
+</div>
 {% endblock %}

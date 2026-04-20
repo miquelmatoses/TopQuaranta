@@ -1,61 +1,122 @@
-{% extends "web/base.html" %}
+{% extends "comptes/_base_auth.html" %}
 
 {% block title %}Configura 2FA — TopQuaranta{% endblock %}
 
+{% block extra_head %}
+<style>
+  .tq-main.wide { max-width: 560px; }
+  .tq-qr-wrap {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    margin: 16px 0;
+  }
+  .tq-qr-wrap img { max-width: 240px; display: block; }
+  .tq-backup-list {
+    font-family: 'Courier New', ui-monospace, monospace;
+    font-size: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px dashed var(--tq-border);
+    padding: 16px;
+    border-radius: 8px;
+    line-height: 1.9;
+    letter-spacing: 0.05em;
+    margin: 12px 0;
+    color: #fde68a;
+    user-select: all;
+  }
+  .tq-steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .tq-steps > li {
+    counter-increment: step;
+    padding-left: 40px;
+    position: relative;
+    margin-bottom: 24px;
+  }
+  .tq-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--tq-yellow);
+    color: var(--tq-ink);
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tq-secret {
+    font-family: 'Courier New', ui-monospace, monospace;
+    background: rgba(255,255,255,0.08);
+    padding: 4px 8px;
+    border-radius: 4px;
+    user-select: all;
+    word-break: break-all;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="container" style="max-width:640px;padding:var(--mm-space-10) 0">
-  <p class="section-label" style="margin-bottom:var(--mm-space-2)">seguretat</p>
-  <h1 class="ranking-title" style="margin:0 0 var(--mm-space-6)">Configura l'autenticació de dos factors</h1>
+<div class="tq-card">
+  <p class="tq-label">Seguretat</p>
+  <h1 class="tq-title">Configura l'autenticació de dos factors</h1>
 
   {% if backup_codes %}
-  <div class="staff-msg staff-msg--success" style="margin-bottom:var(--mm-space-6)">
-    <strong>2FA activada correctament.</strong>
-  </div>
+    <div class="tq-msg tq-msg--success"><strong>2FA activada correctament.</strong></div>
 
-  <section style="margin-bottom:var(--mm-space-8);padding:var(--mm-space-5);border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-md);background:var(--mm-color-surface-alt)">
-    <h2 style="margin-top:0">⚠️ Codis de recuperació — desa'ls ara</h2>
-    <p>Aquests 10 codis són d'un sol ús. Si perds el telèfon, podràs usar-los
-       per a entrar. <strong>No els tornaràs a veure.</strong> Copia'ls ara
-       a un gestor de contrasenyes o un lloc segur.</p>
-    <pre style="font-family:var(--mm-font-mono);font-size:var(--mm-text-base);background:var(--mm-color-background);padding:var(--mm-space-4);border-radius:var(--mm-radius-base);line-height:1.8;letter-spacing:0.05em">{% for code in backup_codes %}{{ code }}
+    <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:20px;margin:16px 0 8px">
+      Codis de recuperació — desa'ls ara
+    </h2>
+    <p class="tq-sub">
+      Aquests 10 codis són d'un sol ús. Si perds el telèfon, podràs fer-los
+      servir per a entrar. <strong>No els tornaràs a veure.</strong>
+      Copia'ls ara a un gestor de contrasenyes o a un lloc segur.
+    </p>
+    <pre class="tq-backup-list">{% for code in backup_codes %}{{ code }}
 {% endfor %}</pre>
-    <div style="margin-top:var(--mm-space-4)">
-      <a href="{% url 'comptes:dashboard' %}" class="mm-btn mm-btn--primary">He desat els codis, continua</a>
-    </div>
-  </section>
+    <a href="{% url 'comptes:dashboard' %}" class="tq-btn">He desat els codis, continua</a>
 
   {% else %}
-  <p>Per a reforçar la seguretat del panell staff, cal que activis 2FA.
-     Usa una aplicació com Google Authenticator, Authy, 1Password o Bitwarden.</p>
+    <p class="tq-sub">
+      Per a reforçar la seguretat del panell staff cal que activis 2FA.
+      Fes servir una aplicació com Google Authenticator, Authy, 1Password
+      o Bitwarden.
+    </p>
 
-  <ol style="line-height:1.8">
-    <li>Obre la teva app d'autenticació.</li>
-    <li>Afegeix un compte nou escanejant aquest QR:
-      <div style="margin:var(--mm-space-4) 0;text-align:center">
-        <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR per a 2FA"
-             style="max-width:240px;border:1px solid var(--mm-color-border);padding:var(--mm-space-3);background:var(--mm-color-white);border-radius:var(--mm-radius-md)">
-      </div>
-      <details style="font-size:var(--mm-text-sm);color:var(--mm-color-text-muted)">
-        <summary>No pots escanejar? Introdueix el codi manualment</summary>
-        <p>Secret: <code style="font-family:var(--mm-font-mono);font-size:var(--mm-text-base);user-select:all">{{ secret }}</code></p>
-      </details>
-    </li>
-    <li>Introdueix el codi de 6 dígits que et mostra l'app:</li>
-  </ol>
+    <ol class="tq-steps">
+      <li>Obre la teva app d'autenticació.</li>
+      <li>
+        Afegeix un compte nou escanejant aquest QR:
+        <div class="tq-qr-wrap">
+          <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR per a 2FA">
+        </div>
+        <details class="tq-small">
+          <summary style="cursor:pointer">No pots escanejar? Introdueix el codi manualment</summary>
+          <p>Secret: <span class="tq-secret">{{ secret }}</span></p>
+        </details>
+      </li>
+      <li>Introdueix el codi de 6 dígits que et mostra l'app:</li>
+    </ol>
 
-  <form method="post" style="margin-top:var(--mm-space-6)">
-    {% csrf_token %}
     {% if error %}
-    <div class="staff-msg staff-msg--error" style="margin-bottom:var(--mm-space-4)">{{ error }}</div>
+      <div class="tq-msg tq-msg--error">{{ error }}</div>
     {% endif %}
-    <label style="display:block;margin-bottom:var(--mm-space-3)">
-      Codi de 6 dígits
-      <input type="text" name="token" inputmode="numeric" pattern="[0-9 ]*"
-             autocomplete="one-time-code" autofocus required
-             style="display:block;width:100%;max-width:260px;margin-top:var(--mm-space-2);padding:var(--mm-space-3);font-family:var(--mm-font-mono);font-size:var(--mm-text-xl);letter-spacing:0.15em;border:1px solid var(--mm-color-border);border-radius:var(--mm-radius-base)">
-    </label>
-    <button type="submit" class="mm-btn mm-btn--primary">Verificar i activar 2FA</button>
-  </form>
+
+    <form method="post" class="tq-stack">
+      {% csrf_token %}
+      <div class="tq-field">
+        <label for="token">Codi de 6 dígits</label>
+        <input id="token" type="text" name="token" inputmode="numeric"
+               pattern="[0-9 ]*" autocomplete="one-time-code" autofocus required
+               class="tq-code-input">
+      </div>
+      <button type="submit" class="tq-btn">Verificar i activar 2FA</button>
+    </form>
   {% endif %}
-</section>
+</div>
 {% endblock %}

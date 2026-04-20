@@ -144,11 +144,12 @@ export default function StaffCanconsPage() {
               <Th>ML</Th>
               <Th>Whisper</Th>
               <Th>Estat</Th>
+              <Th>Preescolta</Th>
             </tr>
           </THead>
           <tbody>
             {data?.results?.length === 0 && (
-              <tr><td colSpan={7}><EmptyState>Cap cançó.</EmptyState></td></tr>
+              <tr><td colSpan={8}><EmptyState>Cap cançó.</EmptyState></td></tr>
             )}
             {data?.results?.map(c => (
               <Tr key={c.pk} onClick={() => navigate(`/staff/cancons/${c.pk}`)}>
@@ -171,6 +172,21 @@ export default function StaffCanconsPage() {
                 <Td>
                   {c.verificada ? <Pill tone="green">Verificada</Pill> : <Pill tone="gray">Pendent</Pill>}
                   {!c.activa && <Pill tone="red">Inactiva</Pill>}
+                </Td>
+                <Td className="text-right" onClick={e => e.stopPropagation()}>
+                  {c.deezer_id ? (
+                    <a
+                      href={`https://www.deezer.com/track/${c.deezer_id}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-xs underline text-tq-ink/70 hover:text-tq-ink whitespace-nowrap"
+                      title="Escoltar a Deezer"
+                    >
+                      ▶ Deezer
+                    </a>
+                  ) : (
+                    <span className="text-[11px] opacity-40">—</span>
+                  )}
                 </Td>
               </Tr>
             ))}

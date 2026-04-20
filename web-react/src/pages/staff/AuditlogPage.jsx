@@ -61,8 +61,8 @@ export default function AuditlogPage() {
                 <Td><Pill>{r.action}</Pill></Td>
                 <Td className="text-xs">{r.target_label} <span className="opacity-50">({r.target_type}#{r.target_id})</span></Td>
                 <Td className="text-[11px] max-w-md">
-                  {r.extra && Object.keys(r.extra).length > 0 && (
-                    <code className="opacity-70 break-all">{JSON.stringify(r.extra)}</code>
+                  {r.metadata && Object.keys(r.metadata).length > 0 && (
+                    <code className="opacity-70 break-all">{JSON.stringify(r.metadata)}</code>
                   )}
                 </Td>
               </Tr>

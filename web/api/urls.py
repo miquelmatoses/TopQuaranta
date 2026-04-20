@@ -66,6 +66,7 @@ urlpatterns = [
         name="staff_canco_detail",
     ),
     # Albums
+    path("staff/albums/", staff_views.albums_list, name="staff_albums_list"),
     path(
         "staff/albums/<int:pk>/",
         staff_views.album_detail,

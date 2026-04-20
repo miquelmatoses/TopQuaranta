@@ -51,6 +51,16 @@ export default function CancoEditPage() {
         subtitle={<Link to={`/canco/${c.slug}`} className="underline">perfil públic</Link>}
         right={
           <>
+            {c.deezer_id && (
+              <a
+                href={`https://www.deezer.com/track/${c.deezer_id}`}
+                target="_blank"
+                rel="noopener"
+                className="text-sm font-semibold px-3 py-1.5 rounded bg-white/10 text-white hover:bg-white/20 transition-colors"
+              >
+                ▶ Escoltar a Deezer
+              </a>
+            )}
             <Btn tone="secondary" size="md" onClick={() => navigate('/staff/cancons')}>Tornar</Btn>
             <Btn size="md" onClick={save} disabled={busy}>Desar</Btn>
           </>

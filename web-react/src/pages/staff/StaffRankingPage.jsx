@@ -5,6 +5,7 @@
  * (canco or artist). No pagination: always shows the full top-40.
  */
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import {
   Btn,
@@ -110,8 +111,20 @@ export default function StaffRankingPage() {
               <Tr key={e.pk}>
                 <Td><input type="checkbox" checked={sel.has(e.pk)} onChange={() => toggle(e.pk)} /></Td>
                 <Td className="font-bold">{e.posicio}</Td>
-                <Td>{e.canco_nom}</Td>
-                <Td>{e.artista_nom}</Td>
+                <Td>
+                  {e.canco_pk ? (
+                    <Link className="underline hover:text-tq-ink" to={`/staff/cancons/${e.canco_pk}`}>
+                      {e.canco_nom}
+                    </Link>
+                  ) : e.canco_nom}
+                </Td>
+                <Td>
+                  {e.artista_pk ? (
+                    <Link className="underline hover:text-tq-ink" to={`/staff/artistes/${e.artista_pk}`}>
+                      {e.artista_nom}
+                    </Link>
+                  ) : e.artista_nom}
+                </Td>
                 <Td className="text-xs">{e.lastfm_playcount?.toLocaleString()}</Td>
                 <Td className="text-xs">{e.dies_en_top}</Td>
               </Tr>

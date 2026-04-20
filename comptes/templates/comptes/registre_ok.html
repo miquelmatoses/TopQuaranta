@@ -1,10 +1,16 @@
-{% extends "web/base.html" %}
+{% extends "comptes/_base_auth.html" %}
 
 {% block title %}Registre enviat — TopQuaranta{% endblock %}
 
 {% block content %}
-<section class="ranking-header">
-  <h2 class="ranking-title">Correu enviat</h2>
-  <p class="ranking-date">Comprova la teua bústia de correu i fes clic a l'enllaç d'activació.</p>
-</section>
+<div class="tq-card" style="text-align:center">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Correu enviat</h1>
+  <p class="tq-sub">
+    Comprova la teva bústia de correu i fes clic a l'enllaç d'activació
+    per a acabar de crear el compte. Si no el veus, revisa també la
+    carpeta de brossa.
+  </p>
+  <a href="/" class="tq-btn tq-btn--ghost">Tornar a l'inici</a>
+</div>
 {% endblock %}

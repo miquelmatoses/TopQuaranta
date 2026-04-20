@@ -635,8 +635,64 @@ def canco_detail(request: Request, pk: int) -> Response:
 
 
 # ═════════════════════════════════════════════════════════════════════════
-# Albums — simple edit
+# Albums — list + simple edit
 # ═════════════════════════════════════════════════════════════════════════
+
+
+@api_view(["GET"])
+@permission_classes([IsStaff])
+def albums_list(request: Request) -> Response:
+    """Album directory for staff. Filters: q, tipus, descartat, artista_pk."""
+    qs = Album.objects.select_related("artista").annotate(
+        n_cancons=Count("cancons"),
+        n_verificades=Count("cancons", filter=Q(cancons__verificada=True)),
+    )
+    cerca = (request.GET.get("q") or "").strip()
+    if cerca:
+        qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
+    tipus = request.GET.get("tipus", "")
+    if tipus in {"album", "single", "ep"}:
+        qs = qs.filter(tipus=tipus)
+    descartat = request.GET.get("descartat", "")
+    if descartat == "1":
+        qs = qs.filter(descartat=True)
+    elif descartat == "0":
+        qs = qs.filter(descartat=False)
+    artista_pk = request.GET.get("artista_pk", "")
+    if artista_pk:
+        try:
+            qs = qs.filter(artista_id=int(artista_pk))
+        except ValueError:
+            pass
+    qs = qs.order_by("-data_llancament", "nom")
+    page, meta = _paginate(qs, request)
+    return Response(
+        {
+            "results": [
+                {
+                    "pk": a.pk,
+                    "nom": a.nom,
+                    "slug": a.slug,
+                    "tipus": a.tipus,
+                    "data_llancament": (
+                        a.data_llancament.isoformat() if a.data_llancament else None
+                    ),
+                    "imatge_url": a.imatge_url or "",
+                    "deezer_id": a.deezer_id,
+                    "descartat": a.descartat,
+                    "n_cancons": a.n_cancons,
+                    "n_verificades": a.n_verificades,
+                    "artista": {
+                        "pk": a.artista_id,
+                        "nom": a.artista.nom if a.artista else "",
+                        "slug": a.artista.slug if a.artista else "",
+                    },
+                }
+                for a in page.object_list
+            ],
+            **meta,
+        }
+    )
 
 
 @api_view(["GET", "PATCH"])
@@ -1220,7 +1276,7 @@ def auditlog(request: Request) -> Response:
                     "target_type": r.target_type or "",
                     "target_id": r.target_id,
                     "target_label": r.target_label or "",
-                    "extra": r.extra or {},
+                    "metadata": r.metadata or {},
                 }
                 for r in page.object_list
             ],

@@ -24,6 +24,7 @@ import ArtistaCrearPage from './pages/staff/ArtistaCrearPage'
 import ArtistaEditPage from './pages/staff/ArtistaEditPage'
 import StaffCanconsPage from './pages/staff/StaffCanconsPage'
 import CancoEditPage from './pages/staff/CancoEditPage'
+import StaffAlbumsPage from './pages/staff/StaffAlbumsPage'
 import AlbumEditPage from './pages/staff/AlbumEditPage'
 import StaffRankingPage from './pages/staff/StaffRankingPage'
 import PropostesPage from './pages/staff/PropostesPage'
@@ -109,6 +110,7 @@ function AppContent() {
                   <Route path="/artistes/:pk" element={<ArtistaEditPage />} />
                   <Route path="/cancons" element={<StaffCanconsPage />} />
                   <Route path="/cancons/:pk" element={<CancoEditPage />} />
+                  <Route path="/albums" element={<StaffAlbumsPage />} />
                   <Route path="/albums/:pk" element={<AlbumEditPage />} />
                   <Route path="/ranking" element={<StaffRankingPage />} />
                   <Route path="/propostes" element={<PropostesPage />} />

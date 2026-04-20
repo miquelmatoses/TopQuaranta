@@ -1,10 +1,15 @@
-{% extends "web/base.html" %}
+{% extends "comptes/_base_auth.html" %}
 
 {% block title %}Error d'activació — TopQuaranta{% endblock %}
 
 {% block content %}
-<section class="ranking-header">
-  <h2 class="ranking-title">Enllaç no vàlid</h2>
-  <p class="ranking-date">L'enllaç d'activació no és vàlid o ha caducat. <a href="{% url 'comptes:registre' %}" class="rank-artist-link">Torna a registrar-te.</a></p>
-</section>
+<div class="tq-card" style="text-align:center">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Enllaç no vàlid</h1>
+  <p class="tq-sub">
+    L'enllaç d'activació no és vàlid o ha caducat. Torna a registrar-te
+    per rebre'n un de nou.
+  </p>
+  <a href="{% url 'comptes:registre' %}" class="tq-btn">Tornar a registrar-se</a>
+</div>
 {% endblock %}

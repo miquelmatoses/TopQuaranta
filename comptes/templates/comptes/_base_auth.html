@@ -1,0 +1,188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TopQuaranta{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'web/img/favicon.svg' %}">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Auth/2FA shell: matches the React SPA visual language (yellow
+       header, dark body) without pulling in the whole legacy CSS. */
+    :root {
+      --tq-yellow: #facc15;
+      --tq-yellow-deep: #ca8a04;
+      --tq-ink: #0a0a0a;
+      --tq-ink-soft: #1a1a1a;
+      --tq-ink-muted: #a1a1aa;
+      --tq-border: rgba(255,255,255,0.12);
+      --tq-focus: #fde68a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--tq-ink);
+      color: #fff;
+      min-height: 100vh;
+    }
+    a { color: var(--tq-yellow); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .tq-header {
+      background: var(--tq-yellow);
+      color: var(--tq-ink);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .tq-header-inner {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      padding: 0 24px;
+    }
+    @media (min-width: 1024px) {
+      .tq-header-inner { padding: 0 48px; }
+    }
+    .tq-logo {
+      color: var(--tq-ink);
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+    }
+    .tq-logo svg {
+      height: 100%;
+      width: auto;
+      display: block;
+    }
+
+    .tq-main {
+      padding: 48px 24px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    @media (min-width: 1024px) { .tq-main { padding: 72px 24px; } }
+
+    .tq-card {
+      background: var(--tq-ink-soft);
+      border: 1px solid var(--tq-border);
+      border-radius: 12px;
+      padding: 32px 28px;
+    }
+
+    .tq-label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; color: var(--tq-ink-muted); margin: 0 0 8px; font-weight: 600; }
+    .tq-title { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; margin: 0 0 16px; line-height: 1.15; }
+    .tq-sub { color: var(--tq-ink-muted); font-size: 14px; margin: 0 0 24px; line-height: 1.5; }
+
+    .tq-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .tq-field > label { font-size: 12px; font-weight: 600; }
+    .tq-field input[type="text"],
+    .tq-field input[type="email"],
+    .tq-field input[type="password"],
+    .tq-field input[type="number"],
+    .tq-field textarea {
+      background: #fff;
+      color: var(--tq-ink);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 14px;
+      width: 100%;
+    }
+    .tq-field input:focus,
+    .tq-field textarea:focus {
+      outline: 2px solid var(--tq-focus);
+      outline-offset: 1px;
+    }
+    .tq-field .tq-hint { color: var(--tq-ink-muted); font-size: 11px; }
+    .tq-field .tq-err  { color: #fca5a5; font-size: 11px; }
+
+    .tq-code-input {
+      font-family: 'Courier New', ui-monospace, monospace !important;
+      font-size: 20px !important;
+      letter-spacing: 0.15em !important;
+      text-align: center;
+    }
+
+    .tq-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: var(--tq-yellow);
+      color: var(--tq-ink);
+      text-decoration: none;
+      width: 100%;
+    }
+    .tq-btn:hover { background: var(--tq-yellow-deep); color: #fff; text-decoration: none; }
+    .tq-btn--ghost {
+      background: transparent;
+      color: #fff;
+      border: 1px solid var(--tq-border);
+    }
+    .tq-btn--ghost:hover { background: rgba(255,255,255,0.05); color: #fff; }
+
+    .tq-msg {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .tq-msg--error   { background: rgba(220,38,38,0.15); color: #fca5a5; border: 1px solid rgba(220,38,38,0.3); }
+    .tq-msg--success { background: rgba(16,185,129,0.12); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+    .tq-msg--info    { background: rgba(250,204,21,0.10); color: #fde68a; border: 1px solid rgba(250,204,21,0.25); }
+
+    .tq-small { font-size: 12px; color: var(--tq-ink-muted); line-height: 1.5; }
+    .tq-small code {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .tq-row { display: flex; gap: 8px; }
+    .tq-row > * { flex: 1; }
+    .tq-stack > * + * { margin-top: 16px; }
+
+    .tq-footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: var(--tq-ink-muted);
+    }
+    .tq-footer a { color: var(--tq-ink-muted); text-decoration: underline; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="tq-header">
+    <div class="tq-header-inner">
+      <a href="/" class="tq-logo" aria-label="TopQuaranta — Inici"
+         style="font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:20px;color:var(--tq-ink);text-decoration:none;letter-spacing:-0.01em;">
+        TopQuaranta
+      </a>
+    </div>
+  </header>
+
+  <main class="tq-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="tq-footer">
+    <a href="/">&larr; Tornar a TopQuaranta</a>
+  </footer>
+</body>
+</html>
