@@ -461,6 +461,12 @@ def artista_detail(request: Request, pk: int) -> Response:
                 setattr(artista, f, (data.get(f) or "").strip())
         if "aprovat" in data:
             artista.aprovat = bool(data["aprovat"])
+            # Invariant enforced by `artista_no_aprovat_pendent_review`:
+            # aprovat=True + pendent_review=True is not allowed. Clear
+            # the queue flag so a PATCH that approves straight from the
+            # edit page doesn't 500 on the CheckConstraint.
+            if artista.aprovat and artista.pendent_review:
+                artista.pendent_review = False
         artista.save()
 
         # Replace locations if sent (array of {municipi_id} or {manual}).
