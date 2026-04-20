@@ -8,6 +8,12 @@ Group=topquaranta
 WorkingDirectory=/home/topquaranta/app
 EnvironmentFile=/home/topquaranta/app/.env
 ExecStart=/home/topquaranta/app/.venv/bin/gunicorn topquaranta.wsgi:application --bind 127.0.0.1:8083 --workers 2 --timeout 120 --env DJANGO_SETTINGS_MODULE=topquaranta.settings.web_server
+# SIGHUP → gunicorn master reloads worker pool gracefully without
+# dropping the listening socket. Use `systemctl reload topquaranta-web`
+# instead of `restart` for code deploys so in-flight requests don't
+# see a 502 during the ~1-2 s worker boot gap.
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
 Restart=always
 
 [Install]

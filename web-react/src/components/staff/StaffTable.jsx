@@ -30,16 +30,30 @@ export function THead({ children }) {
   )
 }
 
-export function Th({ children, className = '' }) {
+export function Th({ children, className = '', ...rest }) {
   return (
-    <th className={'text-left font-semibold px-3 py-2 ' + className}>
+    <th
+      className={'text-left font-semibold px-3 py-2 ' + className}
+      {...rest}
+    >
       {children}
     </th>
   )
 }
 
-export function Td({ children, className = '' }) {
-  return <td className={'px-3 py-2 align-middle ' + className}>{children}</td>
+/**
+ * Forward arbitrary props (most importantly `onClick`) so callers
+ * can attach e.g. `e.stopPropagation()` on the cell wrapping a
+ * checkbox to keep Tr-level navigation from eating the click. Was
+ * a silent drop before, which made checkboxes in clickable rows
+ * behave as if they navigated instead of toggling.
+ */
+export function Td({ children, className = '', ...rest }) {
+  return (
+    <td className={'px-3 py-2 align-middle ' + className} {...rest}>
+      {children}
+    </td>
+  )
 }
 
 export function Tr({ children, onClick, className = '' }) {
