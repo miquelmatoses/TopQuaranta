@@ -97,7 +97,10 @@ export default function TopPage() {
         <ol className="space-y-1">
           {data.entries.map(e => (
             <li key={e.posicio}>
-              <div className="flex items-center gap-3 bg-white text-tq-ink rounded-md px-3 py-2 shadow-sm hover:shadow-md transition-shadow">
+              <Link
+                to={e.canco.id ? `/canco/${e.canco.id}` : '#'}
+                className="flex items-center gap-3 bg-white text-tq-ink rounded-md px-3 py-2 shadow-sm hover:shadow-md transition-shadow"
+              >
                 <span className="w-8 text-center text-xl font-bold font-display">
                   {e.posicio}
                 </span>
@@ -114,23 +117,14 @@ export default function TopPage() {
                   <p className="text-sm font-semibold truncate">{e.canco.nom}</p>
                   {e.artista && (
                     <p className="text-xs text-gray-500 truncate">
-                      {e.artista.slug ? (
-                        <Link
-                          to={`/artista/${e.artista.slug}`}
-                          className="hover:text-tq-yellow-deep"
-                        >
-                          {e.artista.nom}
-                        </Link>
-                      ) : (
-                        e.artista.nom
-                      )}
+                      {e.artista.nom}
                     </p>
                   )}
                 </div>
                 <span className="text-[10px] text-gray-400 tabular-nums">
                   {e.score?.toFixed(1)}
                 </span>
-              </div>
+              </Link>
             </li>
           ))}
         </ol>

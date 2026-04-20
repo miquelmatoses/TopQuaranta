@@ -7,6 +7,7 @@ import TopPage from './pages/TopPage'
 import ArtistesPage from './pages/ArtistesPage'
 import ArtistaPage from './pages/ArtistaPage'
 import AlbumPage from './pages/AlbumPage'
+import CancoPage from './pages/CancoPage'
 import MapaPage from './pages/MapaPage'
 import AuthPage from './pages/AuthPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
@@ -56,6 +57,7 @@ function AppContent() {
         <Route path="/artistes" element={<ArtistesPage />} />
         <Route path="/artista/:slug" element={<ArtistaPage />} />
         <Route path="/album/:slug" element={<AlbumPage />} />
+        <Route path="/canco/:pk" element={<CancoPage />} />
         <Route path="/mapa" element={<MapaPage />} />
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />

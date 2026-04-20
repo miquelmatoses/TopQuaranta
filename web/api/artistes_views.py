@@ -7,13 +7,14 @@ GET /api/v1/artistes/<slug>/     — artist profile (info + territories + recent
 import datetime
 
 from django.core.paginator import Paginator
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from music.models import Artista
+from music.models import Album, Artista, Canco
 from ranking.models import RankingSetmanal
 
 
@@ -37,6 +38,22 @@ def _localitat_principal(artista) -> dict | None:
     return None
 
 
+def _latest_cover(artista) -> str | None:
+    """Artist card image — derived from the most recent album cover.
+
+    Artista has no dedicated image field yet; populating one from
+    Deezer is a backfill we'll do later. For now this is a cheap
+    proxy that covers most active artists (any with ≥1 album).
+    """
+    return (
+        Album.objects.filter(artista=artista)
+        .exclude(imatge_url="")
+        .order_by("-data_llancament")
+        .values_list("imatge_url", flat=True)
+        .first()
+    )
+
+
 def _artista_row(artista) -> dict:
     """Compact shape for directory listing."""
     return {
@@ -47,6 +64,7 @@ def _artista_row(artista) -> dict:
         "territoris": _territoris_summary(artista),
         "localitat": _localitat_principal(artista),
         "deezer_id": artista.deezer_id_principal,
+        "imatge_url": _latest_cover(artista),
     }
 
 
@@ -55,19 +73,56 @@ def _artista_row(artista) -> dict:
 def artistes_list(request: Request) -> Response:
     """Paginated directory of approved artists.
 
-    Query params:
-      q         — case-insensitive substring match on name
-      territori — one of CAT/VAL/BAL to filter
-      page      — 1-based page index (default 1)
-      per_page  — items per page (default 40, capped at 100)
+    Query params (all optional, all compose via AND):
+      q          — case-insensitive substring match on name
+      territori  — any of PPCC/CAT/VAL/BAL/AND/CNO/FRA/ALG/CAR/ALT
+      comarca    — exact comarca name (from /api/v1/localitzacio/comarques/)
+      municipi   — exact municipi name
+      amb_dones  — "1": percentatge_femeni in {100, 50+} (female-led / mixed)
+      nou        — "1": has any album released in the last 365 days
+      al_top     — "1": has at least one track ever in RankingSetmanal
+      page       — 1-based page index (default 1)
+      per_page   — items per page (default 40, capped at 100)
     """
     qs = Artista.objects.filter(aprovat=True).prefetch_related(
         "territoris", "localitats__municipi", "deezer_ids"
     )
 
     territori = (request.GET.get("territori") or "").upper()
-    if territori in ("CAT", "VAL", "BAL"):
+    if territori:
         qs = qs.filter(territoris__codi=territori)
+
+    comarca = (request.GET.get("comarca") or "").strip()
+    if comarca:
+        qs = qs.filter(localitats__municipi__comarca=comarca)
+
+    municipi = (request.GET.get("municipi") or "").strip()
+    if municipi:
+        qs = qs.filter(localitats__municipi__nom=municipi)
+
+    if (request.GET.get("amb_dones") or "") == "1":
+        # Use percentatge_femeni >= 50% (values "100" or "50+").
+        qs = qs.filter(percentatge_femeni__in=["100", "50+"])
+
+    if (request.GET.get("nou") or "") == "1":
+        # Any album released within the past 365 days.
+        cutoff = datetime.date.today() - datetime.timedelta(days=365)
+        qs = qs.filter(
+            Exists(
+                Album.objects.filter(
+                    artista=OuterRef("pk"),
+                    data_llancament__gte=cutoff,
+                )
+            )
+        )
+
+    if (request.GET.get("al_top") or "") == "1":
+        # Nested OuterRef via Canco is buggy here; a direct pk__in over
+        # the (~100 artists) set is cheaper and clearer.
+        top_artist_ids = RankingSetmanal.objects.values_list(
+            "canco__artista_id", flat=True
+        ).distinct()
+        qs = qs.filter(pk__in=top_artist_ids)
 
     q = (request.GET.get("q") or "").strip()
     if q:

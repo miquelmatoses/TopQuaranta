@@ -122,14 +122,16 @@ export default function ArtistaPage() {
                 </p>
                 <ul className="mt-1 flex flex-wrap gap-1.5">
                   {week.entries.map((e, i) => (
-                    <li
-                      key={`${week.setmana}-${e.territori}-${i}`}
-                      className="inline-flex items-center gap-2 px-2 py-1 bg-tq-yellow-soft text-tq-ink text-xs rounded-sm"
-                      title={e.canco_nom}
-                    >
-                      <span className="font-bold tabular-nums">#{e.posicio}</span>
-                      <span className="text-[10px] text-gray-500">{e.territori}</span>
-                      <span className="truncate max-w-[14rem]">{e.canco_nom}</span>
+                    <li key={`${week.setmana}-${e.territori}-${i}`}>
+                      <Link
+                        to={e.canco_id ? `/canco/${e.canco_id}` : '#'}
+                        className="inline-flex items-center gap-2 px-2 py-1 bg-tq-yellow-soft text-tq-ink text-xs rounded-sm hover:bg-tq-yellow"
+                        title={e.canco_nom}
+                      >
+                        <span className="font-bold tabular-nums">#{e.posicio}</span>
+                        <span className="text-[10px] text-gray-500">{e.territori}</span>
+                        <span className="truncate max-w-[14rem]">{e.canco_nom}</span>
+                      </Link>
                     </li>
                   ))}
                 </ul>

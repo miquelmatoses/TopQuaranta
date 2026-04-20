@@ -98,40 +98,31 @@ export default function AlbumPage() {
           <h2 className="text-xl font-bold font-display mb-4">Cançons</h2>
           <ol className="space-y-1">
             {data.cancons.map((c, i) => (
-              <li
-                key={c.pk}
-                className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0"
-              >
-                <span className="w-8 text-right text-sm font-semibold text-gray-400 tabular-nums shrink-0">
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{c.nom}</p>
-                  {c.artistes_col?.length > 0 && (
-                    <p className="text-xs text-gray-500 truncate">
-                      amb{' '}
-                      {c.artistes_col.map((col, j) => (
-                        <span key={col.slug}>
-                          {j > 0 ? ', ' : ''}
-                          <Link
-                            to={`/artista/${col.slug}`}
-                            className="underline hover:text-tq-yellow-deep"
-                          >
-                            {col.nom}
-                          </Link>
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-                {c.al_top && (
-                  <span className="px-1.5 py-0.5 bg-tq-yellow text-tq-ink text-[10px] font-semibold rounded">
-                    TOP
+              <li key={c.pk}>
+                <Link
+                  to={`/canco/${c.pk}`}
+                  className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-tq-yellow-soft -mx-2 px-2 rounded"
+                >
+                  <span className="w-8 text-right text-sm font-semibold text-gray-400 tabular-nums shrink-0">
+                    {i + 1}
                   </span>
-                )}
-                <span className="text-xs text-gray-400 tabular-nums shrink-0 w-12 text-right">
-                  {formatDuration(c.durada_ms)}
-                </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{c.nom}</p>
+                    {c.artistes_col?.length > 0 && (
+                      <p className="text-xs text-gray-500 truncate">
+                        amb {c.artistes_col.map(x => x.nom).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  {c.al_top && (
+                    <span className="px-1.5 py-0.5 bg-tq-yellow text-tq-ink text-[10px] font-semibold rounded">
+                      TOP
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400 tabular-nums shrink-0 w-12 text-right">
+                    {formatDuration(c.durada_ms)}
+                  </span>
+                </Link>
               </li>
             ))}
           </ol>

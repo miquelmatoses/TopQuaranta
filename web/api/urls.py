@@ -1,6 +1,13 @@
 from django.urls import path
 
-from . import album_views, artistes_views, auth_views, ranking_views, views
+from . import (
+    album_views,
+    artistes_views,
+    auth_views,
+    canco_views,
+    ranking_views,
+    views,
+)
 
 app_name = "api"
 
@@ -16,6 +23,8 @@ urlpatterns = [
     path("artistes/<slug:slug>/", artistes_views.artista_detail, name="artista_detail"),
     # Albums
     path("albums/<slug:slug>/", album_views.album_detail, name="album_detail"),
+    # Cançons
+    path("cancons/<int:pk>/", canco_views.canco_detail, name="canco_detail"),
     # Mapa (existing)
     path("mapa/artistes/", views.mapa_artistes, name="mapa_artistes"),
     # Location API — reference data, no auth required
