@@ -30,90 +30,19 @@ import {
   Tr,
 } from '../../components/staff/StaffTable'
 
-function useTerritoris() {
-  const [ts, setTs] = useState([])
+function useDebounced(value, ms = 250) {
+  const [v, setV] = useState(value)
   useEffect(() => {
-    api.get('/localitzacio/territoris/').then(setTs).catch(() => {})
-  }, [])
-  return ts
+    const t = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return v
 }
 
-function LocationCascade({ value, onChange }) {
-  const territoris = useTerritoris()
-  const [comarques, setComarques] = useState([])
-  const [municipis, setMunicipis] = useState([])
-
-  const territori = value?.territori || ''
-  const comarca = value?.comarca || ''
-
-  useEffect(() => {
-    if (!territori) {
-      setComarques([])
-      return
-    }
-    api
-      .get(`/localitzacio/comarques/?territori=${encodeURIComponent(territori)}`)
-      .then(setComarques)
-      .catch(() => setComarques([]))
-  }, [territori])
-
-  useEffect(() => {
-    if (!comarca) {
-      setMunicipis([])
-      return
-    }
-    api
-      .get(`/localitzacio/municipis/?comarca=${encodeURIComponent(comarca)}`)
-      .then(setMunicipis)
-      .catch(() => setMunicipis([]))
-  }, [comarca])
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      <Select
-        value={territori}
-        onChange={e =>
-          onChange({ territori: e.target.value, comarca: '', municipi_id: null })
-        }
-      >
-        <option value="">— Territori —</option>
-        {territoris.map(t => (
-          <option key={t.codi} value={t.codi}>
-            {t.nom}
-          </option>
-        ))}
-      </Select>
-      <Select
-        value={comarca}
-        onChange={e =>
-          onChange({ ...value, comarca: e.target.value, municipi_id: null })
-        }
-        disabled={!territori}
-      >
-        <option value="">— Comarca —</option>
-        {comarques.map(c => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </Select>
-      <Select
-        value={value?.municipi_id || ''}
-        onChange={e =>
-          onChange({ ...value, municipi_id: e.target.value || null })
-        }
-        disabled={!comarca}
-      >
-        <option value="">— Municipi —</option>
-        {municipis.map(m => (
-          <option key={m.pk} value={m.pk}>
-            {m.nom}
-          </option>
-        ))}
-      </Select>
-    </div>
-  )
-}
+// LocationCascade is shared with ArtistaEditPage (and anywhere else
+// staff needs to pin an ArtistaLocalitat). Kept in a separate module
+// so the ALT-manual special case only lives in one place.
+import LocationCascade from '../../components/staff/LocationCascade'
 
 function Row({ a, onApproved, onDiscarded }) {
   const [deezerId, setDeezerId] = useState(a.deezer_ids[0] || '')
@@ -133,7 +62,14 @@ function Row({ a, onApproved, onDiscarded }) {
     try {
       const body = {}
       if (deezerId) body.deezer_id = deezerId
-      if (loc.municipi_id) body.municipi_id = loc.municipi_id
+      if (loc.municipi_id) {
+        body.municipi_id = loc.municipi_id
+      } else if (loc.territori === 'ALT' && loc.manual) {
+        // Free-text place outside the curated Municipi list. The
+        // backend accepts `manual` as a shortcut that skips the
+        // Municipi lookup and stores on ArtistaLocalitat.localitat_manual.
+        body.manual = loc.manual
+      }
       await api.post(`/staff/pendents/${a.pk}/aprovar/`, body)
       onApproved(a.pk)
     } catch (e) {
@@ -249,19 +185,30 @@ export default function PendentsPage() {
   const [data, setData] = useState(null)
   const [page, setPage] = useState(1)
   const [error, setError] = useState(null)
+  const [q, setQ] = useState('')
+  const dq = useDebounced(q)
 
-  function load(p = page) {
+  function load(p = page, cerca = dq) {
     setData(null)
+    const params = new URLSearchParams({ page: p })
+    if (cerca) params.set('q', cerca)
     api
-      .get(`/staff/pendents/?page=${p}`)
+      .get(`/staff/pendents/?${params}`)
       .then(setData)
       .catch(e => setError(e.message))
   }
 
   useEffect(() => {
-    load(page)
+    load(page, dq)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
+  }, [page, dq])
+
+  // Resetting the page back to 1 every time the search changes keeps
+  // the results coherent — otherwise a search with few hits would land
+  // on an empty "page 3" view.
+  useEffect(() => {
+    setPage(1)
+  }, [dq])
 
   function onResolved(pk) {
     setData(d =>
@@ -277,6 +224,23 @@ export default function PendentsPage() {
           data ? `${data.total} pendents de revisió` : 'Carregant…'
         }
       />
+      <div className="flex flex-wrap gap-2 mb-3">
+        <Input
+          placeholder="Cerca per nom d'artista…"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          className="min-w-[260px]"
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ('')}
+            className="text-xs text-white/70 hover:text-white underline"
+          >
+            neteja
+          </button>
+        )}
+      </div>
       {error && <p className="text-sm text-red-300 mb-4">{error}</p>}
       <TableCard>
         <Table>

@@ -15,6 +15,7 @@ import ComptePage from './pages/ComptePage'
 import ComptePerfilPage from './pages/ComptePerfilPage'
 import ProposarArtistaPage from './pages/ProposarArtistaPage'
 import SolicitarGestioPage from './pages/SolicitarGestioPage'
+import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import AdminRoute from './components/AdminRoute'
 import StaffLayout from './components/StaffLayout'
 import StaffDashboardPage from './pages/staff/StaffDashboardPage'
@@ -95,6 +96,7 @@ function AppContent() {
         <Route path="/compte/perfil" element={<ComptePerfilPage />} />
         <Route path="/compte/artista/proposta" element={<ProposarArtistaPage />} />
         <Route path="/compte/artista/gestio" element={<SolicitarGestioPage />} />
+        <Route path="/spotify/callback" element={<SpotifyCallbackPage />} />
         {/* Staff panel. All /staff/* routes sit under a shared
             StaffLayout (dark sidebar) and require `is_staff`. As we
             port each Django staff view we'll add a nested route. */}

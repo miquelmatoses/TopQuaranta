@@ -50,14 +50,18 @@ def api_comarques(request: Request) -> Response:
 
 @api_view(["GET"])
 def api_municipis(request: Request) -> Response:
-    """List municipis for a comarca."""
+    """List municipis for a comarca.
+
+    Returns objects `[{pk, nom}, …]`. Callers that only need the name
+    (e.g. the public artist-filter dropdown) can map to `.nom`; the
+    staff pendents approval needs the pk so it doesn't have to do a
+    second lookup on submit.
+    """
     comarca = request.GET.get("comarca", "")
     if not comarca:
         return Response([])
     municipis = list(
-        Municipi.objects.filter(comarca=comarca)
-        .values_list("nom", flat=True)
-        .order_by("nom")
+        Municipi.objects.filter(comarca=comarca).values("pk", "nom").order_by("nom")
     )
     return Response(municipis)
 

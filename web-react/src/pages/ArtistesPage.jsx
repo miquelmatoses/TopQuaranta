@@ -209,8 +209,9 @@ export default function ArtistesPage() {
             className="px-3 py-1.5 bg-white/5 border border-white/15 rounded-md text-sm text-white focus:outline-none focus:border-tq-yellow disabled:opacity-40"
           >
             <option value="" className="text-tq-ink">Municipi: Tots</option>
+            {/* api returns [{pk, nom}] — filter uses name as value. */}
             {municipis.map(m => (
-              <option key={m} value={m} className="text-tq-ink">{m}</option>
+              <option key={m.pk} value={m.nom} className="text-tq-ink">{m.nom}</option>
             ))}
           </select>
         </div>

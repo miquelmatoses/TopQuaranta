@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { Btn, Input, PageHeader, Select, TableCard } from '../../components/staff/StaffTable'
+import LocationCascade from '../../components/staff/LocationCascade'
 
 export default function ArtistaEditPage() {
   const { pk } = useParams()
@@ -178,35 +179,29 @@ export default function ArtistaEditPage() {
             <h2 className="font-semibold">Localitats</h2>
             <Btn size="sm" onClick={addLoc}>+ Afegir</Btn>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {a.localitats.map((l, i) => (
-              <div key={i} className="flex gap-2 items-center">
-                <Input
-                  value={l.municipi_nom}
-                  placeholder="Nom municipi (informatiu)"
-                  onChange={e => updateLoc(i, { municipi_nom: e.target.value })}
-                  className="flex-1"
-                />
-                <Input
-                  value={l.municipi_id || ''}
-                  placeholder="pk"
-                  onChange={e => updateLoc(i, { municipi_id: e.target.value })}
-                  className="w-20"
-                  inputMode="numeric"
-                />
-                <Input
-                  value={l.manual || ''}
-                  placeholder="Manual"
-                  onChange={e => updateLoc(i, { manual: e.target.value })}
-                  className="flex-1"
-                />
+              <div key={i} className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <LocationCascade
+                    value={{
+                      territori: l.territori || '',
+                      comarca: l.comarca || '',
+                      municipi_id: l.municipi_id || null,
+                      municipi_nom: l.municipi_nom || '',
+                      manual: l.manual || '',
+                    }}
+                    onChange={next => updateLoc(i, next)}
+                  />
+                </div>
                 <Btn tone="danger" onClick={() => removeLoc(i)}>×</Btn>
               </div>
             ))}
             {a.localitats.length === 0 && <p className="text-xs opacity-60">Cap localitat.</p>}
             <p className="text-[11px] opacity-60 mt-1">
-              Municipi pk: cerca a <Link className="underline" to="/staff/artistes">llista d'artistes</Link> o
-              usa l'API <code>/api/v1/localitzacio/municipis/</code>. Si no en saps el pk, fes servir "Manual".
+              Tria territori → comarca → municipi. Per a llocs fora dels
+              Països Catalans escull "Altres" i escriu el nom de la
+              localitat a mà.
             </p>
           </div>
         </TableCard>

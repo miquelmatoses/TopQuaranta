@@ -184,6 +184,9 @@ def pendents_list(request: Request) -> Response:
         .annotate(nb_verif=F("nb_verif_main") + F("nb_verif_col"))
         .order_by("-nb_verif", "nom")
     )
+    cerca = (request.GET.get("q") or "").strip()
+    if cerca:
+        qs = qs.filter(nom__icontains=cerca)
     page, meta = _paginate(qs, request)
     rows = []
     for a in page.object_list:
@@ -204,8 +207,13 @@ def pendent_aprovar(request: Request, pk: int) -> Response:
     municipi_id = data.get("municipi_id")
     comarca = (data.get("comarca") or "").strip()
     localitat = (data.get("localitat") or "").strip()
+    # Explicit shortcut used by the React cascade when territori=ALT:
+    # there's no comarca/municipi then, just a free-text place name.
+    manual_loc = (data.get("manual") or "").strip()
 
-    cascade_selected = bool(municipi_id) or (bool(comarca) and bool(localitat))
+    cascade_selected = (
+        bool(municipi_id) or (bool(comarca) and bool(localitat)) or bool(manual_loc)
+    )
     has_existing_loc = artista.localitats.exists()
     if not cascade_selected and not has_existing_loc:
         return Response({"error": "Cal seleccionar un municipi"}, status=400)
@@ -259,6 +267,14 @@ def pendent_aprovar(request: Request, pk: int) -> Response:
                 ArtistaLocalitat.objects.create(artista=artista, municipi=municipi)
                 audit_loc = f"{municipi.nom}, {municipi.comarca}"
                 territori = municipi.territori_id
+            elif manual_loc:
+                ArtistaLocalitat.objects.create(
+                    artista=artista,
+                    municipi=None,
+                    localitat_manual=manual_loc,
+                )
+                audit_loc = f"{manual_loc} (manual)"
+                territori = "ALT"
             else:
                 try:
                     municipi = Municipi.objects.get(nom=localitat, comarca=comarca)

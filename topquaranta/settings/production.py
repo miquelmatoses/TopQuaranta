@@ -37,12 +37,14 @@ LASTFM_API_SECRET = config("LASTFM_API_SECRET", default="")
 # to sync the public top-40 + novetats playlists.
 SPOTIFY_CLIENT_ID = config("SPOTIFY_CLIENT_ID", default="")
 SPOTIFY_CLIENT_SECRET = config("SPOTIFY_CLIENT_SECRET", default="")
-# Loopback redirect — Spotify allows HTTP on 127.0.0.1. Admin does the
-# one-time OAuth dance via `autoritzar_spotify`; the code lands in the
-# browser URL and gets pasted back into the command. No callback
-# server needed in production.
+# OAuth callback URL. The React SPA serves a tiny page at
+# /spotify/callback that displays the `code` query param so the admin
+# can copy it back into the `autoritzar_spotify` command. The URL
+# must be registered exactly in the Spotify app dashboard's
+# "Redirect URIs" list.
 SPOTIFY_REDIRECT_URI = config(
-    "SPOTIFY_REDIRECT_URI", default="http://127.0.0.1:8888/callback"
+    "SPOTIFY_REDIRECT_URI",
+    default="https://www.topquaranta.cat/spotify/callback",
 )
 
 # No SMTP is configured on this server. mail_admins() calls would try
