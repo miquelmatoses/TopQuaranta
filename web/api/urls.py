@@ -21,6 +21,16 @@ urlpatterns = [
     # Authenticated user area
     path("compte/dashboard/", compte_views.dashboard, name="compte_dashboard"),
     path("compte/perfil/", compte_views.perfil, name="compte_perfil"),
+    path(
+        "compte/propostes/",
+        compte_views.proposta_crear,
+        name="compte_proposta_crear",
+    ),
+    path(
+        "compte/solicituds/",
+        compte_views.solicitud_crear,
+        name="compte_solicitud_crear",
+    ),
     # ── Staff (is_staff required) ──
     path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
     # Pendents

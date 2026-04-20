@@ -3,6 +3,9 @@
 GET   /api/v1/compte/dashboard/   — managed artists + proposals + stats
 GET   /api/v1/compte/perfil/      — current profile snapshot
 PATCH /api/v1/compte/perfil/      — update email / username / password
+POST  /api/v1/compte/propostes/   — submit a new-artist proposal
+POST  /api/v1/compte/solicituds/  — submit a management request for an
+                                    existing artist
 """
 
 from django.contrib.auth import update_session_auth_hash
@@ -10,12 +13,14 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from comptes.models import PropostaArtista, UserArtista, Usuari
+from comptes.models import HTTP_ONLY_URL, PropostaArtista, UserArtista, Usuari
+from music.models import Artista
 from ranking.models import RankingSetmanal
 
 
@@ -191,3 +196,164 @@ def perfil(request: Request) -> Response:
         )
 
     return Response(_profile_payload(user))
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Propostes d'artistes nous (user-submitted)
+# ─────────────────────────────────────────────────────────────────────────
+
+SOCIAL_FIELDS = [f for f, _ in Artista.SOCIAL_LINK_FIELDS]
+# Subset of SOCIAL_FIELDS that also exists on PropostaArtista. Myspace
+# lives on Artista only; skipping it here keeps setattr() safe.
+PROPOSTA_SOCIAL_FIELDS = [
+    "spotify_url",
+    "viasona_url",
+    "web_url",
+    "bandcamp_url",
+    "youtube_url",
+    "viquipedia_url",
+    "soundcloud_url",
+    "tiktok_url",
+    "facebook_url",
+]
+
+
+def _clean_url(raw: str) -> tuple[str, str | None]:
+    """Validate a user-submitted URL. Returns (value, error)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return "", None
+    try:
+        HTTP_ONLY_URL(raw)
+    except ValidationError:
+        return raw, "URL no vàlida (només http/https)."
+    return raw, None
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def proposta_crear(request: Request) -> Response:
+    """Create a PropostaArtista for the authenticated user.
+
+    Body:
+      nom            str, required
+      justificacio   str, required
+      <social>_url   optional URL fields (one per social network)
+      deezer_ids     optional list of ints / numeric strings
+      localitzacions optional list of {"municipi_id": int} or {"manual": str}
+    """
+    data = request.data or {}
+    errors: dict[str, str] = {}
+
+    nom = (data.get("nom") or "").strip()
+    if not nom:
+        errors["nom"] = "Obligatori."
+    elif len(nom) > 255:
+        errors["nom"] = "Massa llarg (màxim 255 caràcters)."
+
+    justificacio = (data.get("justificacio") or "").strip()
+    if not justificacio:
+        errors["justificacio"] = "Obligatòria."
+
+    socials: dict[str, str] = {}
+    for f in PROPOSTA_SOCIAL_FIELDS:
+        val, err = _clean_url(data.get(f, ""))
+        if err:
+            errors[f] = err
+        socials[f] = val
+
+    deezer_ids: list[int] = []
+    for raw in data.get("deezer_ids") or []:
+        try:
+            deezer_ids.append(int(raw))
+        except (TypeError, ValueError):
+            errors["deezer_ids"] = "Un dels IDs no és un número."
+
+    localitzacions: list[dict] = []
+    for loc in data.get("localitzacions") or []:
+        if not isinstance(loc, dict):
+            continue
+        if loc.get("municipi_id"):
+            try:
+                localitzacions.append({"municipi_id": int(loc["municipi_id"])})
+            except (TypeError, ValueError):
+                pass
+        elif loc.get("manual"):
+            manual = str(loc["manual"]).strip()
+            if manual:
+                localitzacions.append({"manual": manual})
+
+    if errors:
+        return Response({"errors": errors}, status=400)
+
+    p = PropostaArtista.objects.create(
+        usuari=request.user,
+        nom=nom,
+        justificacio=justificacio,
+        deezer_ids=deezer_ids,
+        localitzacions=localitzacions,
+        **socials,
+    )
+    return Response({"ok": True, "pk": p.pk, "estat": p.estat}, status=201)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Sol·licituds de gestió (UserArtista)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def solicitud_crear(request: Request) -> Response:
+    """Create a UserArtista request for the authenticated user.
+
+    Body:
+      artista_slug  str, required — must resolve to an aprovat=True artist
+      sollicitud_text  str, required — why you should manage this artist
+    """
+    data = request.data or {}
+    errors: dict[str, str] = {}
+
+    slug = (data.get("artista_slug") or "").strip()
+    text = (data.get("sollicitud_text") or "").strip()
+    if not slug:
+        errors["artista_slug"] = "Tria un artista."
+    if not text:
+        errors["sollicitud_text"] = "Cal una justificació."
+
+    if errors:
+        return Response({"errors": errors}, status=400)
+
+    try:
+        artista = Artista.objects.get(slug=slug, aprovat=True)
+    except Artista.DoesNotExist:
+        return Response(
+            {"errors": {"artista_slug": "Artista no trobat o no aprovat."}},
+            status=404,
+        )
+
+    # Deny duplicates: same user + same artist + still open.
+    existing = UserArtista.objects.filter(
+        usuari=request.user,
+        artista=artista,
+        estat__in=[UserArtista.ESTAT_PENDENT, UserArtista.ESTAT_APROVAT],
+    ).first()
+    if existing:
+        return Response(
+            {
+                "errors": {
+                    "artista_slug": (
+                        "Ja tens una sol·licitud activa per a aquest artista."
+                    )
+                }
+            },
+            status=400,
+        )
+
+    ua = UserArtista.objects.create(
+        usuari=request.user,
+        artista=artista,
+        sollicitud_text=text,
+        estat=UserArtista.ESTAT_PENDENT,
+    )
+    return Response({"ok": True, "pk": ua.pk, "estat": ua.estat}, status=201)

@@ -121,6 +121,15 @@ export default function ArtistaPage() {
               {key.replace(/_url$/, '').replace(/_/g, ' ')}
             </a>
           ))}
+          {/* CTA: request to manage this artist. Goes to /compte/artista/gestio
+              pre-filled. Private — still works for anonymous users because
+              AuthRoute on the target page will redirect to login. */}
+          <Link
+            to={`/compte/artista/gestio?artista=${data.slug}`}
+            className="ml-auto text-xs px-2.5 py-1 rounded-md bg-tq-ink text-tq-yellow font-semibold hover:bg-tq-ink/90"
+          >
+            Sóc aquest artista
+          </Link>
         </div>
         </div>
       </header>
