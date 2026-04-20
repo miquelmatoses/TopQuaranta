@@ -51,6 +51,11 @@ urlpatterns = [
     # Artistes
     path("staff/artistes/", staff_views.artistes_list, name="staff_artistes_list"),
     path(
+        "staff/artistes/search/",
+        staff_views.artistes_search,
+        name="staff_artistes_search",
+    ),
+    path(
         "staff/artistes/crear/",
         staff_views.artista_crear,
         name="staff_artista_crear",

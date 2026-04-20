@@ -19,6 +19,7 @@ import {
   THead,
   Tr,
 } from '../../components/staff/StaffTable'
+import ArtistaPicker from '../../components/staff/ArtistaPicker'
 
 export default function AlbumEditPage() {
   const { pk } = useParams()
@@ -27,6 +28,10 @@ export default function AlbumEditPage() {
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  // Default ON: when staff reassigns the album to a new artist the
+  // tracks that today point at the old artist should follow. Toggling
+  // off is rare but useful for compilations / mixed albums.
+  const [cascade, setCascade] = useState(true)
 
   useEffect(() => {
     api.get(`/staff/albums/${pk}/`).then(setA).catch(e => setErr(e.message))
@@ -47,6 +52,8 @@ export default function AlbumEditPage() {
         deezer_id: a.deezer_id,
         imatge_url: a.imatge_url,
         descartat: a.descartat,
+        artista_pk: a.artista?.pk,
+        cascade_cancons: cascade,
       })
       setA(out)
       setMsg('Desat.')
@@ -74,6 +81,26 @@ export default function AlbumEditPage() {
         <TableCard className="p-4">
           <h2 className="font-semibold mb-3">Metadades</h2>
           <div className="grid gap-3">
+            <div className="text-xs font-semibold">
+              Artista
+              <div className="mt-1 font-normal">
+                <ArtistaPicker
+                  value={a.artista?.pk ? a.artista : null}
+                  onChange={next => patch({ artista: next })}
+                />
+              </div>
+              {a.cancons?.length > 0 && (
+                <label className="mt-2 flex items-center gap-2 font-normal text-[11px] text-tq-ink/70">
+                  <input
+                    type="checkbox"
+                    checked={cascade}
+                    onChange={e => setCascade(e.target.checked)}
+                  />
+                  Reassignar també les cançons ({a.cancons.length}) que
+                  apunten a l'artista actual
+                </label>
+              )}
+            </div>
             <label className="text-xs font-semibold">Nom
               <Input value={a.nom} onChange={e => patch({ nom: e.target.value })} className="w-full mt-1 font-normal" />
             </label>

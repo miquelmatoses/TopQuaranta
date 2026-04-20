@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { Btn, Input, PageHeader, TableCard } from '../../components/staff/StaffTable'
+import ArtistaPicker from '../../components/staff/ArtistaPicker'
 
 export default function CancoEditPage() {
   const { pk } = useParams()
@@ -36,6 +37,8 @@ export default function CancoEditPage() {
         activa: c.activa,
         data_llancament: c.data_llancament,
         deezer_id: c.deezer_id,
+        // Empty string means "don't change" on the backend.
+        artista_pk: c.artista?.pk,
       })
       setC(out)
       setMsg('Desat.')
@@ -73,9 +76,19 @@ export default function CancoEditPage() {
           <label className="text-xs font-semibold">Nom
             <Input value={c.nom} onChange={e => patch({ nom: e.target.value })} className="w-full mt-1 font-normal" />
           </label>
-          <label className="text-xs font-semibold">Artista
-            <div className="mt-1 font-normal text-sm">{c.artista.nom} (pk={c.artista.pk})</div>
-          </label>
+          <div className="text-xs font-semibold">
+            Artista
+            <div className="mt-1 font-normal">
+              <ArtistaPicker
+                value={c.artista?.pk ? c.artista : null}
+                onChange={next => patch({ artista: next })}
+              />
+            </div>
+            <p className="mt-1 text-[11px] font-normal text-tq-ink/60">
+              Si l'artista correcte no existeix, clica "+ Crear" per afegir-lo
+              primer, després torna aquí i tria'l de la llista.
+            </p>
+          </div>
           {c.album && (
             <label className="text-xs font-semibold">Àlbum
               <div className="mt-1 font-normal text-sm">

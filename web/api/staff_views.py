@@ -359,6 +359,35 @@ def artistes_list(request: Request) -> Response:
     return Response({"results": [_artista_card(a) for a in page.object_list], **meta})
 
 
+@api_view(["GET"])
+@permission_classes([IsStaff])
+def artistes_search(request: Request) -> Response:
+    """Light-weight lookup for the reassignment typeaheads.
+
+    Returns up to 10 candidate artists (aprovats=True by default, but
+    we surface pending/descartats too when the search is explicit, so
+    staff can pick a pending artist to land a mis-assigned track on).
+    """
+    q = (request.GET.get("q") or "").strip()
+    if len(q) < 2:
+        return Response({"results": []})
+    qs = Artista.objects.filter(nom__icontains=q).order_by("-aprovat", "nom")[:10]
+    return Response(
+        {
+            "results": [
+                {
+                    "pk": a.pk,
+                    "nom": a.nom,
+                    "slug": a.slug,
+                    "aprovat": a.aprovat,
+                    "pendent_review": a.pendent_review,
+                }
+                for a in qs
+            ]
+        }
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsStaff])
 def artista_crear(request: Request) -> Response:
@@ -536,7 +565,26 @@ def cancons_list(request: Request) -> Response:
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
-    qs = qs.order_by("-ml_confianca", "nom")
+    # Sorting: `sort` accepts the same allow-list as the Django staff
+    # view used to, prefixed with `-` for descending. Default keeps the
+    # ML triage order so new users land on the highest-confidence work.
+    sort_map = {
+        "ml_confianca": "ml_confianca",
+        "nom": "nom",
+        "data_llancament": "data_llancament",
+        "artista": "artista__nom",
+        "album": "album__nom",
+        "isrc": "isrc",
+    }
+    sort_raw = (request.GET.get("sort") or "-ml_confianca").strip()
+    direction = ""
+    key = sort_raw
+    if sort_raw.startswith("-"):
+        direction = "-"
+        key = sort_raw[1:]
+    if key not in sort_map:
+        direction, key = "-", "ml_confianca"
+    qs = qs.order_by(f"{direction}{sort_map[key]}", "nom")
     page, meta = _paginate(qs, request)
     return Response({"results": [_canco_row(c) for c in page.object_list], **meta})
 
@@ -630,6 +678,26 @@ def canco_detail(request: Request, pk: int) -> Response:
                     return Response({"error": "Deezer ID invàlid."}, status=400)
             else:
                 canco.deezer_id = None
+        # Reassign to a different artist (when staff spots a mis-attribution).
+        if "artista_pk" in data:
+            raw = data.get("artista_pk")
+            if raw in (None, ""):
+                return Response({"error": "L'artista és obligatori."}, status=400)
+            try:
+                new_artista = Artista.objects.get(pk=int(raw))
+            except (ValueError, Artista.DoesNotExist):
+                return Response({"error": "Artista no trobat."}, status=404)
+            if canco.artista_id != new_artista.pk:
+                old_nom = canco.artista.nom if canco.artista else ""
+                canco.artista = new_artista
+                log_staff_action(
+                    request,
+                    "canco_edit",
+                    target=canco,
+                    field="artista",
+                    old_artista=old_nom,
+                    new_artista=new_artista.nom,
+                )
         canco.save()
         log_staff_action(request, "canco_edit", target=canco)
     return Response(_canco_row(canco))
@@ -717,6 +785,38 @@ def album_detail(request: Request, pk: int) -> Response:
             album.imatge_url = (data.get("imatge_url") or "").strip()
         if "descartat" in data:
             album.descartat = bool(data["descartat"])
+
+        # Reassign to a different artist. `cascade_cancons` (default True)
+        # also re-points every Canco whose current artista_id matches the
+        # album's old artista_id — the common case after a mis-split. Set
+        # to False to leave the tracks' attributions intact (rare, but
+        # useful when an album mixes tracks from several artists).
+        if "artista_pk" in data:
+            raw = data.get("artista_pk")
+            if raw in (None, ""):
+                return Response({"error": "L'artista és obligatori."}, status=400)
+            try:
+                new_artista = Artista.objects.get(pk=int(raw))
+            except (ValueError, Artista.DoesNotExist):
+                return Response({"error": "Artista no trobat."}, status=404)
+            if album.artista_id != new_artista.pk:
+                old_id = album.artista_id
+                old_nom = album.artista.nom if album.artista else ""
+                album.artista = new_artista
+                cancons_changed = 0
+                if data.get("cascade_cancons", True):
+                    cancons_changed = Canco.objects.filter(
+                        album=album, artista_id=old_id
+                    ).update(artista=new_artista)
+                log_staff_action(
+                    request,
+                    "album_edit",
+                    target=album,
+                    field="artista",
+                    old_artista=old_nom,
+                    new_artista=new_artista.nom,
+                    cancons_reassignades=cancons_changed,
+                )
         album.save()
         log_staff_action(request, "album_edit", target=album)
         if album.descartat and not was_descartat:

@@ -37,6 +37,7 @@ export default function StaffCanconsPage() {
   const [verificada, setVerificada] = useState('0')
   const [mlClasse, setMlClasse] = useState('')
   const [whisper, setWhisper] = useState('')
+  const [sort, setSort] = useState('-ml_confianca')
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [sel, setSel] = useState(new Set())
@@ -45,11 +46,13 @@ export default function StaffCanconsPage() {
   const [msg, setMsg] = useState('')
 
   function load() {
-    const params = new URLSearchParams({ q, verificada, ml_classe: mlClasse, whisper, page })
+    const params = new URLSearchParams({
+      q, verificada, ml_classe: mlClasse, whisper, sort, page,
+    })
     api.get(`/staff/cancons/?${params}`).then(setData).catch(() => setData(null))
   }
 
-  useEffect(load, [q, verificada, mlClasse, whisper, page])
+  useEffect(load, [q, verificada, mlClasse, whisper, sort, page])
 
   const allSelected = data?.results?.length && data.results.every(r => sel.has(r.pk))
 
@@ -116,6 +119,16 @@ export default function StaffCanconsPage() {
           <option value="ca">ca</option>
           <option value="no_ca">no ca</option>
           <option value="pendent">pendent</option>
+        </Select>
+        <Select value={sort} onChange={e => { setPage(1); setSort(e.target.value) }}>
+          <option value="-ml_confianca">Ordre: ML conf. ↓</option>
+          <option value="ml_confianca">Ordre: ML conf. ↑</option>
+          <option value="-data_llancament">Ordre: Data ↓ (més recents)</option>
+          <option value="data_llancament">Ordre: Data ↑ (més antigues)</option>
+          <option value="nom">Ordre: Nom A-Z</option>
+          <option value="-nom">Ordre: Nom Z-A</option>
+          <option value="artista">Ordre: Artista A-Z</option>
+          <option value="-artista">Ordre: Artista Z-A</option>
         </Select>
       </div>
 
