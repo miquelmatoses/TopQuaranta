@@ -62,7 +62,7 @@ export default function StaffDashboardPage() {
   return (
     <section>
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Panel intern</h1>
+        <h1 className="text-2xl font-bold text-white">Panell intern</h1>
         <p className="text-sm text-white/70">
           Eines d'administració TopQuaranta
           {counts && (

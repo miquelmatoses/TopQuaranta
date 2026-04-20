@@ -21,8 +21,110 @@ urlpatterns = [
     # Authenticated user area
     path("compte/dashboard/", compte_views.dashboard, name="compte_dashboard"),
     path("compte/perfil/", compte_views.perfil, name="compte_perfil"),
-    # Staff (is_staff required)
+    # ── Staff (is_staff required) ──
     path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
+    # Pendents
+    path("staff/pendents/", staff_views.pendents_list, name="staff_pendents_list"),
+    path(
+        "staff/pendents/<int:pk>/aprovar/",
+        staff_views.pendent_aprovar,
+        name="staff_pendent_aprovar",
+    ),
+    path(
+        "staff/pendents/<int:pk>/descartar/",
+        staff_views.pendent_descartar,
+        name="staff_pendent_descartar",
+    ),
+    # Artistes
+    path("staff/artistes/", staff_views.artistes_list, name="staff_artistes_list"),
+    path(
+        "staff/artistes/crear/",
+        staff_views.artista_crear,
+        name="staff_artista_crear",
+    ),
+    path(
+        "staff/artistes/<int:pk>/",
+        staff_views.artista_detail,
+        name="staff_artista_detail",
+    ),
+    # Cançons
+    path("staff/cancons/", staff_views.cancons_list, name="staff_cancons_list"),
+    path("staff/cancons/accio/", staff_views.cancons_accio, name="staff_cancons_accio"),
+    path(
+        "staff/cancons/<int:pk>/",
+        staff_views.canco_detail,
+        name="staff_canco_detail",
+    ),
+    # Albums
+    path(
+        "staff/albums/<int:pk>/",
+        staff_views.album_detail,
+        name="staff_album_detail",
+    ),
+    # Ranking provisional
+    path("staff/ranking/", staff_views.ranking_list, name="staff_ranking_list"),
+    path("staff/ranking/accio/", staff_views.ranking_accio, name="staff_ranking_accio"),
+    # Propostes
+    path("staff/propostes/", staff_views.propostes_list, name="staff_propostes_list"),
+    path(
+        "staff/propostes/<int:pk>/",
+        staff_views.proposta_detail,
+        name="staff_proposta_detail",
+    ),
+    path(
+        "staff/propostes/<int:pk>/aprovar/",
+        staff_views.proposta_aprovar,
+        name="staff_proposta_aprovar",
+    ),
+    path(
+        "staff/propostes/<int:pk>/rebutjar/",
+        staff_views.proposta_rebutjar,
+        name="staff_proposta_rebutjar",
+    ),
+    # Sol·licituds de gestió
+    path(
+        "staff/solicituds/", staff_views.solicituds_list, name="staff_solicituds_list"
+    ),
+    path(
+        "staff/solicituds/<int:pk>/toggle/",
+        staff_views.solicitud_toggle,
+        name="staff_solicitud_toggle",
+    ),
+    path(
+        "staff/solicituds/<int:pk>/rebutjar/",
+        staff_views.solicitud_rebutjar,
+        name="staff_solicitud_rebutjar",
+    ),
+    # Senyal diari
+    path("staff/senyal/", staff_views.senyal_list, name="staff_senyal_list"),
+    path(
+        "staff/senyal/<int:canco_pk>/acceptar-correccio/",
+        staff_views.senyal_acceptar_correccio,
+        name="staff_senyal_acceptar_correccio",
+    ),
+    # Historial
+    path("staff/historial/", staff_views.historial_list, name="staff_historial_list"),
+    # Configuració
+    path("staff/configuracio/", staff_views.configuracio, name="staff_configuracio"),
+    # Auditoria
+    path("staff/auditlog/", staff_views.auditlog, name="staff_auditlog"),
+    # Usuaris
+    path("staff/usuaris/", staff_views.usuaris_list, name="staff_usuaris_list"),
+    path(
+        "staff/usuaris/<int:pk>/",
+        staff_views.usuari_detail,
+        name="staff_usuari_detail",
+    ),
+    path(
+        "staff/usuaris/<int:pk>/toggle-actiu/",
+        staff_views.usuari_toggle_actiu,
+        name="staff_usuari_toggle_actiu",
+    ),
+    path(
+        "staff/usuaris/<int:pk>/reset-2fa/",
+        staff_views.usuari_reset_2fa,
+        name="staff_usuari_reset_2fa",
+    ),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes

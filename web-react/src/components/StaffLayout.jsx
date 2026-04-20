@@ -48,7 +48,7 @@ export default function StaffLayout({ children }) {
       >
         <div className="px-4 py-3 border-b border-white/5 hidden md:block">
           <p className="text-[10px] uppercase tracking-widest text-white/50">
-            Panel intern
+            Panell intern
           </p>
           <p className="text-sm font-semibold">Staff</p>
         </div>

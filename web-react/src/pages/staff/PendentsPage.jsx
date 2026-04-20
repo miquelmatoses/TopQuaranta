@@ -1,0 +1,270 @@
+/**
+ * PendentsPage — /staff/pendents
+ *
+ * The busiest staff flow: auto-discovered artists awaiting approval
+ * or discard. Each row exposes inline fields for Deezer ID + location
+ * (municipi cascade: territori → comarca → municipi) and two action
+ * buttons. Approvals require either a new location input or an
+ * existing one; discards delete the row when there are no verified
+ * tracks, otherwise just lower pendent_review.
+ *
+ * The location dropdowns are populated lazily via the existing
+ * /api/v1/localitzacio/* endpoints so we don't over-fetch on mount.
+ */
+import { useEffect, useMemo, useState } from 'react'
+import { api } from '../../lib/api'
+import {
+  Btn,
+  EmptyState,
+  Input,
+  PageHeader,
+  Pagination,
+  Pill,
+  Select,
+  Table,
+  TableCard,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from '../../components/staff/StaffTable'
+
+function useTerritoris() {
+  const [ts, setTs] = useState([])
+  useEffect(() => {
+    api.get('/localitzacio/territoris/').then(setTs).catch(() => {})
+  }, [])
+  return ts
+}
+
+function LocationCascade({ value, onChange }) {
+  const territoris = useTerritoris()
+  const [comarques, setComarques] = useState([])
+  const [municipis, setMunicipis] = useState([])
+
+  const territori = value?.territori || ''
+  const comarca = value?.comarca || ''
+
+  useEffect(() => {
+    if (!territori) {
+      setComarques([])
+      return
+    }
+    api
+      .get(`/localitzacio/comarques/?territori=${encodeURIComponent(territori)}`)
+      .then(setComarques)
+      .catch(() => setComarques([]))
+  }, [territori])
+
+  useEffect(() => {
+    if (!comarca) {
+      setMunicipis([])
+      return
+    }
+    api
+      .get(`/localitzacio/municipis/?comarca=${encodeURIComponent(comarca)}`)
+      .then(setMunicipis)
+      .catch(() => setMunicipis([]))
+  }, [comarca])
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      <Select
+        value={territori}
+        onChange={e =>
+          onChange({ territori: e.target.value, comarca: '', municipi_id: null })
+        }
+      >
+        <option value="">— Territori —</option>
+        {territoris.map(t => (
+          <option key={t.codi} value={t.codi}>
+            {t.nom}
+          </option>
+        ))}
+      </Select>
+      <Select
+        value={comarca}
+        onChange={e =>
+          onChange({ ...value, comarca: e.target.value, municipi_id: null })
+        }
+        disabled={!territori}
+      >
+        <option value="">— Comarca —</option>
+        {comarques.map(c => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </Select>
+      <Select
+        value={value?.municipi_id || ''}
+        onChange={e =>
+          onChange({ ...value, municipi_id: e.target.value || null })
+        }
+        disabled={!comarca}
+      >
+        <option value="">— Municipi —</option>
+        {municipis.map(m => (
+          <option key={m.pk} value={m.pk}>
+            {m.nom}
+          </option>
+        ))}
+      </Select>
+    </div>
+  )
+}
+
+function Row({ a, onApproved, onDiscarded }) {
+  const [deezerId, setDeezerId] = useState(a.deezer_ids[0] || '')
+  const [loc, setLoc] = useState({
+    territori: a.localitat?.territori || '',
+    comarca: a.localitat?.comarca || '',
+    municipi_id: a.localitat?.municipi_id || null,
+  })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const hasExistingLoc = !!a.localitat
+
+  async function aprovar() {
+    setBusy(true)
+    setErr('')
+    try {
+      const body = {}
+      if (deezerId) body.deezer_id = deezerId
+      if (loc.municipi_id) body.municipi_id = loc.municipi_id
+      await api.post(`/staff/pendents/${a.pk}/aprovar/`, body)
+      onApproved(a.pk)
+    } catch (e) {
+      setErr(e.payload?.error || e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function descartar() {
+    if (!confirm(`Descartar ${a.nom}?`)) return
+    setBusy(true)
+    setErr('')
+    try {
+      await api.post(`/staff/pendents/${a.pk}/descartar/`)
+      onDiscarded(a.pk)
+    } catch (e) {
+      setErr(e.payload?.error || e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Tr>
+      <Td>
+        <div className="font-semibold">{a.nom}</div>
+        <div className="text-xs opacity-60">
+          {a.nb_verif} cançons verificades · {a.font_descoberta}
+        </div>
+        {hasExistingLoc && (
+          <div className="text-[11px] text-tq-ink/60 mt-0.5">
+            Ja té localitat:{' '}
+            {a.localitat.municipi_nom ||
+              `${a.localitat.manual} (manual)`}
+          </div>
+        )}
+      </Td>
+      <Td>
+        <Input
+          type="text"
+          inputMode="numeric"
+          placeholder="Deezer ID"
+          value={deezerId}
+          onChange={e => setDeezerId(e.target.value)}
+          className="w-32"
+        />
+      </Td>
+      <Td>
+        {!hasExistingLoc && <LocationCascade value={loc} onChange={setLoc} />}
+        {hasExistingLoc && (
+          <span className="text-xs opacity-60">(no cal tornar-la a indicar)</span>
+        )}
+      </Td>
+      <Td className="text-right">
+        {err && <div className="text-[11px] text-red-600 mb-1">{err}</div>}
+        <div className="flex gap-1 justify-end">
+          <Btn onClick={aprovar} disabled={busy}>
+            Aprovar
+          </Btn>
+          <Btn tone="danger" onClick={descartar} disabled={busy}>
+            Descartar
+          </Btn>
+        </div>
+      </Td>
+    </Tr>
+  )
+}
+
+export default function PendentsPage() {
+  const [data, setData] = useState(null)
+  const [page, setPage] = useState(1)
+  const [error, setError] = useState(null)
+
+  function load(p = page) {
+    setData(null)
+    api
+      .get(`/staff/pendents/?page=${p}`)
+      .then(setData)
+      .catch(e => setError(e.message))
+  }
+
+  useEffect(() => {
+    load(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
+
+  function onResolved(pk) {
+    setData(d =>
+      d ? { ...d, results: d.results.filter(r => r.pk !== pk) } : d,
+    )
+  }
+
+  return (
+    <section>
+      <PageHeader
+        title="Artistes pendents"
+        subtitle={
+          data ? `${data.total} pendents de revisió` : 'Carregant…'
+        }
+      />
+      {error && <p className="text-sm text-red-300 mb-4">{error}</p>}
+      <TableCard>
+        <Table>
+          <THead>
+            <tr>
+              <Th>Artista</Th>
+              <Th>Deezer</Th>
+              <Th>Localitat</Th>
+              <Th></Th>
+            </tr>
+          </THead>
+          <tbody>
+            {data?.results?.length === 0 && (
+              <tr>
+                <td colSpan={4}>
+                  <EmptyState>Cap artista pendent. 🎉</EmptyState>
+                </td>
+              </tr>
+            )}
+            {data?.results?.map(a => (
+              <Row
+                key={a.pk}
+                a={a}
+                onApproved={onResolved}
+                onDiscarded={onResolved}
+              />
+            ))}
+          </tbody>
+        </Table>
+        <Pagination meta={data} onPage={setPage} />
+      </TableCard>
+    </section>
+  )
+}
