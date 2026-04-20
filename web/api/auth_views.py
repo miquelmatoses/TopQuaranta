@@ -13,12 +13,22 @@ POST /api/v1/auth/login/   — {email, password} → session cookie + user
 POST /api/v1/auth/logout/  — clears the session
 """
 
+import logging
+
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 def _profile(request_or_user) -> dict:
@@ -109,3 +119,98 @@ def logout_view(request: Request) -> Response:
     """Clear the session cookie."""
     logout(request)
     return Response({"ok": True})
+
+
+def _send_verification_email(request, user) -> None:
+    """Send an email with an activation link.
+
+    Mirrors comptes.views._send_verification_email so the activation
+    URL (handled by Django at /compte/activar/<uid>/<token>/) keeps
+    working for both the Django form and this API.
+    """
+    # Late import to avoid a circular apps-not-loaded issue at startup.
+    from comptes.tokens import email_verification_token
+
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = email_verification_token.make_token(user)
+    link = request.build_absolute_uri(f"/compte/activar/{uid}/{token}/")
+    subject = "Activa el teu compte TopQuaranta"
+    body = (
+        "Hola,\n\n"
+        "Activa el teu compte fent clic a l'enllaç:\n"
+        f"{link}\n\n"
+        "Si no has estat tu, pots ignorar aquest correu.\n\n"
+        "TopQuaranta"
+    )
+    try:
+        send_mail(subject, body, None, [user.email])
+    except Exception:
+        logger.exception("Failed to send verification email to %s", user.email)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_view(request: Request) -> Response:
+    """Create an inactive user and send an activation email.
+
+    Body: {email, password1, password2}.
+
+    Anti-enumeration (S5): whether the address is new or already
+    registered we return the same 201 "check your email" payload.
+    If the email is taken we silently skip user creation so an
+    attacker can't use this endpoint to map existing accounts. Field
+    validation errors (password mismatch, invalid email, weak
+    password) still surface as 400 so legitimate users see what's
+    wrong with the form itself.
+    """
+    from comptes.models import Usuari
+
+    data = request.data or {}
+    email = (data.get("email") or "").strip().lower()
+    p1 = data.get("password1") or ""
+    p2 = data.get("password2") or ""
+
+    errors: dict[str, str] = {}
+    if not email:
+        errors["email"] = "Introdueix un correu."
+    else:
+        try:
+            validate_email(email)
+        except ValidationError:
+            errors["email"] = "Correu no vàlid."
+
+    if not p1 or not p2:
+        errors["password2"] = "Has d'omplir les dues contrasenyes."
+    elif p1 != p2:
+        errors["password2"] = "Les contrasenyes no coincideixen."
+    else:
+        try:
+            validate_password(p1)
+        except ValidationError as exc:
+            errors["password1"] = "; ".join(exc.messages)
+
+    if errors:
+        return Response({"errors": errors}, status=400)
+
+    if not Usuari.objects.filter(email__iexact=email).exists():
+        user = Usuari.objects.create(
+            email=email,
+            username=email,
+            is_active=False,
+        )
+        user.set_password(p1)
+        user.save()
+        _send_verification_email(request, user)
+    else:
+        logger.info("Registration for existing email ignored: %s", email)
+
+    return Response(
+        {
+            "ok": True,
+            "message": (
+                "T'hem enviat un correu amb l'enllaç d'activació. "
+                "Revisa la safata d'entrada (i la de spam) per a acabar."
+            ),
+        },
+        status=201,
+    )

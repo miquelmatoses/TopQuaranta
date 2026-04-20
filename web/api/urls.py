@@ -18,6 +18,7 @@ urlpatterns = [
     path("auth/me/", auth_views.me, name="auth_me"),
     path("auth/login/", auth_views.login_view, name="auth_login"),
     path("auth/logout/", auth_views.logout_view, name="auth_logout"),
+    path("auth/register/", auth_views.register_view, name="auth_register"),
     # Authenticated user area
     path("compte/dashboard/", compte_views.dashboard, name="compte_dashboard"),
     path("compte/perfil/", compte_views.perfil, name="compte_perfil"),
