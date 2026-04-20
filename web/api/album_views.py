@@ -40,6 +40,7 @@ def album_detail(request: Request, slug: str) -> Response:
 
     return Response(
         {
+            "pk": album.pk,
             "slug": album.slug,
             "nom": album.nom,
             "data_llancament": (

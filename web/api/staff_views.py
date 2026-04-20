@@ -562,6 +562,15 @@ def cancons_list(request: Request) -> Response:
         qs = qs.filter(whisper_processat_at__isnull=False).exclude(whisper_lang="ca")
     elif whisper == "pendent":
         qs = qs.filter(whisper_processat_at__isnull=True)
+    # "Sense Deezer" — a verified track without a deezer_id is the
+    # legacy/mis-ingest case worth auditing. `no` surfaces only those,
+    # `si` only the tracks that do have an ID (rarely needed, handy
+    # for QA).
+    deezer = request.GET.get("deezer", "")
+    if deezer == "no":
+        qs = qs.filter(deezer_id__isnull=True)
+    elif deezer == "si":
+        qs = qs.filter(deezer_id__isnull=False)
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))

@@ -41,6 +41,7 @@ export default function StaffCanconsPage() {
   const [verificada, setVerificada] = useState(urlParams.get('verificada') || '0')
   const [mlClasse, setMlClasse] = useState(urlParams.get('ml_classe') || '')
   const [whisper, setWhisper] = useState(urlParams.get('whisper') || '')
+  const [deezer, setDeezer] = useState(urlParams.get('deezer') || '')
   const [sort, setSort] = useState(urlParams.get('sort') || '-ml_confianca')
   const artistaPk = urlParams.get('artista_pk') || ''
   const [page, setPage] = useState(1)
@@ -52,13 +53,13 @@ export default function StaffCanconsPage() {
 
   function load() {
     const params = new URLSearchParams({
-      q, verificada, ml_classe: mlClasse, whisper, sort, page,
+      q, verificada, ml_classe: mlClasse, whisper, deezer, sort, page,
     })
     if (artistaPk) params.set('artista_pk', artistaPk)
     api.get(`/staff/cancons/?${params}`).then(setData).catch(() => setData(null))
   }
 
-  useEffect(load, [q, verificada, mlClasse, whisper, sort, page, artistaPk])
+  useEffect(load, [q, verificada, mlClasse, whisper, deezer, sort, page, artistaPk])
 
   const allSelected = data?.results?.length && data.results.every(r => sel.has(r.pk))
 
@@ -148,6 +149,11 @@ export default function StaffCanconsPage() {
           <option value="ca">ca</option>
           <option value="no_ca">no ca</option>
           <option value="pendent">pendent</option>
+        </Select>
+        <Select value={deezer} onChange={e => { setPage(1); setDeezer(e.target.value) }}>
+          <option value="">Deezer: qualsevol</option>
+          <option value="no">Sense Deezer</option>
+          <option value="si">Amb Deezer</option>
         </Select>
         <Select value={sort} onChange={e => { setPage(1); setSort(e.target.value) }}>
           <option value="-ml_confianca">Ordre: ML conf. ↓</option>
