@@ -723,3 +723,75 @@ class StaffAuditLog(models.Model):
     def __str__(self) -> str:
         who = self.actor.email if self.actor_id else "(deleted user)"
         return f"[{self.created_at:%Y-%m-%d %H:%M}] {who} · {self.action} · {self.target_label}"
+
+
+class SpotifyAuth(models.Model):
+    """Singleton row storing the admin's Spotify OAuth refresh token.
+
+    Populated once by the `autoritzar_spotify` management command after
+    the admin walks through Spotify's Authorization Code flow. The
+    refresh token is long-lived (no expiry unless the user revokes it
+    from Spotify's dashboard) so the daily cron can keep rolling over
+    access tokens without any human intervention.
+
+    Single-row invariant enforced by always using pk=1.
+    """
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1)
+    refresh_token = models.TextField()
+    scope = models.CharField(max_length=500, blank=True)
+    spotify_user_id = models.CharField(max_length=100)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Autorització Spotify"
+        verbose_name_plural = "Autoritzacions Spotify"
+
+    def save(self, *args, **kwargs):
+        # Enforce singleton even if someone tries to create a second row.
+        self.id = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls) -> "SpotifyAuth | None":
+        return cls.objects.filter(pk=1).first()
+
+    def __str__(self) -> str:
+        return f"Spotify auth for @{self.spotify_user_id}"
+
+
+class SpotifyPlaylist(models.Model):
+    """A Spotify playlist we sync from the data.
+
+    `spotify_playlist_id` is pre-set by `configurar_spotify_playlists`
+    (the admin passes the existing Spotify playlist IDs they already
+    own). The daily sync command replaces the tracklist in place so
+    subscribers keep the same URL and follower count.
+    """
+
+    KIND_TOP = "top"
+    KIND_NOVETATS = "novetats"
+    KIND_CHOICES = [
+        (KIND_TOP, "Top provisional"),
+        (KIND_NOVETATS, "Novetats"),
+    ]
+
+    codi = models.SlugField(max_length=50, unique=True)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    # Only used when kind=top. Empty string for kind=novetats.
+    territori = models.CharField(max_length=10, blank=True)
+    spotify_playlist_id = models.CharField(max_length=100, blank=True)
+
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    last_sync_ok = models.BooleanField(default=True)
+    last_sync_msg = models.TextField(blank=True)
+    last_n_tracks = models.IntegerField(default=0)
+    last_n_matched = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["codi"]
+        verbose_name = "Playlist Spotify"
+        verbose_name_plural = "Playlists Spotify"
+
+    def __str__(self) -> str:
+        return f"{self.codi} ({self.kind}:{self.territori or '-'})"

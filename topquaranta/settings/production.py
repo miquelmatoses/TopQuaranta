@@ -31,9 +31,19 @@ CSRF_COOKIE_SECURE = True
 LASTFM_API_KEY = config("LASTFM_API_KEY")
 LASTFM_API_SECRET = config("LASTFM_API_SECRET", default="")
 
-# Spotify (fallback — blocked since 2024, client retained for reference)
+# Spotify. The client-credentials ingesta flow has been blocked since
+# 2024, but playlist management via user OAuth still works fine (no
+# Premium required). Used by the `actualitzar_playlists_spotify` cron
+# to sync the public top-40 + novetats playlists.
 SPOTIFY_CLIENT_ID = config("SPOTIFY_CLIENT_ID", default="")
 SPOTIFY_CLIENT_SECRET = config("SPOTIFY_CLIENT_SECRET", default="")
+# Loopback redirect — Spotify allows HTTP on 127.0.0.1. Admin does the
+# one-time OAuth dance via `autoritzar_spotify`; the code lands in the
+# browser URL and gets pasted back into the command. No callback
+# server needed in production.
+SPOTIFY_REDIRECT_URI = config(
+    "SPOTIFY_REDIRECT_URI", default="http://127.0.0.1:8888/callback"
+)
 
 # No SMTP is configured on this server. mail_admins() calls would try
 # localhost:25 and raise ConnectionRefusedError. Route admin notifications

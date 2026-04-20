@@ -203,3 +203,119 @@ def _parse_release_date(date_str: str) -> date | None:
     except (ValueError, TypeError):
         return None
     return None
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# User OAuth client — for playlist management (weekly sync cron).
+#
+# The class above uses Client Credentials and can't touch user-scoped
+# endpoints like /me/playlists or /playlists/<id>/tracks. This one reads
+# the refresh_token stored in `music.SpotifyAuth` and manages a short-
+# lived access token on top so we can mutate user-owned playlists.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class UserSpotifyClient:
+    """OAuth refresh-token-backed client for playlist management.
+
+    `SpotifyAuth` is populated once by the `autoritzar_spotify` mgmt
+    command. On every call we lazily refresh the access token; on 401
+    mid-flight we refresh once and retry; on 429 we honour Retry-After.
+    """
+
+    OAUTH_SCOPES = "playlist-modify-private playlist-modify-public"
+    # Spotify allows up to 100 URIs per add/replace call.
+    PLAYLIST_TRACK_BATCH = 100
+
+    def __init__(self, auth) -> None:
+        # Imported lazily to avoid a models-not-ready issue at module load.
+        self._auth = auth
+        self._access_token: str | None = None
+
+    # ── Auth ────────────────────────────────────────────────────────────
+    def _refresh_access_token(self) -> None:
+        response = requests.post(
+            TOKEN_URL,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": self._auth.refresh_token,
+            },
+            auth=(settings.SPOTIFY_CLIENT_ID, settings.SPOTIFY_CLIENT_SECRET),
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        self._access_token = payload["access_token"]
+        # Spotify sometimes rotates the refresh_token. Persist the new
+        # one when it arrives so we don't drift out of sync.
+        new_refresh = payload.get("refresh_token")
+        if new_refresh and new_refresh != self._auth.refresh_token:
+            self._auth.refresh_token = new_refresh
+            self._auth.save(update_fields=["refresh_token"])
+
+    def _headers(self) -> dict:
+        if not self._access_token:
+            self._refresh_access_token()
+        return {"Authorization": f"Bearer {self._access_token}"}
+
+    def _request(self, method: str, path: str, **kwargs) -> requests.Response:
+        url = f"{API_BASE}{path}"
+        for attempt in range(MAX_RETRIES):
+            time.sleep(RATE_LIMIT_SLEEP)
+            resp = requests.request(
+                method, url, headers=self._headers(), timeout=20, **kwargs
+            )
+            if resp.status_code == 401:
+                logger.info("Spotify token expired mid-flight; refreshing")
+                self._refresh_access_token()
+                continue
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", 2))
+                logger.warning("Spotify rate limited; sleeping %ds", wait)
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp
+        # Attempts exhausted.
+        raise RuntimeError(
+            f"Spotify {method} {path} failed after {MAX_RETRIES} attempts"
+        )
+
+    # ── Operations we use ──────────────────────────────────────────────
+    def me(self) -> dict:
+        return self._request("GET", "/me").json()
+
+    def search_isrc(self, isrc: str) -> str | None:
+        """Return a Spotify track URI matching the ISRC, or None."""
+        if not isrc:
+            return None
+        resp = self._request(
+            "GET",
+            "/search",
+            params={"q": f"isrc:{isrc}", "type": "track", "limit": 1},
+        )
+        items = resp.json().get("tracks", {}).get("items", [])
+        return items[0]["uri"] if items else None
+
+    def replace_playlist_tracks(self, playlist_id: str, uris: list[str]) -> None:
+        """Replace the whole playlist in place.
+
+        Spotify's PUT /playlists/<id>/tracks caps at 100 URIs per call.
+        For larger lists we PUT the first 100 (which also truncates
+        anything beyond) then POST the rest in 100-URI chunks. We
+        never exceed 100 in practice (top-40 + novetats ≲ 100), but
+        the chunking keeps the helper general.
+        """
+        first = uris[: self.PLAYLIST_TRACK_BATCH]
+        self._request(
+            "PUT",
+            f"/playlists/{playlist_id}/tracks",
+            json={"uris": first},
+        )
+        for i in range(self.PLAYLIST_TRACK_BATCH, len(uris), self.PLAYLIST_TRACK_BATCH):
+            chunk = uris[i : i + self.PLAYLIST_TRACK_BATCH]
+            self._request(
+                "POST",
+                f"/playlists/{playlist_id}/tracks",
+                json={"uris": chunk},
+            )

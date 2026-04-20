@@ -36,6 +36,12 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Daily provisional ranking — 07:00
 0 7 * * *   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
 
+# Spotify playlist sync — 07:15. Runs right after the provisional
+# ranking settles so the 4 territorial playlists + Novetats reflect
+# the freshest data. Silently skips tracks that don't resolve via
+# ISRC; mismatches counted in SpotifyPlaylist.last_n_*.
+15 7 * * *  topquaranta   /home/topquaranta/bin/tq-run actualitzar_playlists_spotify >> /var/log/topquaranta/playlists.log 2>&1
+
 # Weekly official ranking — Saturday 08:00
 0 8 * * 6   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking >> /var/log/topquaranta/ranking.log 2>&1
 
