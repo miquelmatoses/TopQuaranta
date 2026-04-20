@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
+import { cancoUrl } from '../lib/urls'
 
 function formatDuration(ms) {
   if (!ms) return '—'
@@ -18,7 +19,9 @@ function formatDuration(ms) {
 }
 
 export default function AlbumPage() {
-  const { slug } = useParams()
+  // Matched route can be `/album/:slug` or `/artista/:artistaSlug/:albumSlug`.
+  const params = useParams()
+  const slug = params.albumSlug || params.slug
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -100,7 +103,11 @@ export default function AlbumPage() {
             {data.cancons.map((c, i) => (
               <li key={c.pk}>
                 <Link
-                  to={`/canco/${c.pk}`}
+                  to={cancoUrl({
+                    cancoSlug: c.slug,
+                    artistaSlug: data.artista?.slug,
+                    albumSlug: data.slug,
+                  })}
                   className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-tq-yellow-soft -mx-2 px-2 rounded"
                 >
                   <span className="w-8 text-right text-sm font-semibold text-gray-400 tabular-nums shrink-0">

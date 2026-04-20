@@ -17,6 +17,7 @@ import {
   Tooltip, XAxis, YAxis, Legend,
 } from 'recharts'
 import { api } from '../lib/api'
+import { albumUrl } from '../lib/urls'
 
 const TERRITORI_COLORS = {
   PPCC: '#427c42', CAT: '#c99b0c', VAL: '#cf3339', BAL: '#0047ba',
@@ -39,7 +40,12 @@ function formatDuration(ms) {
 }
 
 export default function CancoPage() {
-  const { pk } = useParams()
+  // React Router hands us whichever params the matched route had:
+  //   /canco/:slug                                      → slug
+  //   /artista/:artistaSlug/:albumSlug/:cancoSlug       → cancoSlug
+  // The leaf slug is the authoritative lookup in either case.
+  const params = useParams()
+  const slug = params.cancoSlug || params.slug
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -47,11 +53,11 @@ export default function CancoPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    api.get(`/cancons/${pk}/`)
+    api.get(`/cancons/${slug}/`)
       .then(setData)
       .catch(e => setError(e.status === 404 ? 'Cançó no trobada.' : (e.message || 'Error')))
       .finally(() => setLoading(false))
-  }, [pk])
+  }, [slug])
 
   if (loading) {
     return (
@@ -112,7 +118,7 @@ export default function CancoPage() {
           )}
           {data.album && (
             <p className="text-sm text-gray-500 mt-1">
-              Àlbum: <Link to={`/album/${data.album.slug}`} className="underline">{data.album.nom}</Link>
+              Àlbum: <Link to={albumUrl({ albumSlug: data.album.slug, artistaSlug: data.artista?.slug })} className="underline">{data.album.nom}</Link>
             </p>
           )}
           <p className="text-xs text-gray-500 mt-2 space-x-3">

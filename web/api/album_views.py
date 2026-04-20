@@ -58,6 +58,7 @@ def album_detail(request: Request, slug: str) -> Response:
             "cancons": [
                 {
                     "pk": c.pk,
+                    "slug": c.slug,
                     "nom": c.nom,
                     "isrc": c.isrc or None,
                     "durada_ms": c.durada_ms,

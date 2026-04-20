@@ -15,12 +15,12 @@ from ranking.models import RankingProvisional, RankingSetmanal
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def canco_detail(request: Request, pk: int) -> Response:
+def canco_detail(request: Request, slug: str) -> Response:
     canco = get_object_or_404(
         Canco.objects.select_related("artista", "album").prefetch_related(
             "artistes_col"
         ),
-        pk=pk,
+        slug=slug,
     )
 
     # Weekly ranking history per territory. Shape designed to feed a
@@ -59,6 +59,7 @@ def canco_detail(request: Request, pk: int) -> Response:
     return Response(
         {
             "pk": canco.pk,
+            "slug": canco.slug,
             "nom": canco.nom,
             "isrc": canco.isrc or None,
             "durada_ms": canco.durada_ms,

@@ -174,6 +174,7 @@ def artista_detail(request: Request, slug: str) -> Response:
         "aprovat": artista.aprovat,
         "genere": artista.genere or "",
         "percentatge_femeni": artista.percentatge_femeni or None,
+        "imatge_url": _latest_cover(artista),
         "territoris": _territoris_summary(artista),
         "localitats": [
             {
@@ -216,7 +217,10 @@ def artista_detail(request: Request, slug: str) -> Response:
                 "territori": e.territori,
                 "posicio": e.posicio,
                 "canco_nom": e.canco.nom if e.canco else e.canco_nom_snapshot,
-                "canco_id": e.canco_id,
+                "canco_slug": e.canco.slug if e.canco else None,
+                "canco_album_slug": (
+                    e.canco.album.slug if e.canco and e.canco.album else None
+                ),
             }
         )
     historial_out = [

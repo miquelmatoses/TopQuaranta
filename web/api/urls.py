@@ -24,7 +24,7 @@ urlpatterns = [
     # Albums
     path("albums/<slug:slug>/", album_views.album_detail, name="album_detail"),
     # Cançons
-    path("cancons/<int:pk>/", canco_views.canco_detail, name="canco_detail"),
+    path("cancons/<slug:slug>/", canco_views.canco_detail, name="canco_detail"),
     # Mapa (existing)
     path("mapa/artistes/", views.mapa_artistes, name="mapa_artistes"),
     # Location API — reference data, no auth required

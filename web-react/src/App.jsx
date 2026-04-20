@@ -56,8 +56,14 @@ function AppContent() {
         <Route path="/top" element={<TopPage />} />
         <Route path="/artistes" element={<ArtistesPage />} />
         <Route path="/artista/:slug" element={<ArtistaPage />} />
+        {/* Canonical flat routes (short, stable). */}
         <Route path="/album/:slug" element={<AlbumPage />} />
-        <Route path="/canco/:pk" element={<CancoPage />} />
+        <Route path="/canco/:slug" element={<CancoPage />} />
+        {/* Nested SEO routes. React Router picks the most specific
+            match; both shapes end up rendering the same page, which
+            fetches by the leaf slug alone. */}
+        <Route path="/artista/:artistaSlug/:albumSlug/:cancoSlug" element={<CancoPage />} />
+        <Route path="/artista/:artistaSlug/:albumSlug" element={<AlbumPage />} />
         <Route path="/mapa" element={<MapaPage />} />
         <Route path="/compte/accedir" element={<AuthPage />} />
         <Route path="/compte/callback" element={<AuthCallbackPage />} />

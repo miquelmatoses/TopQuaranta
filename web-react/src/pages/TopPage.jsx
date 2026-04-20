@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
+import { cancoUrl, artistaUrl } from '../lib/urls'
 
 const TERRITORIS = [
   { codi: 'PPCC', nom: 'General' },
@@ -98,7 +99,11 @@ export default function TopPage() {
           {data.entries.map(e => (
             <li key={e.posicio}>
               <Link
-                to={e.canco.id ? `/canco/${e.canco.id}` : '#'}
+                to={cancoUrl({
+                  cancoSlug: e.canco.slug,
+                  artistaSlug: e.artista?.slug,
+                  albumSlug: e.album?.slug,
+                })}
                 className="flex items-center gap-3 bg-white text-tq-ink rounded-md px-3 py-2 shadow-sm hover:shadow-md transition-shadow"
               >
                 <span className="w-8 text-center text-xl font-bold font-display">

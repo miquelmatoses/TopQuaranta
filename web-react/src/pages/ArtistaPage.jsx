@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
+import { albumUrl, cancoUrl } from '../lib/urls'
 
 const TERRITORI_NOM = {
   CAT: 'Catalunya', VAL: 'País Valencià', BAL: 'Illes Balears',
@@ -69,7 +70,19 @@ export default function ArtistaPage() {
   return (
     <article className="max-w-4xl mx-auto text-white space-y-6">
       {/* Header card */}
-      <header className="bg-white text-tq-ink rounded-lg p-6 shadow-md">
+      <header className="bg-white text-tq-ink rounded-lg p-6 shadow-md flex flex-col sm:flex-row gap-6">
+        {data.imatge_url ? (
+          <img
+            src={data.imatge_url}
+            alt=""
+            className="w-full sm:w-48 h-48 object-cover rounded-md shrink-0"
+          />
+        ) : (
+          <div className="w-full sm:w-48 h-48 bg-gray-100 rounded-md shrink-0 flex items-center justify-center font-display font-bold text-5xl text-gray-400">
+            {data.nom?.[0] || '?'}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
         <h1 className="text-3xl font-bold font-display">{data.nom}</h1>
         <div className="flex flex-wrap gap-2 mt-2 text-sm text-gray-600">
           {data.territoris?.length > 0 && (
@@ -88,6 +101,7 @@ export default function ArtistaPage() {
 
         {/* Links row */}
         <div className="flex flex-wrap gap-3 mt-4 text-sm">
+
           {data.deezer_ids?.[0] && (
             <a
               href={`https://www.deezer.com/artist/${data.deezer_ids[0]}`}
@@ -108,6 +122,7 @@ export default function ArtistaPage() {
             </a>
           ))}
         </div>
+        </div>
       </header>
 
       {/* Ranking history */}
@@ -124,7 +139,11 @@ export default function ArtistaPage() {
                   {week.entries.map((e, i) => (
                     <li key={`${week.setmana}-${e.territori}-${i}`}>
                       <Link
-                        to={e.canco_id ? `/canco/${e.canco_id}` : '#'}
+                        to={cancoUrl({
+                          cancoSlug: e.canco_slug,
+                          artistaSlug: data.slug,
+                          albumSlug: e.canco_album_slug,
+                        })}
                         className="inline-flex items-center gap-2 px-2 py-1 bg-tq-yellow-soft text-tq-ink text-xs rounded-sm hover:bg-tq-yellow"
                         title={e.canco_nom}
                       >
@@ -148,7 +167,10 @@ export default function ArtistaPage() {
           <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {data.discografia.map(a => (
               <li key={a.slug}>
-                <Link to={`/album/${a.slug}`} className="block">
+                <Link
+                  to={albumUrl({ albumSlug: a.slug, artistaSlug: data.slug })}
+                  className="block"
+                >
                   {a.imatge_url ? (
                     <img
                       src={a.imatge_url}

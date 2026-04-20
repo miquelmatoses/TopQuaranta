@@ -454,6 +454,11 @@ class Canco(models.Model):
         help_text="Collaborating artists. Track appears in their territories too.",
     )
     nom = models.CharField(max_length=500)
+    # URL slug for SEO-friendly public URLs. Globally unique; generated
+    # in save() from `nom` with a numeric suffix when collisions happen.
+    # Prefixed by artist slug gives the SPA `/artista/<a>/<album>/<canco>`
+    # style nesting, but the authoritative lookup is this slug alone.
+    slug = models.SlugField(max_length=560, unique=True, blank=True)
     lastfm_nom = models.CharField(
         max_length=500,
         blank=True,
@@ -523,6 +528,24 @@ class Canco(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nom} — {self.artista.nom}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.slug:
+            # Base: "<artist>-<track>" — gives search engines both
+            # keywords on the URL. Fall back to "canco-<pk>" if name
+            # slugifies empty (unusual but possible with all-accent
+            # titles after ASCII folding fails).
+            artist_bit = slugify(self.artista.nom) if self.artista_id else ""
+            track_bit = slugify(self.nom) or f"canco-{self.pk or 'nova'}"
+            base = f"{artist_bit}-{track_bit}".strip("-") if artist_bit else track_bit
+            base = base[:550]  # leave headroom for the "-N" suffix
+            slug = base
+            n = 1
+            while Canco.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                n += 1
+                slug = f"{base}-{n}"
+            self.slug = slug
+        super().save(*args, **kwargs)
 
     @property
     def lastfm_lookup_nom(self) -> str:
