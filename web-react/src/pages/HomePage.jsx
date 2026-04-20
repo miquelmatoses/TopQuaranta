@@ -1,11 +1,16 @@
 /**
  * HomePage — all-yellow territory selector.
  *
- * Mirrors cercol's home pattern: full-colour canvas, directly actionable.
- * No hero text. A wide "General" card up top (PPCC), then a grid of
- * territory cards (CAT / VAL / BAL / CNO / AND / FRA / ALG / CAR / ALT)
- * each linking to /top?t=<code>. Each card is a white surface with
- * the territory's SVG mark + name.
+ * Layout: featured wide "General" card on top, then a responsive grid
+ * of square territory cards below (logo on top, name below, both
+ * centred). The whole selector is vertically centred in the viewport.
+ *
+ * Hover pattern (same as cercol's instrument cards): the whole card
+ * flips to ink bg with yellow foreground.
+ *
+ * Visible territories: PPCC (General), CAT, VAL, BAL, AND, CNO, FRA,
+ * ALG. Hidden: CAR (not viable) and ALT (reachable via the others'
+ * fallback).
  */
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
@@ -14,40 +19,40 @@ const TERRITORIS_GRID = [
   { codi: 'CAT', nom: 'Catalunya' },
   { codi: 'VAL', nom: 'País Valencià' },
   { codi: 'BAL', nom: 'Illes Balears' },
-  { codi: 'CNO', nom: 'Catalunya Nord' },
   { codi: 'AND', nom: 'Andorra' },
-  { codi: 'FRA', nom: 'Sud de França' },
+  { codi: 'CNO', nom: 'Catalunya del Nord' },
+  { codi: 'FRA', nom: 'Franja de Ponent' },
   { codi: 'ALG', nom: "L'Alguer" },
-  { codi: 'CAR', nom: 'Carxe' },
-  { codi: 'ALT', nom: 'Altres' },
 ]
 
-function TerritoriCard({ codi, nom, featured }) {
-  const iconSize = featured ? 'h-24 w-24' : 'h-12 w-12'
-  const nameSize = featured ? 'text-2xl' : 'text-base'
+function TerritoriCard({ codi, nom, featured = false }) {
+  const sizing = featured
+    ? 'p-8 md:p-10 gap-4 md:flex-row md:items-center md:gap-8'
+    : 'p-5 aspect-square gap-3'
+
+  const iconSize = featured ? 'h-20 w-20 md:h-28 md:w-28' : 'h-14 w-14'
+  const textSize = featured ? 'text-2xl md:text-3xl' : 'text-sm md:text-base'
+
   return (
     <Link
       to={`/top?t=${codi.toLowerCase()}`}
       className={[
-        'bg-white text-tq-ink rounded-lg shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5',
-        'flex items-center gap-4 p-5',
-        featured ? 'md:p-7' : '',
+        'group flex flex-col items-center justify-center text-center',
+        'bg-white text-tq-ink rounded-lg shadow-md',
+        'transition-colors duration-150',
+        'hover:bg-tq-ink hover:text-tq-yellow',
+        sizing,
       ].join(' ')}
     >
       <img
         src={`/static/mm-design/icons/territories/territory-${codi.toLowerCase()}.svg`}
         alt=""
-        className={`${iconSize} shrink-0`}
+        className={`${iconSize} shrink-0 transition-[filter] duration-150 group-hover:invert`}
         aria-hidden="true"
       />
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-          Top {featured ? 'general' : ''}
-        </p>
-        <h2 className={`${nameSize} font-bold font-display leading-tight mt-0.5`}>
-          {nom}
-        </h2>
-      </div>
+      <h2 className={`${textSize} font-bold font-display leading-tight`}>
+        {nom}
+      </h2>
     </Link>
   )
 }
@@ -59,15 +64,14 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
-      {/* Featured — General (PPCC) */}
-      <TerritoriCard codi="PPCC" nom="General" featured />
-
-      {/* Grid of the rest */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {TERRITORIS_GRID.map(t => (
-          <TerritoriCard key={t.codi} codi={t.codi} nom={t.nom} />
-        ))}
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center">
+      <div className="w-full max-w-5xl space-y-4">
+        <TerritoriCard codi="PPCC" nom="General" featured />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {TERRITORIS_GRID.map(t => (
+            <TerritoriCard key={t.codi} codi={t.codi} nom={t.nom} />
+          ))}
+        </div>
       </div>
     </div>
   )

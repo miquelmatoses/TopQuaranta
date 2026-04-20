@@ -13,9 +13,11 @@ const TERRITORIS = [
   { codi: 'CAT',  nom: 'Catalunya' },
   { codi: 'VAL',  nom: 'País Valencià' },
   { codi: 'BAL',  nom: 'Illes Balears' },
-  { codi: 'CNO',  nom: 'Catalunya Nord' },
   { codi: 'AND',  nom: 'Andorra' },
+  { codi: 'CNO',  nom: 'Catalunya del Nord' },
+  { codi: 'FRA',  nom: 'Franja de Ponent' },
   { codi: 'ALG',  nom: "L'Alguer" },
+  { codi: 'ALT',  nom: 'Altres' },
 ]
 const TERRITORI_NOM = Object.fromEntries(TERRITORIS.map(t => [t.codi, t.nom]))
 
@@ -58,8 +60,13 @@ export default function TopPage() {
 
       <header className="mb-4">
         <h1 className="text-3xl font-bold">
-          Top {TERRITORI_NOM[territori] || territori}
+          Top {TERRITORI_NOM[data?.territori || territori] || territori}
         </h1>
+        {data?.fallback_from && (
+          <p className="text-xs text-tq-yellow mt-1">
+            {TERRITORI_NOM[data.fallback_from]} encara no té prou dades per a un top propi — mostrem el top «Altres».
+          </p>
+        )}
         {data?.setmana && (
           <p className="text-xs text-tq-ink-muted mt-1">
             Setmana del {data.setmana}

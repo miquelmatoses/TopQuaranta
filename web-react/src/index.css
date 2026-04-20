@@ -21,14 +21,6 @@
   --radius-lg: 0.75rem;
 }
 
-html {
-  /* Scale the whole typographic system down — cercol feels compact
-     because 1rem is 15px there, not 16px. Everything (Tailwind
-     utilities, mm-design spacing, our own tokens) rides on this
-     base so the whole chrome shrinks proportionally. */
-  font-size: 93.75%;
-}
-
 html, body {
   background: var(--color-tq-ink);
   color: #ffffff;

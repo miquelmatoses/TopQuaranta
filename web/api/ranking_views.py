@@ -13,8 +13,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from music.constants import MAX_POSICIONS_TOP, TERRITORIS_VALIDS
+from music.constants import MAX_POSICIONS_TOP, TERRITORI_NOMS
 from ranking.models import RankingProvisional, RankingSetmanal
+
+# Territories the public API accepts — the five ranking-eligible plus
+# the smaller ones that fall back to ALT (AND, CNO, FRA, ALG). Caller
+# can pass any of these; the fallback logic below redirects empty ones.
+API_TERRITORIS = tuple(TERRITORI_NOMS.keys())
 
 
 def _serialize_entry(entry, is_provisional: bool) -> dict:
@@ -68,9 +73,9 @@ def ranking(request: Request) -> Response:
       - setmana:   YYYY-MM-DD, Monday of the ISO week (optional)
     """
     territori = (request.GET.get("territori") or "").strip().upper()
-    if territori not in TERRITORIS_VALIDS:
+    if territori not in API_TERRITORIS:
         return Response(
-            {"error": f"Invalid territori. Must be one of {list(TERRITORIS_VALIDS)}."},
+            {"error": f"Invalid territori. Must be one of {list(API_TERRITORIS)}."},
             status=400,
         )
 
@@ -84,21 +89,32 @@ def ranking(request: Request) -> Response:
                 {"error": "Invalid setmana format. Expected YYYY-MM-DD."}, status=400
             )
 
-    qs = RankingSetmanal.objects.select_related(
-        "canco", "canco__artista", "canco__album"
-    ).filter(territori=territori)
+    # Small territories (AND, CNO, FRA, ALG) fold their tracks into ALT
+    # when they don't reach the 20-track threshold, so if the caller
+    # asked for one of those and we have nothing stored, we redirect to
+    # ALT for the same week and tell the client via `fallback_from`.
+    FALLBACK_TERRITORIS = {"AND", "CNO", "FRA", "ALG", "CAR"}
 
-    if setmana is not None:
-        qs = qs.filter(setmana=setmana)
-    else:
-        latest_week = (
-            RankingSetmanal.objects.filter(territori=territori)
+    def _latest_week(t: str):
+        return (
+            RankingSetmanal.objects.filter(territori=t)
             .order_by("-setmana")
             .values_list("setmana", flat=True)
             .first()
         )
-        if latest_week is None:
-            # Fall back to provisional if the territory has no official week yet.
+
+    fallback_from = None
+    actual_territori = territori
+
+    if setmana is None:
+        setmana = _latest_week(territori)
+        if setmana is None and territori in FALLBACK_TERRITORIS:
+            setmana = _latest_week("ALT")
+            if setmana is not None:
+                fallback_from = territori
+                actual_territori = "ALT"
+        if setmana is None:
+            # Fall back to provisional for the originally-requested territory.
             prov = list(
                 RankingProvisional.objects.select_related(
                     "canco", "canco__artista", "canco__album"
@@ -109,19 +125,41 @@ def ranking(request: Request) -> Response:
             return Response(
                 {
                     "territori": territori,
+                    "fallback_from": None,
                     "setmana": None,
                     "es_provisional": True,
                     "data_calcul": prov[0].data_calcul.isoformat() if prov else None,
                     "entries": [_serialize_entry(e, is_provisional=True) for e in prov],
                 }
             )
-        qs = qs.filter(setmana=latest_week)
-        setmana = latest_week
 
-    entries = list(qs.order_by("posicio")[:MAX_POSICIONS_TOP])
+    entries = list(
+        RankingSetmanal.objects.select_related(
+            "canco", "canco__artista", "canco__album"
+        )
+        .filter(territori=actual_territori, setmana=setmana)
+        .order_by("posicio")[:MAX_POSICIONS_TOP]
+    )
+
+    # If the caller pinned a specific setmana and the small-territory
+    # row came up empty, try ALT for the same week.
+    if not entries and territori in FALLBACK_TERRITORIS and fallback_from is None:
+        alt_entries = list(
+            RankingSetmanal.objects.select_related(
+                "canco", "canco__artista", "canco__album"
+            )
+            .filter(territori="ALT", setmana=setmana)
+            .order_by("posicio")[:MAX_POSICIONS_TOP]
+        )
+        if alt_entries:
+            fallback_from = territori
+            actual_territori = "ALT"
+            entries = alt_entries
+
     return Response(
         {
-            "territori": territori,
+            "territori": actual_territori,
+            "fallback_from": fallback_from,
             "setmana": setmana.isoformat() if setmana else None,
             "es_provisional": False,
             "data_calcul": None,
