@@ -99,6 +99,12 @@ export default function StaffDashboardPage() {
           count={c.solicituds_gestio_obertes}
         />
         <Tile
+          to="/staff/feedback"
+          title="Feedback d'usuaris"
+          desc="Correccions i errors reportats des de les pàgines públiques."
+          count={c.feedback_obert}
+        />
+        <Tile
           to="/staff/cancons"
           title="Cançons"
           desc="Cançons no verificades a revisar."

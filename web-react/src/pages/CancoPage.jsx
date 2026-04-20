@@ -18,6 +18,7 @@ import {
 } from 'recharts'
 import { api } from '../lib/api'
 import { albumUrl } from '../lib/urls'
+import { useFeedbackTarget } from '../context/FeedbackContext'
 
 const TERRITORI_COLORS = {
   PPCC: '#427c42', CAT: '#c99b0c', VAL: '#cf3339', BAL: '#0047ba',
@@ -58,6 +59,12 @@ export default function CancoPage() {
       .catch(e => setError(e.status === 404 ? 'Cançó no trobada.' : (e.message || 'Error')))
       .finally(() => setLoading(false))
   }, [slug])
+
+  useFeedbackTarget(
+    data
+      ? { targetType: 'canco', targetPk: data.pk, targetSlug: data.slug, targetLabel: data.nom }
+      : null,
+  )
 
   if (loading) {
     return (

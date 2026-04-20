@@ -12,7 +12,9 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import TopQuarantaLogo from './TopQuarantaLogo'
 import AccountButton from './AccountButton'
+import FeedbackButton from './FeedbackButton'
 import { useAuth } from '../context/AuthContext'
+import { FeedbackProvider, useFeedbackContext } from '../context/FeedbackContext'
 
 function Hamburger({ open }) {
   return open ? (
@@ -32,7 +34,48 @@ function Hamburger({ open }) {
   )
 }
 
+function FooterLine() {
+  const { target } = useFeedbackContext()
+  return (
+    <footer className="px-6 lg:px-12 py-6 text-xs opacity-60 flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span>Open source</span>
+      <span>·</span>
+      <a
+        href="https://github.com/miquelmatoses/TopQuaranta"
+        target="_blank"
+        rel="noopener"
+        className="underline hover:opacity-100"
+      >
+        GitHub
+      </a>
+      <span>·</span>
+      <Link to="/privacitat" className="underline hover:opacity-100">
+        Privacitat
+      </Link>
+      {target && (
+        <>
+          <span>·</span>
+          <FeedbackButton
+            targetType={target.targetType}
+            targetPk={target.targetPk}
+            targetSlug={target.targetSlug}
+            targetLabel={target.targetLabel}
+          />
+        </>
+      )}
+    </footer>
+  )
+}
+
 export default function Layout({ children }) {
+  return (
+    <FeedbackProvider>
+      <LayoutInner>{children}</LayoutInner>
+    </FeedbackProvider>
+  )
+}
+
+function LayoutInner({ children }) {
   const { profile } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -107,23 +150,7 @@ export default function Layout({ children }) {
       </main>
 
       {/* ── Inline footer — single line, body colour context ── */}
-      <footer className="px-6 lg:px-12 py-6 text-xs opacity-60">
-        <p>
-          Open source ·{' '}
-          <a
-            href="https://github.com/miquelmatoses/TopQuaranta"
-            target="_blank"
-            rel="noopener"
-            className="underline hover:opacity-100"
-          >
-            GitHub
-          </a>
-          {' '}·{' '}
-          <Link to="/privacitat" className="underline hover:opacity-100">
-            Privacitat
-          </Link>
-        </p>
-      </footer>
+      <FooterLine />
     </>
   )
 }

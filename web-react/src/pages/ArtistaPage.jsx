@@ -13,6 +13,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { albumUrl, cancoUrl } from '../lib/urls'
+import FeedbackButton from '../components/FeedbackButton'
+import { useFeedbackTarget } from '../context/FeedbackContext'
 
 const TERRITORI_NOM = {
   CAT: 'Catalunya', VAL: 'País Valencià', BAL: 'Illes Balears',
@@ -35,6 +37,15 @@ export default function ArtistaPage() {
       .catch(e => setError(e.status === 404 ? 'Artista no trobat.' : (e.message || 'Error')))
       .finally(() => setLoading(false))
   }, [slug])
+
+  // Publish the page target so the shared footer "Corregir" button
+  // addresses this artist. Must run unconditionally before any early
+  // returns so the hook call order stays stable across renders.
+  useFeedbackTarget(
+    data
+      ? { targetType: 'artista', targetPk: data.pk, targetSlug: data.slug, targetLabel: data.nom }
+      : null,
+  )
 
   if (loading) {
     return (

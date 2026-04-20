@@ -20,6 +20,7 @@ const SECTIONS = [
   { to: '/staff/ranking',    label: 'Ranking prov.' },
   { to: '/staff/propostes',  label: 'Propostes'    },
   { to: '/staff/solicituds', label: 'Sol·licituds' },
+  { to: '/staff/feedback',   label: 'Feedback'     },
   { to: '/staff/senyal',     label: 'Senyal'       },
   { to: '/staff/historial',  label: 'Historial'    },
   { to: '/staff/configuracio', label: 'Configuració' },

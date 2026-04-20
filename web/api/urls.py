@@ -31,6 +31,8 @@ urlpatterns = [
         compte_views.solicitud_crear,
         name="compte_solicitud_crear",
     ),
+    # Public feedback (authenticated, any user)
+    path("feedback/", compte_views.feedback_crear, name="feedback_crear"),
     # ── Staff (is_staff required) ──
     path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
     # Pendents
@@ -119,6 +121,17 @@ urlpatterns = [
     path("staff/configuracio/", staff_views.configuracio, name="staff_configuracio"),
     # Auditoria
     path("staff/auditlog/", staff_views.auditlog, name="staff_auditlog"),
+    # Feedback (user-filed corrections)
+    path(
+        "staff/feedback/",
+        staff_views.feedback_list,
+        name="staff_feedback_list",
+    ),
+    path(
+        "staff/feedback/<int:pk>/resolve/",
+        staff_views.feedback_resolve,
+        name="staff_feedback_resolve",
+    ),
     # Usuaris
     path("staff/usuaris/", staff_views.usuaris_list, name="staff_usuaris_list"),
     path(

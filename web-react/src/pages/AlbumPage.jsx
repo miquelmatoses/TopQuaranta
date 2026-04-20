@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { cancoUrl } from '../lib/urls'
+import { useFeedbackTarget } from '../context/FeedbackContext'
 
 function formatDuration(ms) {
   if (!ms) return '—'
@@ -34,6 +35,12 @@ export default function AlbumPage() {
       .catch(e => setError(e.status === 404 ? 'Àlbum no trobat.' : (e.message || 'Error')))
       .finally(() => setLoading(false))
   }, [slug])
+
+  useFeedbackTarget(
+    data
+      ? { targetType: 'album', targetPk: data.pk, targetSlug: data.slug, targetLabel: data.nom }
+      : null,
+  )
 
   if (loading) {
     return (

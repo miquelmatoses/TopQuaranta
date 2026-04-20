@@ -149,3 +149,70 @@ class PropostaArtista(models.Model):
             except (TypeError, ValueError):
                 continue
         return out
+
+
+class Feedback(models.Model):
+    """User-submitted correction / error report for a public page.
+
+    Any authenticated user can file one from a `/artista/`, `/album/`
+    or `/canco/` page when they spot something wrong. Staff reviews
+    them at /staff/feedback/ and either applies the fix via the normal
+    edit flow and marks the entry resolved, or rejects it with a note.
+
+    Anonymous visitors hitting the "Corregir" button are bounced to
+    registration first — so `usuari` is non-null.
+    """
+
+    TARGET_ARTISTA = "artista"
+    TARGET_ALBUM = "album"
+    TARGET_CANCO = "canco"
+    TARGET_ALTRES = "altres"
+    TARGET_CHOICES = [
+        (TARGET_ARTISTA, "Artista"),
+        (TARGET_ALBUM, "Àlbum"),
+        (TARGET_CANCO, "Cançó"),
+        (TARGET_ALTRES, "Altres"),
+    ]
+
+    usuari = models.ForeignKey(
+        Usuari,
+        on_delete=models.CASCADE,
+        related_name="feedbacks",
+    )
+    # Context of the page the user was on when they reported.
+    url = models.CharField(max_length=500)
+    target_type = models.CharField(
+        max_length=10, choices=TARGET_CHOICES, default=TARGET_ALTRES
+    )
+    target_pk = models.BigIntegerField(null=True, blank=True)
+    target_slug = models.CharField(max_length=550, blank=True)
+    # Snapshot of the target's display name — so the staff list remains
+    # meaningful even if the target is later renamed or deleted.
+    target_label = models.CharField(max_length=500, blank=True)
+
+    missatge = models.TextField()
+
+    resolt = models.BooleanField(default=False)
+    notes_staff = models.TextField(blank=True)
+    resolt_at = models.DateTimeField(null=True, blank=True)
+    resolt_per = models.ForeignKey(
+        Usuari,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="feedbacks_resolts",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Feedback d'usuari"
+        verbose_name_plural = "Feedback d'usuaris"
+        indexes = [
+            models.Index(fields=["resolt", "-created_at"]),
+            models.Index(fields=["target_type", "target_pk"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.usuari} · {self.target_type}:{self.target_label or self.target_slug}"

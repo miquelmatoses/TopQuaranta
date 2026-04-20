@@ -34,7 +34,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from comptes.models import PropostaArtista, UserArtista
+from comptes.models import Feedback, PropostaArtista, UserArtista
 from music.audit import log_staff_action
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS, TERRITORI_NOMS
 from music.ml import recalcular_ml_si_cal
@@ -119,6 +119,7 @@ def dashboard(request: Request) -> Response:
             "solicituds_gestio_obertes": UserArtista.objects.filter(
                 estat=UserArtista.ESTAT_PENDENT
             ).count(),
+            "feedback_obert": Feedback.objects.filter(resolt=False).count(),
             "usuaris_total": Usuari.objects.filter(is_active=True).count(),
         }
     )
@@ -1450,3 +1451,87 @@ def usuari_reset_2fa(request: Request, pk: int) -> Response:
         static_removed=static_n,
     )
     return Response({"ok": True, "totp_removed": totp_n, "static_removed": static_n})
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Feedback (staff-side review)
+# ═════════════════════════════════════════════════════════════════════════
+
+
+def _feedback_row(fb) -> dict:
+    return {
+        "pk": fb.pk,
+        "url": fb.url,
+        "target_type": fb.target_type,
+        "target_pk": fb.target_pk,
+        "target_slug": fb.target_slug or "",
+        "target_label": fb.target_label or "",
+        "missatge": fb.missatge,
+        "resolt": fb.resolt,
+        "notes_staff": fb.notes_staff or "",
+        "created_at": fb.created_at.isoformat() if fb.created_at else None,
+        "resolt_at": fb.resolt_at.isoformat() if fb.resolt_at else None,
+        "usuari": {
+            "pk": fb.usuari_id,
+            "email": fb.usuari.email if fb.usuari_id else "",
+            "username": fb.usuari.username if fb.usuari_id else "",
+        },
+        "resolt_per": (
+            {"pk": fb.resolt_per.pk, "email": fb.resolt_per.email}
+            if fb.resolt_per_id
+            else None
+        ),
+    }
+
+
+@api_view(["GET"])
+@permission_classes([IsStaff])
+def feedback_list(request: Request) -> Response:
+    qs = Feedback.objects.select_related("usuari", "resolt_per")
+    resolt = request.GET.get("resolt", "0")
+    if resolt == "0":
+        qs = qs.filter(resolt=False)
+    elif resolt == "1":
+        qs = qs.filter(resolt=True)
+    target_type = request.GET.get("target_type", "")
+    if target_type in {t for t, _ in Feedback.TARGET_CHOICES}:
+        qs = qs.filter(target_type=target_type)
+    cerca = (request.GET.get("q") or "").strip()
+    if cerca:
+        qs = qs.filter(
+            Q(missatge__icontains=cerca)
+            | Q(target_label__icontains=cerca)
+            | Q(usuari__email__icontains=cerca)
+        )
+    qs = qs.order_by("-created_at")
+    page, meta = _paginate(qs, request)
+    return Response({"results": [_feedback_row(fb) for fb in page.object_list], **meta})
+
+
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def feedback_resolve(request: Request, pk: int) -> Response:
+    """Toggle a feedback entry's resolved state. Body: {resolt, notes_staff}."""
+    from django.utils import timezone
+
+    fb = get_object_or_404(Feedback, pk=pk)
+    data = request.data or {}
+    if "notes_staff" in data:
+        fb.notes_staff = (data.get("notes_staff") or "").strip()
+    if "resolt" in data:
+        want = bool(data["resolt"])
+        fb.resolt = want
+        if want:
+            fb.resolt_at = timezone.now()
+            fb.resolt_per = request.user
+        else:
+            fb.resolt_at = None
+            fb.resolt_per = None
+    fb.save()
+    log_staff_action(
+        request,
+        "feedback_resolt" if fb.resolt else "feedback_obert",
+        target=fb,
+        missatge_snippet=fb.missatge[:120],
+    )
+    return Response(_feedback_row(fb))
