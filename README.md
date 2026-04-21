@@ -36,25 +36,33 @@ qualsevol pugui revisar com es calcula.
   normalització per percentil.
 - 🏆 **Rànquing setmanal** amb algoritme de 14 CTEs SQL (penalitzacions
   per antiguitat, monopoli, novetats). Transparència algorítmica
-  pública a [/com-funciona/](https://www.topquaranta.cat/com-funciona/).
+  pública a [/com-funciona](https://www.topquaranta.cat/com-funciona).
 - 🗺️ **10 territoris**: CAT, VAL, BAL, CNO, AND, FRA, ALG, CAR, ALT, PPCC.
-- 👥 **Panell staff** per gestionar artistes, propostes, cançons i
+- ⚛️ **SPA React** com a interfície pública i d'administració (Sprint 4,
+  abril 2026). Django passa a ser un backend API pur.
+- 🎼 **Playlists Spotify** actualitzades cada matí per territori + novetats,
+  mantenint URL estable i seguidors.
+- 🎙️ **Whisper LID** per a identificació d'idioma automàtica sobre el
+  preview de 30s de Deezer.
+- 👥 **Panell staff React** per gestionar artistes, propostes, cançons i
   coeficients; tota acció destructiva queda a `StaffAuditLog`.
-- 🧠 **ML** per a pre-classificar cançons noves (A/B/C) i prioritzar la
-  revisió humana.
-- 🔒 **Seguretat**: Argon2 password hashing, 2FA TOTP staff,
-  django-axes, CSP estricta.
+- 🧠 **Classificador ML** (Random Forest, 76 features, ROC-AUC 0.9994) per
+  pre-classificar cançons noves (A/B/C) i prioritzar revisió humana.
+- 💬 **Feedback d'usuaris** — botó "Corregir" a cada pàgina pública.
+- 🔒 **Seguretat**: Argon2, 2FA TOTP staff, django-axes, CSP estricta.
 
 ## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-stack-blue.svg" width="20" height="20" /> Stack
 
 <div align="center">
 
+![React](https://img.shields.io/badge/React_19-0047ba?style=flat-square&logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite_8-0047ba?style=flat-square&logo=vite&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_v4-0047ba?style=flat-square&logo=tailwindcss&logoColor=white)
 ![Django](https://img.shields.io/badge/Django_5.2-0047ba?style=flat-square&logo=django&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-0047ba?style=flat-square&logo=postgresql&logoColor=white)
+![DRF](https://img.shields.io/badge/DRF-cf3339?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL_14-0047ba?style=flat-square&logo=postgresql&logoColor=white)
 ![Python](https://img.shields.io/badge/Python_3.10-0047ba?style=flat-square&logo=python&logoColor=white)
-![Last.fm](https://img.shields.io/badge/Last.fm-cf3339?style=flat-square&logo=lastdotfm&logoColor=white)
-![Deezer](https://img.shields.io/badge/Deezer-12b76a?style=flat-square)
-![Caddy](https://img.shields.io/badge/Caddy-0047ba?style=flat-square)
+![Caddy](https://img.shields.io/badge/Caddy-0047ba?style=flat-square&logo=caddy)
 ![Hetzner](https://img.shields.io/badge/Hetzner-cf3339?style=flat-square)
 
 </div>
@@ -63,15 +71,23 @@ qualsevol pugui revisar com es calcula.
 
 ```
 TopQuaranta/
-├── topquaranta/   # Configuració Django + settings (base / production / web_server / test)
-├── music/         # Models: Artista, Album, Canco, ArtistaDeezer, ArtistaLocalitat
-├── ingesta/       # Pipeline Last.fm + Deezer (clients + management commands)
-├── ranking/       # Algoritme setmanal (algorisme.py, 14 CTEs) + models
-├── web/           # Públic + panell staff + API v1 (/api/v1/*)
-├── comptes/       # Usuari custom, PropostaArtista, 2FA
-├── bin/           # Ops scripts (tq-run, tq-recover, tq-health, tq-backup, tq-restore-test)
-├── deploy/        # Caddyfile + systemd service + logrotate config
-└── vendor/        # mm-design tokens (vendored)
+├── topquaranta/    # Configuració Django + settings
+├── music/          # Models domini + ML + signals
+├── ingesta/        # Pipeline Last.fm + Deezer + Spotify (sync)
+├── ranking/        # Algorisme setmanal (algorisme.py, 14 CTEs)
+├── comptes/        # Usuari custom, PropostaArtista, Feedback, 2FA
+├── web/            # Django API v1 + SEO + error handlers
+│   └── api/        # tots els endpoints /api/v1/*
+├── web-react/      # SPA React (públic + staff)
+│   └── src/
+│       ├── pages/
+│       │   └── staff/    # 17 pàgines d'administració
+│       ├── components/
+│       └── context/      # Auth · Feedback
+├── bin/            # Ops: tq-run, tq-recover, tq-health, tq-backup
+├── deploy/         # Caddyfile + systemd + cron + logrotate
+├── scripts/        # Anàlisi + one-shot migrations arxivades
+└── vendor/         # mm-design tokens (vendored per a Django)
 ```
 
 ## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-code-blue.svg" width="20" height="20" /> Desenvolupament local
@@ -88,7 +104,7 @@ python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 
-# 3. Variables d'entorn (vegeu CLAUDE.md §7 per la llista completa)
+# 3. Variables d'entorn (vegeu CLAUDE.md §8 per la llista completa)
 cp .env.example .env   # si existeix, o crea'l amb DATABASE_URL, LASTFM_API_KEY, etc.
 
 # 4. Tests (SQLite in-memory, cap API externa)
@@ -97,9 +113,16 @@ pytest -q
 # 5. Instal·la els pre-commit hooks (black + isort + missing-migration check)
 pre-commit install
 
-# 6. Servidor local
+# 6. Django API local
 DJANGO_SETTINGS_MODULE=topquaranta.settings.local python manage.py migrate
 DJANGO_SETTINGS_MODULE=topquaranta.settings.local python manage.py runserver
+
+# 7. SPA React
+cd web-react
+npm install
+npm run dev        # http://localhost:5173 amb proxy a l'API
+# ─ o ─
+npm run build      # bundle estàtic a web-react/dist/
 ```
 
 ## <img src="https://raw.githubusercontent.com/miquelmatoses/mm-design/main/icons/readme/icon-user-blue.svg" width="20" height="20" /> Contribuir

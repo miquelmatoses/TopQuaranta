@@ -1,7 +1,9 @@
 # CLAUDE_MODELS.md — Django Data Models
 
-> Post-Phase-8 snapshot. All models are Django-managed. No unmanaged / legacy
-> models remain. DB: 25 tables, 44 MB.
+> Post-Sprint-4 snapshot (2026-04-21). All models are Django-managed. No
+> unmanaged / legacy models remain. DB: 37 tables total (18 domain + Django
+> internals: auth_*, django_session, axes_*, otp_totp_*, otp_static_*,
+> django_migrations, django_content_type).
 
 ---
 
@@ -132,6 +134,33 @@ into the RF classifier as 4 features (`whisper_p_ca`, `whisper_p_es`,
 set (`scripts/model_comparison/resultats.md`): precision(ca) = 100 %,
 recall(ca) = 81 %, specificity = 100 %.
 
+### `ArtistaDeezer` invariant (2026-04-21)
+Signal `unapprove_on_last_deezer_removed` (post_delete on ArtistaDeezer)
+enforces: `aprovat=True ⇒ ≥ 1 ArtistaDeezer`. When the last Deezer ID
+of an approved artist is removed — either via `rebutjar_artista` mass
+delete or a staff PATCH that empties the deezer_ids list — the signal
+flips `aprovat=False, pendent_review=False` in one UPDATE.
+
+### `StaffAuditLog` — `music_staffauditlog`
+R9. Append-only log of every destructive staff action. Written via
+`music/audit.py::log_staff_action(request, action, target=obj,
+**metadata)`. `target_type`, `target_id` and `target_label` are snapshots
+so rows stay meaningful after the target is deleted. `metadata` is a
+JSONField for action-specific context (motiu, diff, counts).
+
+### `SpotifyAuth` — `music_spotifyauth` (singleton, 2026-04)
+Holds the admin's Spotify OAuth refresh token after the one-time
+`autoritzar_spotify` dance. Fields: `id=1` forced in save(),
+`refresh_token`, `scope`, `spotify_user_id`, `updated_at`.
+
+### `SpotifyPlaylist` — `music_spotifyplaylist`
+One row per managed Spotify playlist. Fields: `codi` (slug, unique),
+`kind` (`top` | `novetats`), `territori` (when kind=top), plus last-sync
+metadata: `spotify_playlist_id`, `last_sync_at`, `last_sync_ok`,
+`last_sync_msg`, `last_n_tracks`, `last_n_matched`. Populated by
+`seed_spotify_playlists` (archived) + `configurar_spotify_playlists`
+once per deployment.
+
 ### `HistorialRevisio` — `music_historialrevisio`
 Immutable audit trail of every approval / rejection. Read-only by convention;
 written by `music/services.py` via `verificacio.crear_historial()`.
@@ -209,19 +238,33 @@ Proposal for a **new** artist not yet in the system.
 - `artista_creat` FK → Artista (SET_NULL) — set on approval
 - `created_at`
 
-**On approval** (`staff.eines.proposta_aprovar`): creates `Artista`,
-`ArtistaDeezer` per Deezer ID, `ArtistaLocalitat` per location, copies social
-link fields — all inside one `transaction.atomic()`. Links the new Artista back
-via `artista_creat`.
+**On approval** (`/api/v1/staff/propostes/<pk>/aprovar/` in React): creates
+`Artista`, `ArtistaDeezer` per Deezer ID, `ArtistaLocalitat` per location,
+copies social link fields — all inside one `transaction.atomic()`. Links the
+new Artista back via `artista_creat`.
+
+### `Feedback` — `comptes_feedback` (2026-04)
+User-submitted correction reports filed from public artist/album/canço
+pages via the "Corregir" button.
+
+- `usuari` FK → Usuari (CASCADE). Non-null: anonymous visitors are
+  bounced to `/compte/accedir` before they can file.
+- `url` CharField — the page the reporter was on.
+- `target_type` CharField (artista/album/canco/altres), `target_pk`
+  (nullable), `target_slug`, `target_label` — snapshot so the row
+  stays meaningful after rename/delete.
+- `missatge` TextField.
+- `resolt` Bool, `notes_staff` TextField, `resolt_at`, `resolt_per`
+  FK → Usuari (SET_NULL).
+- Indexes: `(resolt, -created_at)`, `(target_type, target_pk)`.
 
 ---
 
 ## Migrations
 
-- `music/` 0001–0026. Latest: `0026_add_indexes_audit` (adds `db_index=True` on
-  Canco.{verificada, activa, data_llancament}, Artista.aprovat,
-  Album.{cancons_obtingudes, descartat}).
+- `music/` 0001–0046. Latest: `0046_spotifyauth_spotifyplaylist`.
+  Notable recent: `0042_artista_pendent_review_constraint` (CheckConstraint
+  on `aprovat` / `pendent_review`), `0045_canco_slug` (unique slug on Canco),
+  `0044_drop_deezer_no_trobat` (dropped the stale cache flag).
 - `ranking/` 0001–0004. Latest: `0004_rankingprovisional`.
-- `comptes/` 0001–0004. Latest: `0004_proposta_artista_estat`.
-- `music/0025_populate_municipis_and_localitats` is tolerant to the dropped
-  legacy `municipis` table — it no-ops on fresh installs.
+- `comptes/` 0001–0007. Latest: `0007_feedback`.

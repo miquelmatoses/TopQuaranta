@@ -45,12 +45,16 @@ from `music/constants.py`. Never raise — return `None` on any failure.
   name normalized: strips `(feat. X)`, `(Acoustic Version)`, `- Live`, `- Remix`,
   etc., and converts Unicode quotes to ASCII. Recovers ~10–15% of errors.
 
-### `spotify.py` — fallback (unused)
-- Blocked since 2024 (requires Premium). Kept for reference; no command imports it.
-
-### `viasona.py` — stub (TODO)
-- Placeholder. The Viasona scraper was on the Phase 6 wishlist but is not
-  implemented. Safe to remove when the project decides against it.
+### `spotify.py` — playlist output (active since 2026-04)
+- Two classes. `SpotifyClient` is the legacy Client-Credentials wrapper
+  (ingest endpoints no longer available to us since Spotify gated Web API
+  behind Premium in 2024).
+- **`UserSpotifyClient`** is the live path: OAuth refresh-token flow for the
+  admin account. Rotates access tokens on 401 mid-flight, honours 429
+  `Retry-After`, persists a rotated refresh_token when Spotify issues one.
+  Supports `search_isrc()` for resolution and chunked
+  `replace_playlist_tracks()` for the daily sync (§3.9).
+- Scopes used: `playlist-modify-private playlist-modify-public`.
 
 ## 3. Management commands
 
@@ -148,31 +152,85 @@ python manage.py netejar_caducades
 Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 
 ### 3.8 Utility / ad-hoc commands (not cron-scheduled)
-- `fix_album_dates`, `fix_artista_principal` — one-off corrections from Deezer.
-- `deduplicar_isrc` — merges Cancons that share an ISRC.
-- `backfill_deezer_artistes`, `backfill_preview_url` — populate new fields.
 - `recalcular_ml` — force retrain the RF model and reclassify all unverified
   tracks. Normally runs automatically via `recalcular_ml_si_cal()` when 5+ new
   decisions have accumulated.
+- `arxivar_senyal_vell` — quarterly archive of SenyalDiari rows older than 2 years
+  (Φ6 retention).
+
+**One-shot migrations already executed** live under
+`scripts/archived_commands/` (out of `manage.py` reach):
+`fix_album_dates`, `fix_artista_principal`, `deduplicar_isrc`,
+`backfill_deezer_artistes`, `backfill_preview_url`,
+`seed_spotify_playlists`. Preserved for history only.
+
+### 3.9 Spotify playlist sync — daily 07:15 UTC
+```bash
+python manage.py actualitzar_playlists_spotify [--dry-run] [--only <codi>]
+```
+Reads every `SpotifyPlaylist` row with a configured `spotify_playlist_id`
+and rewrites its tracklist in place. Runs 15 minutes after the provisional
+ranking settles.
+
+Per kind:
+- `top` → `RankingProvisional.filter(territori=X).order_by('posicio')[:40]`
+- `novetats` → `Canco.filter(data_llancament=yesterday, activa=True)[:100]`
+
+Resolves each Canço to a Spotify URI via `UserSpotifyClient.search_isrc()`
+and caches the result on `Canco.spotify_id` so subsequent runs skip the
+search. Mismatches (ISRC not found on Spotify) are silently dropped; the
+`SpotifyPlaylist.last_n_tracks` vs `last_n_matched` fields expose the
+mismatch rate per run.
+
+One-time setup (once per Spotify account):
+```bash
+# Prints the OAuth URL, takes the `code` from the callback, persists
+# refresh_token to SpotifyAuth (singleton).
+python manage.py autoritzar_spotify
+
+# Attach the existing Spotify playlist IDs to the 5 seeded rows.
+python manage.py configurar_spotify_playlists \
+    --top-cat <id> --top-val <id> --top-bal <id> --top-alt <id> \
+    --novetats <id>
+```
 
 ## 4. Track verification (ML classifier)
 
-`music/ml.py` — Random Forest (100 estimators, `class_weight="balanced"`) on
-1,448 decisions from `HistorialRevisio`. 219 features: 19 structured + 200
-TF-IDF char n-grams of the track title. 5-fold CV: **97.2% accuracy, 99.8% ROC
-AUC**. Top features: rejection ratio per artist / per ISRC prefix / per ISRC
-registrant (~44% of importance combined).
+`music/ml.py` — Random Forest (100 estimators, `class_weight="balanced"`)
+trained on **4,371** decisions from `HistorialRevisio`. Post 2026-04-21
+feature slim: **76 features** (16 structured + 4 Whisper LID + 60 TF-IDF
+char n-grams of the track title).
+
+5-fold CV metrics (2026-04-21, 4,371 training rows):
+- ROC-AUC **0.9994** · F1 **0.9522** · Accuracy **0.9675**.
+- Top 10 features carry **88%** of the signal (was 77% in the 223-feature
+  model).
+
+Top 5 features by importance:
+1. `ratio_rebuig_artista` (22.2%) — Bayesian-smoothed (k=5, prior=0.5)
+2. `ratio_rebuig_registrant` (14.9%)
+3. `ratio_rebuig_isrc_prefix` (13.6%)
+4. `nb_decisions_artista` (9.1%)
+5. `nom_artista_len` (7.1%)
+
+Bayesian smoothing on the three `ratio_rebuig_*` features: returns
+`(rej + k*p) / (total + k)` with `k=5, p=0.5`, so an artist with few
+decisions can't collapse to 0 or 1 from one or two calls. Prevents
+feedback loops where an early false rebuig biases the model
+permanently.
 
 Classes: `A ≥ 0.7`, `B 0.4–0.7`, `C < 0.4`. Stored on `Canco.ml_classe` +
 `ml_confianca`. Model files: `music/ml_model.joblib` + `ml_tfidf.joblib`.
+Both cached in-memory with mtime-based invalidation.
 
-Retraining is triggered automatically by `recalcular_ml_si_cal()` when there
-are ≥ `MIN_NEW_DECISIONS` new records since last run (marker file
-`/tmp/tq_last_ml_recalc`). Runs in a daemon thread; both files and the marker
-must be writable by the `topquaranta` user.
+Retraining triggers automatically via `recalcular_ml_si_cal()` when
+≥ `MIN_NEW_DECISIONS=5` records have arrived since last run (marker:
+`/tmp/tq_last_ml_recalc`). Runs in a daemon thread. If
+< `MIN_TRAINING_SAMPLES=20` decisions exist, `pre_classificar` falls
+back to a hand-tuned heuristic.
 
-If < `MIN_TRAINING_SAMPLES=20` decisions exist, `pre_classificar` falls back to
-a hand-tuned heuristic in `_heuristic_classificar`.
+Live feature importances + training size + class distribution + mean
+confidence are surfaced on `/staff/estat` via `/api/v1/staff/estat/`.
 
 ## 5. Cron schedule
 
@@ -183,15 +241,22 @@ health check (§7).
 
 ```cron
 # Pipeline
-0 * * * *   topquaranta   /home/topquaranta/bin/tq-run obtenir_novetats            >> /var/log/topquaranta/novetats.log    2>&1
-0 4 * * *   topquaranta   /home/topquaranta/bin/tq-run netejar_caducades           >> /var/log/topquaranta/neteja.log      2>&1
-0 6 * * *   topquaranta   /home/topquaranta/bin/tq-run obtenir_senyal              >> /var/log/topquaranta/senyal.log      2>&1
-30 6 * * *  topquaranta   /home/topquaranta/bin/tq-run actualitzar_score_entrada   >> /var/log/topquaranta/senyal.log      2>&1
-0 7 * * *   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1
-0 8 * * 6   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking            >> /var/log/topquaranta/ranking.log     2>&1
+0 * * * *   topquaranta   tq-run obtenir_novetats                 # every hour
+30 1 * * *  topquaranta   tq-run analitzar_whisper --limit 700    # nightly LID
+0 4 * * *   topquaranta   tq-run netejar_caducades                # 04:00
+0 6 * * *   topquaranta   tq-run obtenir_senyal                   # 06:00
+30 6 * * *  topquaranta   tq-run actualitzar_score_entrada        # 06:30
+0 7 * * *   topquaranta   tq-run calcular_ranking --provisional   # 07:00
+15 7 * * *  topquaranta   tq-run actualitzar_playlists_spotify    # 07:15 Spotify sync
+0 8 * * 6   topquaranta   tq-run calcular_ranking                 # Sat 08:00 official
 
 # DB backup
-0 3 * * *   postgres      /home/topquaranta/bin/tq-backup                          >> /var/log/topquaranta/backup.log      2>&1
+0 3 * * *   postgres      tq-backup                               # 03:00
+
+# Retention
+0 5 1 1,4,7,10 * topquaranta tq-run arxivar_senyal_vell           # quarterly
+30 4 1 * *  postgres        tq-restore-test                       # monthly
+*/30 * * * * topquaranta    tq-recover                            # recovery sweep
 ```
 
 ## 6. Backups

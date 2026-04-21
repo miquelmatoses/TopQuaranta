@@ -8,6 +8,14 @@ This document assumes user `topquaranta` on host `188.245.60.20`.
 Service: `topquaranta-web.service` (gunicorn on :8083), reverse proxy
 Caddy, PostgreSQL on localhost.
 
+**Two front-ends since Sprint 4**: React SPA bundle at
+`/home/topquaranta/app/web-react/dist/` served directly by Caddy from the
+root, and a small Django HTML surface for auth flows (`/compte/2fa/*`,
+`/compte/registre/`, `/compte/activar/*`, `/compte/login/`,
+`/compte/logout/`) plus `/api/v1/*` and `/sitemap.xml` / `/robots.txt`.
+A page serving blank despite `systemctl` being OK is almost always a
+missing `npm run build` in `web-react/` — see §1 below.
+
 ---
 
 ## First 60 seconds — "is it still alive?"
@@ -38,10 +46,12 @@ systemctl status caddy
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `502 Bad Gateway` + gunicorn inactive | Service crashed / OOM | `sudo systemctl restart topquaranta-web` |
+| `502 Bad Gateway` + gunicorn inactive | Service crashed / OOM | `sudo systemctl restart topquaranta-web` — for code deploys prefer `reload` to avoid 502 during worker swap |
 | `504 Gateway Timeout` | Slow DB query, worker starvation | Check `SELECT * FROM pg_stat_activity WHERE state='active'` via `sudo -u postgres psql topquaranta`. Kill runaway query with `SELECT pg_cancel_backend(PID)`. |
+| Blank page on `/` or `/top` but `/api/v1/auth/me/` → 200 | React bundle missing or stale | `cd /home/topquaranta/app/web-react && npm run build`. Caddy serves from `dist/` directly, no gunicorn reload needed. |
 | TLS cert error | Caddy auto-renew failed | `sudo journalctl -u caddy -n 200`. Usually resolves itself within 24h; Caddy retries. |
-| Django 500, `errors.log` shows the trace | Bug in code | Check recent commits, rollback via `git reset --hard HEAD~1 && sudo systemctl restart topquaranta-web`. |
+| Django 500 on `/api/*` or `/compte/2fa/*` | Bug in code | `tail -50 /var/log/topquaranta/errors.log`. Rollback: `git reset --hard HEAD~1 && sudo systemctl reload topquaranta-web`. |
+| "Alguna cosa ha fallat" React error boundary | Client-side JS crash | Browser console gives the stack. Most common: null-guard on a new API field that wasn't returned. |
 
 ---
 

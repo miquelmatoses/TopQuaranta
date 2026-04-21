@@ -1,172 +1,196 @@
 # CLAUDE_STAFF.md — Staff panel
 
-> Custom `/staff/` admin interface. Replaced Django admin + Wagtail admin in
-> Phase 7. Served by the same gunicorn as the public site (port 8083).
+> React SPA admin interface living at `/staff/*` in `web-react/src/pages/staff/`,
+> backed by the `/api/v1/staff/*` DRF endpoints in `web/api/staff_views.py`.
+> Replaced the Django-template staff panel in Sprint 4 (April 2026).
 
 ---
 
-## 1. Access control
+## 1. Architecture at a glance
 
-- URL prefix: `/staff/` (wired in `topquaranta/urls.py`).
-- Every view is wrapped in `@staff_required` (`web/views/staff/__init__.py`).
-  The decorator returns HTTP 403 for anonymous users and for authenticated users
-  without `is_staff=True`. No role hierarchy beyond the flag.
-- Login is shared with the public site (`/compte/login/`). After a successful
-  login, staff users see an "Admin" shortcut in the header (via the
-  `user_header_info` context processor).
-- The two location API endpoints re-exported from `web/api/views.py`
-  (`api_territoris`, `api_comarques`, `api_municipis`, `api_municipi_lookup`)
-  are **not** wrapped in `@staff_required` — they expose public reference data
-  (list of municipalities) and are shared with the public proposal form.
-
-## 2. Shared helpers (`web/views/staff/__init__.py`)
-
-```python
-@staff_required                # permissions gate
-def paginate(request, qs, per_page=50)    # Paginator helper
-def apply_ordering(request, qs, allowed_fields, default)
-    # Reads ?order= and ?dir= GET params, returns (ordered_qs, order, dir).
-    # allowed_fields maps a URL key to an ORM path:
-    #   {"nom": "nom", "artista": "artista__nom"}
-    # Paired with the {% sort_header %} template tag in staff templates.
+```
+Browser                   Caddy                    gunicorn :8083
+  │                         │                           │
+  │  GET /staff/pendents    │                           │
+  │ ───────────────────────▶│                           │
+  │                         │  (no path match in        │
+  │                         │   Django allow-list)      │
+  │                         │                           │
+  │                         │  ▶ serve web-react/dist/  │
+  │  React SPA              │                           │
+  │                         │                           │
+  │  fetch /api/v1/staff/…  │                           │
+  │ ───────────────────────▶│ ────────────────────────▶ │
+  │                         │                           │ IsStaff check
+  │                         │                           │ → DRF JSON
+  │                ◀──────────────────────────── JSON ──┤
+  │  render table           │                           │
 ```
 
-Every staff list view follows this pattern:
+The SPA owns the visual layer + routing. The API owns the data + permission
+gating. No Django templates are rendered for staff anymore.
 
-```python
-@staff_required
-def llista(request):
-    qs = Model.objects.filter(...).select_related(...)
-    qs, order, dir_ = apply_ordering(request, qs, ORDER_FIELDS, default="-created_at")
-    page = paginate(request, qs)
-    return render(request, "web/staff/<name>.html", {
-        "staff_section": "<name>", "page": page,
-        "current_order": order, "current_dir": dir_,
-        # plus filter values for form repopulation
-    })
-```
+## 2. Access control
 
-## 3. URL map (`web/views/staff/urls.py`, prefix `/staff/`)
+- **Route gate (client)**: `components/AdminRoute.jsx` wraps every `/staff/*`
+  route. It bounces non-staff users to `/compte/accedir` and staff users
+  whose session hasn't been OTP-verified to `/compte/2fa/verificar/` (a full-
+  page redirect — the Django 2FA form lives in the Caddy allow-list).
 
-| Path | Name | View | Purpose |
+- **Permission gate (server)**: `IsStaff` DRF permission (`staff_views.py`)
+  requires `user.is_authenticated AND user.is_staff AND user.is_verified()`.
+  Every `/api/v1/staff/*` endpoint declares `@permission_classes([IsStaff])`.
+
+- **Session**: same `sessionid` cookie as the public SPA. CSRF token comes
+  from the `csrftoken` cookie and is echoed back as `X-CSRFToken` on writes
+  by `web-react/src/lib/api.js`.
+
+- **Self-elevation prevention**: toggling `is_staff` is intentionally not
+  exposed from the UI. Admins must flip that via `manage.py` + SSH.
+
+## 3. API surface (`web/api/staff_views.py`)
+
+All endpoints are under `/api/v1/staff/` and return JSON. Shared helpers:
+`_paginate(qs, request)` returns `(page, meta)` where `meta` is
+`{page, num_pages, total, per_page, has_next, has_previous}`.
+
+### Dashboard & estat
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/dashboard/` | Landing counters (artistes pendents, cançons no verificades, propostes, sol·licituds, feedback, usuaris). |
+| GET | `/staff/estat/` | Full system health: BD inventory, Whisper coverage, ranking, cron status, ML model stats + feature importances, weekly flux + target. |
+
+### Pendents (auto-discovered artists)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/pendents/?q=&page=` | Pending artists with `nb_verif` annotation. |
+| POST | `/staff/pendents/<pk>/aprovar/` | Body: `{deezer_id?, municipi_id? \| manual?}`. Approves, clears `pendent_review`. |
+| POST | `/staff/pendents/<pk>/descartar/` | Deletes if no verified tracks; else only clears `pendent_review`. |
+
+### Artistes
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/artistes/` | Filters: `q`, `aprovat`, `deezer`, `territori`. |
+| GET | `/staff/artistes/search/?q=` | Typeahead for pickers. Returns up to 10 results. |
+| POST | `/staff/artistes/crear/` | Body: `nom`, `lastfm_nom?`, `deezer_id?`. |
+| GET/PATCH | `/staff/artistes/<pk>/` | Detail + replace-semantics PATCH over `nom`, `lastfm_nom`, `genere`, `percentatge_femeni`, `aprovat`, social URLs, `localitats[]`, `deezer_ids[]`. |
+
+### Cançons
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/cancons/` | Filters: `q`, `verificada`, `ml_classe`, `whisper`, `deezer`, `sort`, `artista_pk`. |
+| POST | `/staff/cancons/accio/` | Bulk `aprovar` / `rebutjar` with `motiu`. `artista_incorrecte` → cascades to `rebutjar_artista`; `album_incorrecte` → `rebutjar_album`. |
+| GET/PATCH | `/staff/cancons/<pk>/` | Detail + PATCH incl. `artista_pk` reassignment + `artistes_col_pks` replace. |
+
+### Albums
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/albums/` | List with `n_cancons` / `n_verificades` annotations, filter by `tipus`, `descartat`, `artista_pk`. |
+| GET/PATCH | `/staff/albums/<pk>/` | Detail incl. track list with per-track collab map. PATCH accepts `artista_pk` + `cascade_cancons` to also re-point tracks. |
+
+### Ranking (provisional)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/ranking/?territori=CAT` | Top-40 provisional + territori list + motius. |
+| POST | `/staff/ranking/accio/` | Bulk `rebutjar_canco` / `rebutjar_artista` with `motiu`. |
+
+### Propostes (user proposals) & Sol·licituds (management requests)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/propostes/` | Filter by `estat`. |
+| GET | `/staff/propostes/<pk>/` | Detail (justificació, localitzacions, Deezer IDs, social). |
+| POST | `/staff/propostes/<pk>/aprovar/` | Creates the Artista in one transaction. |
+| POST | `/staff/propostes/<pk>/rebutjar/` | Marks rejected. |
+| GET | `/staff/solicituds/` | UserArtista list. |
+| POST | `/staff/solicituds/<pk>/toggle/` | Toggle verificat. |
+| POST | `/staff/solicituds/<pk>/rebutjar/` | Mark rejected. |
+
+### Feedback, senyal, historial, configuració, auditlog, usuaris
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/staff/feedback/` | User correction reports with filter + search. |
+| POST | `/staff/feedback/<pk>/resolve/` | Toggle resolved + attach staff notes. |
+| GET | `/staff/senyal/` | Daily Last.fm signal inspector. |
+| POST | `/staff/senyal/<canco_pk>/acceptar-correccio/` | R5: accept Last.fm's autocorrect for a track. |
+| GET | `/staff/historial/` | Read-only HistorialRevisio. |
+| GET/PATCH | `/staff/configuracio/` | ConfiguracioGlobal coeffs; PATCH logs field-level diff to audit. |
+| GET | `/staff/auditlog/` | Read-only StaffAuditLog (R9). |
+| GET | `/staff/usuaris/` | User list with filters. |
+| GET | `/staff/usuaris/<pk>/` | Detail with propostes + sol·licituds + audit. |
+| POST | `/staff/usuaris/<pk>/toggle-actiu/` | Deactivate / reactivate (never self, never staff). |
+| POST | `/staff/usuaris/<pk>/reset-2fa/` | Wipe TOTP + static devices. |
+
+## 4. React surface (`web-react/src/pages/staff/`)
+
+- **Layout** — `components/StaffLayout.jsx` renders a dark vertical sidebar
+  nested inside the public yellow header. The nav lists: Panel · Estat ·
+  Pendents · Artistes · Cançons · Albums · Ranking prov. · Propostes ·
+  Sol·licituds · Feedback · Senyal · Historial · Configuració · Auditoria ·
+  Usuaris.
+- **Shared chrome** — `components/staff/StaffTable.jsx` exports `TableCard`,
+  `Table`, `THead/Th/Td/Tr`, `Btn`, `Pill`, `Input`, `Select`, `Pagination`,
+  `PageHeader`, `EmptyState`. Keeps every page under ~150 LOC.
+- **Typeahead pickers** — `staff/ArtistaPicker.jsx` (single) and
+  `staff/ArtistesColPicker.jsx` (multi), both backed by
+  `/staff/artistes/search/`. Used on edit pages for reassignment +
+  collaborator editing.
+- **Location cascade** — `staff/LocationCascade.jsx` pairs
+  territori→comarca→municipi selects. Special case: when `territori=ALT`
+  the comarca/municipi selects collapse into a single free-text input
+  (saved to `ArtistaLocalitat.localitat_manual`).
+
+### Pages (17 total)
+
+`StaffDashboardPage` · `EstatPage` (visual health dashboard) · `PendentsPage` ·
+`StaffArtistesPage` · `ArtistaCrearPage` · `ArtistaEditPage` ·
+`StaffCanconsPage` · `CancoEditPage` · `StaffAlbumsPage` · `AlbumEditPage` ·
+`StaffRankingPage` · `PropostesPage` · `PropostaDetailPage` ·
+`SolicitudsPage` · `SenyalPage` · `HistorialPage` · `ConfiguracioPage` ·
+`AuditlogPage` · `UsuarisPage` · `UsuariDetailPage` · `FeedbackPage`.
+
+## 5. Motius de rebuig — semantics
+
+`music.constants.MOTIUS_VALIDS` = `{no_catala, artista_incorrecte,
+album_incorrecte, no_musica}`. The motiu decides which service function
+gets called by the bulk-action endpoint:
+
+| Motiu | Escalation | Side effects | Safe for |
 |---|---|---|---|
-| `/` | `dashboard` | `dashboard.dashboard` | Tool grid landing page |
-| `cancons/` | `cancons` | `cancons.llista` | Track list + filters + bulk actions |
-| `cancons/accio/` | `cancons_accio` | `cancons.accio` | POST handler for bulk actions |
-| `cancons/<pk>/editar/` | `canco_editar` | `cancons.editar` | Single track edit |
-| `albums/<pk>/editar/` | `album_editar` | `albums.editar` | Single album edit |
-| `ranking/` | `ranking` | `ranking.llista` | Provisional ranking by territory |
-| `ranking/accio/` | `ranking_accio` | `ranking.accio` | POST: reject track / artist |
-| `artistes/` | `artistes` | `artistes.llista` | Artist list + filters + merge/approve |
-| `artistes/accio/` | `artistes_accio` | `artistes.accio` | POST bulk actions |
-| `artistes/<pk>/editar/` | `artista_editar` | `artistes.editar` | Artist edit (social, Deezer IDs, locations) |
-| `artistes/pendents/` | `artistes_pendents` | `pendents.llista` | Auto-discovered artists (paginated 50/page) |
-| `artistes/pendents/api/territoris/` | `api_territoris` | `pendents.api_territoris` | Cascading selects |
-| `artistes/pendents/api/comarques/` | `api_comarques` | `pendents.api_comarques` | |
-| `artistes/pendents/api/municipis/` | `api_municipis` | `pendents.api_municipis` | |
-| `artistes/pendents/api/municipi-lookup/` | `api_municipi_lookup` | `pendents.api_municipi_lookup` | name+comarca → pk |
-| `artistes/pendents/<pk>/aprovar/` | `api_aprovar` | `pendents.api_aprovar` | AJAX POST |
-| `artistes/pendents/<pk>/descartar/` | `api_descartar` | `pendents.api_descartar` | AJAX POST |
-| `historial/` | `historial` | `eines.historial` | Read-only decision log |
-| `senyal/` | `senyal` | `eines.senyal` | Daily Last.fm signal inspector |
-| `verificacio/` | `verificacio_artistes` | `eines.verificacio_artistes` | UserArtista (management requests) |
-| `verificacio/<pk>/toggle/` | `verificacio_toggle` | | approve/unapprove |
-| `verificacio/<pk>/rebutjar/` | `verificacio_rebutjar` | | reject (estat=rebutjat) |
-| `propostes/` | `propostes_artistes` | `eines.propostes_artistes` | PropostaArtista list |
-| `propostes/<pk>/` | `proposta_detall` | `eines.proposta_detall` | Full proposal detail |
-| `propostes/<pk>/aprovar/` | `proposta_aprovar` | | Create Artista + links in atomic tx |
-| `propostes/<pk>/rebutjar/` | `proposta_rebutjar` | | estat=rebutjat |
-| `configuracio/` | `configuracio` | `eines.configuracio` | ConfiguracioGlobal edit form |
-| `auditlog/` | `auditlog` | `eines.auditlog` | Read-only StaffAuditLog — append-only trail of destructive actions (R9) |
-| `usuaris/` | `usuaris` | `usuaris.llista` | List + filters + search of registered users |
-| `usuaris/<pk>/` | `usuari_detall` | `usuaris.detall` | Full user profile with propostes, sol·licituds, audit |
-| `usuaris/<pk>/toggle-actiu/` | `usuari_toggle_actiu` | `usuaris.toggle_actiu` | POST — (de)activate account (not self / not staff) |
-| `usuaris/<pk>/reset-2fa/` | `usuari_reset_2fa` | `usuaris.reset_2fa` | POST — wipe TOTP + static devices |
+| `no_catala` | per-Canço `rebutjar_canco` | deletes + writes HistorialRevisio with this motiu | track-level corrections |
+| `no_musica` | per-Canço `rebutjar_canco` | same as above | interviews, samplers, empty tracks |
+| `album_incorrecte` | per-Album `rebutjar_album` | deletes all unverified tracks of the album + marks `album.descartat=True` | **Deezer-blurred homonym albums (e.g. wrong-Aion's album)** — blast radius contained |
+| `artista_incorrecte` | per-Artista `rebutjar_artista` | deletes all unverified tracks + clears all Deezer IDs + marks all albums descartat | an artist whose Deezer profile is entirely wrong; **destructive of real artists with the same name** |
 
-## 4. Views by module
+All four write `HistorialRevisio` with `artista_nom` = canço's main artist.
+Collaborators (`artistes_col`) are NOT persisted in the decision log, so
+rejecting a track with Juan Magan as collab does not taint Juan Magan's
+future classification.
 
-- **`dashboard.py`** — single view, renders a grid of tool cards.
-- **`cancons.py`** — `llista` (filters: verificada, ml_classe, date range,
-  search), `accio` (bulk aprovar / rebutjar / rebutjar_album, requires motiu
-  for rejects — enforced client-side + server-side), `editar`.
-- **`albums.py`** — `editar` (nom, data, tipus, deezer_id, imatge_url,
-  descartat + read-only artista + track list).
-- **`ranking.py`** — `llista` (per-territory provisional ranking with bulk
-  reject), `accio` (rebutjar_canco / rebutjar_artista with motiu).
-- **`artistes.py`** — `llista` (filters: aprovat, deezer, territori; search by
-  nom), `accio` (aprovar, marcar_sense_deezer, fusionar), `editar`
-  (cascading selects for multiple locations, 10 social links, multiple
-  Deezer IDs with +/− buttons).
-- **`pendents.py`** — `llista` (queue of auto-discovered artists, sortable
-  by nom or nb_verif). Also hosts the `api_aprovar` / `api_descartar` AJAX
-  endpoints and re-exports the 4 location lookup endpoints from
-  `web/api/views.py` (staff URL names point to the shared functions).
-- **`eines.py`** — "tools" grab-bag: historial, senyal, verificacio,
-  propostes, configuracio.
+## 6. Invariants enforced by signals
 
-## 5. Two solicitud flows
+- **`aprovat=True ⇒ ≥ 1 ArtistaDeezer`** — `music/signals.py` post_delete
+  on `ArtistaDeezer`. When the last Deezer ID of an approved artist is
+  removed, `aprovat` is flipped to False (and `pendent_review` to False)
+  in one UPDATE. Prevents phantom approved artists invisible to
+  `obtenir_novetats`.
+- **D5: main artist ≠ collaborator on same canço** — `m2m_changed` on
+  `Canco.artistes_col`. Raises `ValidationError` on pre_add / pre_set.
+- **`artista_no_aprovat_pendent_review`** — DB CheckConstraint (migration
+  0042). `aprovat=True AND pendent_review=True` is impossible.
 
-The system has two parallel flows, deliberately separated:
+## 7. Adding a new staff page
 
-1. **`UserArtista` (management request)** — a user wants to manage an artist
-   **already in the system**. Staff decides via `/staff/verificacio/`:
-   - toggle button: flips `verificat` + sets `estat` to aprovat/pendent
-   - reject button: sets `estat=rebutjat` (record kept for audit)
-
-2. **`PropostaArtista` (new artist proposal)** — a user wants an artist that
-   **does not yet exist**. The form captures a full profile: nom, 9 social
-   links, comma-separated Deezer IDs, and a JSON array of locations. Staff
-   decides via `/staff/propostes/<pk>/`:
-   - approve: `proposta_aprovar` runs a `transaction.atomic()` that creates
-     the `Artista`, its `ArtistaDeezer` entries (first one marked principal),
-     the `ArtistaLocalitat` entries (municipi FK for PPCC locations, manual
-     text for others), and copies all 9 social URL fields. Sets
-     `proposta.estat=aprovat` and `proposta.artista_creat=<new artista>`.
-   - reject: `estat=rebutjat`, record preserved.
-
-Pending queue (`/staff/artistes/pendents/`) is separate from both flows — it
-holds artists auto-discovered by the Deezer pipeline, which also need approval
-before entering the ranking.
-
-## 6. Templates (`web/templates/web/staff/`)
-
-### Layout
-- **`base_staff.html`** — extends `web/base.html`, renders the staff nav
-  (Inici, Cançons, Ranking, Artistes, Pendents, Historial, Sol·licituds,
-  Propostes, Configuració) and flashes `messages`.
-- **`_pagination.html`** — reused by every list view. Expects a `page` object
-  from `paginate()`.
-- **`_select_all.html`** — reusable `<script>` for the master "Tot" checkbox.
-  Include once after a table that has an `#select-all` input and `.row-check`
-  row checkboxes.
-- **`confirmar_accio.html`** — intermediate confirmation page for dangerous
-  actions; shows the motiu select.
-
-### Custom template tags (`web/templatetags/staff_tags.py`)
-- **`{% sort_header "param" "Label" %}`** — renders a `<th>` with an anchor
-  toggling the `?order=` / `?dir=` GET params. Pairs with `apply_ordering`.
-- **`{% ml_badge canco %}`** — colored A/B/C badge with confidence tooltip.
-- **`{% territori_list artista %}`** — comma-separated territory codes.
-- **`{% query_string ... %}`** — URL-encode helper for pagination + filters.
-- **`{% lastfm_encode ... %}`** — URL-encode a name for Last.fm deep links.
-
-## 7. CSS conventions
-
-Staff-specific styles live in `web/static/web/css/style.css` under the section
-`/* === STAFF PANEL === */`. Prefixed `.staff-*`: `.staff-layout`,
-`.staff-nav`, `.staff-content`, `.staff-table`, `.staff-table-wrap`,
-`.staff-filters`, `.staff-actions-bar`, `.staff-action-select`, `.staff-edit-link`,
-`.staff-badge-ok` / `.staff-badge-no`, `.staff-msg--{success,error,warning,info}`.
-All use `var(--mm-*)` tokens.
-
-## 8. Adding a new staff page
-
-1. Create the view in the appropriate module under `web/views/staff/` using
-   the `@staff_required` + `apply_ordering` + `paginate` pattern.
-2. Add a URL entry in `web/views/staff/urls.py`.
-3. Create the template in `web/templates/web/staff/` extending
-   `base_staff.html`. Reuse `_pagination.html` and `_select_all.html`.
-4. If it has filter/sort columns, declare the `ORDER_FIELDS` dict in the view
-   module and use `{% sort_header %}` in the template `<th>`.
-5. If it needs a link from the main dashboard, add a tool card in
-   `templates/web/staff/dashboard.html` pointing to the new URL.
+1. Add the view in `web/api/staff_views.py` using `@api_view` +
+   `@permission_classes([IsStaff])`. Use `_paginate()` for lists.
+2. Register the route in `web/api/urls.py` under the `staff/` prefix.
+3. Create the React page in `web-react/src/pages/staff/`. Use the
+   `StaffTable.jsx` primitives. Seed filters from `useSearchParams` if the
+   URL should be shareable.
+4. Wire the route in `App.jsx` inside the `/staff/*` switch.
+5. Add the sidebar link in `components/StaffLayout.jsx` if it's user-facing.
+6. Drop a tile in `StaffDashboardPage.jsx` if it should surface on the
+   landing grid.
+7. If the action is destructive, call `log_staff_action(request, "<verb>",
+   target=obj, **metadata)` from the backend. The `StaffAuditLog.ACTION_CHOICES`
+   tuple accepts new values without a schema migration (only the UI filter
+   needs to be updated).

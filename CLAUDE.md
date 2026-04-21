@@ -1,16 +1,17 @@
 # CLAUDE.md — TopQuaranta
 
 > Persistent memory for Claude Code. Read this file first on every session.
-> Last updated: 2026-04-16 — CLAUDE_EXCELLENCE.md added; Phase 9 (Excellence) queued as next.
+> Last updated: 2026-04-21 — Post-Sprint-4 audit + Django-templates UI cleanup.
 
 ## Other docs
 - **`CLAUDE_MODELS.md`** — every Django model with fields, relations, indexes.
 - **`CLAUDE_PIPELINE.md`** — ingest → signal → ranking flow, API clients, crons.
-- **`CLAUDE_STAFF.md`** — staff panel architecture, views, permissions, flows.
+- **`CLAUDE_STAFF.md`** — React staff panel, DRF endpoints, permission model.
 - **`CLAUDE_ALGORITHM.md`** — 14-CTE ranking algorithm details.
-- **`CLAUDE_EXCELLENCE.md`** — full audit + 62 findings (S1..Φ7) for Phase 9.
+- **`CLAUDE_EXCELLENCE.md`** — full audit + findings (S1..Φ7) from Phase 9.
 - **`CLAUDE_LEGACY.md`** — historical audit of the pre-2026 system (reference only).
 - **`ROADMAP.md`** — phase status; current state and next steps.
+- **`RUNBOOK.md`** — operational troubleshooting.
 
 ---
 
@@ -21,115 +22,228 @@ music across 10 territories: `CAT`, `VAL`, `BAL`, `PPCC` (aggregate), `ALT`,
 `CNO`, `AND`, `FRA`, `ALG`, `CAR`. Cultural mission: show that Catalan-language
 music is alive and growing.
 
-**Signal source:** Last.fm (`playcount` + `listeners`, normalized via
-`percentileofscore`). **Metadata source:** Deezer (public, ISRC on every track).
-Spotify is a dead fallback (blocked since 2024, needs Premium).
+- **Signal source:** Last.fm (`playcount` + `listeners`, normalized via
+  `percentileofscore`).
+- **Metadata source:** Deezer (public API, ISRC on every track).
+- **Playlist output:** Spotify (daily sync via OAuth refresh token; cron
+  07:15 UTC). Also "Escolta-ho a" universal search links on every content
+  page as a no-API fallback (Spotify ISRC deep-link + Deezer direct +
+  YouTube Music + Apple Music search URLs).
 
-**Image generation + Telegram distribution: indefinitely shelved.** Original
-assets inaccessible. The public website is the distribution channel instead.
+## 2. Architecture
 
-## 2. Infrastructure
+Post Sprint-4 (April 2026), the public website and the staff panel moved
+from Django-rendered templates to a React SPA living at `web-react/`.
+Django now owns only the API, a handful of auth flows and SEO:
+
+```
+                        ┌──────────── Caddy (TLS + routing) ────────────┐
+                        │                                                │
+  /api/v1/*             │                                                │
+  /compte/{2fa/*, login, │                                               │
+    logout, registre,    │─▶  Django · gunicorn :8083                    │
+    activar/*}           │    (session + CSRF + axes + django-otp +     │
+  /sitemap.xml           │     ConfiguracioGlobal)                       │
+  /robots.txt           │                                                │
+                        │                                                │
+  /static/*             │─▶  /home/topquaranta/app/staticfiles/          │
+                        │                                                │
+  /beta/*               │─▶  301 → /                                     │
+                        │                                                │
+  everything else       │─▶  web-react/dist/ (SPA index.html fallback)   │
+                        │                                                │
+                        └────────────────────────────────────────────────┘
+```
+
+The SPA handles: `/`, `/top`, `/artistes`, `/artista/<slug>`, `/album/<slug>`,
+`/canco/<slug>`, `/mapa`, `/compte`, `/compte/accedir`, `/compte/perfil`,
+`/compte/artista/{proposta,gestio}`, `/staff`, `/staff/*`,
+`/spotify/callback`. Client-side 404 is handled by React Router.
+
+Django still renders: `registre.html`, `registre_ok.html`, `activar_error.html`,
+`login.html`, `dos_fa_{configurar, verificar, gestio}.html`, plus the trio
+of error pages (`403/404/500.html`) and `robots.txt`. Every auth template
+extends a minimal self-contained `comptes/_base_auth.html` that mirrors
+the SPA palette but has no dependency on mm-design.
+
+## 3. Infrastructure
 
 - **Server:** Hetzner CX22 (`188.245.60.20`), Ubuntu 22.04.
-- **Runtime:** Python 3.10, Django 5.2, PostgreSQL 14.
+- **Runtime:** Python 3.10, Django 5.2, PostgreSQL 14. Node 22 + Vite 8
+  for the SPA.
 - **Reverse proxy:** Caddy (auto TLS). Config: `/etc/caddy/Caddyfile`
   (source of truth: `deploy/Caddyfile`).
 - **Process:** `topquaranta-web.service` → gunicorn :8083, settings
-  `topquaranta.settings.web_server`, user `topquaranta`. Single gunicorn serves
-  the public web **and** the staff panel. (source: `deploy/topquaranta-web.service`)
+  `topquaranta.settings.web_server`, user `topquaranta`. `ExecReload=HUP`
+  so `systemctl reload topquaranta-web` swaps workers gracefully on deploy
+  (no 502 window during code pushes).
 - **Cron:** `/etc/cron.d/topquaranta` (source: `deploy/cron.topquaranta`).
   Redeploy with `sudo install -o root -g root -m 644
-  deploy/cron.topquaranta /etc/cron.d/topquaranta` — cron reloads on its own.
+  deploy/cron.topquaranta /etc/cron.d/topquaranta` — cron auto-reloads.
 - **Logrotate:** `/etc/logrotate.d/topquaranta` (source:
   `deploy/logrotate.topquaranta`).
-- **DB:** `topquaranta` on localhost, user `topquaranta`. 25 tables, 44 MB.
+- **DB:** `topquaranta` on localhost. 37 tables (18 domain + Django/axes/
+  otp/session internals).
 - **Working dir:** `/home/topquaranta/app/`. Virtualenv: `.venv/`.
 - **Repo:** `github.com/miquelmatoses/TopQuaranta` (private).
 
-Legacy Wagtail code is preserved read-only at `/root/TopQuaranta/` but the
-service is stopped and disabled. Port 8081 is free.
-
-## 3. Project structure
+## 4. Project structure
 
 ```
 /home/topquaranta/
-├── bin/                 # ops scripts (outside the Django project)
-│   ├── tq-run           # wrapper: runs manage.py command with retry, records status
-│   ├── tq-recover       # detects missed/failed daily runs, relaunches via tq-run
-│   ├── tq-health        # reads status files + errors.log; non-zero on issue
-│   └── tq-backup        # pg_dump + tiered retention; runs as postgres
-├── backups/             # daily/ weekly/ monthly/ — pg_dump snapshots (gzipped)
-└── app/                         # Django project (this repo)
+├── bin/                 # ops scripts outside the repo
+│   ├── tq-run           # runs manage.py command with retry + status file
+│   ├── tq-recover       # detects missed/failed runs, relaunches
+│   ├── tq-health        # non-zero exit on any cron failure
+│   └── tq-backup        # pg_dump + tiered retention
+├── backups/             # daily/ weekly/ monthly/ pg_dump snapshots
+└── app/                         # The repo.
     ├── manage.py
     ├── .env                     # never commit
-    ├── package.json             # declares mm-design npm git dep
-    ├── topquaranta/             # Django settings + urls
-    │   ├── settings/            # base, production, web_server, local, test
-    │   └── urls.py
-    ├── music/                   # Artista, Album, Canco, Municipi, ArtistaLocalitat,
-    │   │                        # HistorialRevisio, Territori, ArtistaDeezer
-    │   ├── models.py, ml.py, services.py, verificacio.py, signals.py,
-    │   ├── constants.py, titlecase_catala.py, ml_model.joblib, ml_tfidf.joblib
-    │   └── migrations/          # 26 migrations
-    ├── ingesta/                 # pipeline code only
-    │   ├── clients/             # deezer.py, lastfm.py, spotify.py (fallback), viasona.py (stub)
-    │   └── management/commands/ # obtenir_novetats, obtenir_senyal, obtenir_metadata, ...
-    ├── ranking/                 # ConfiguracioGlobal, SenyalDiari, RankingSetmanal, RankingProvisional
+    ├── requirements.txt · requirements-dev.txt
+    ├── pyproject.toml · pytest.ini · conftest.py
+    │
+    ├── topquaranta/             # Django settings + root URLs
+    │   ├── settings/            # base · production · web_server · local · test
+    │   └── urls.py              # /api/v1/ · /compte/ · /sitemap.xml · /robots.txt
+    │
+    ├── music/                   # core domain models + services
+    │   │                        # Artista, Album, Canco, Territori, Municipi,
+    │   │                        # ArtistaLocalitat, ArtistaDeezer,
+    │   │                        # HistorialRevisio, StaffAuditLog,
+    │   │                        # SpotifyAuth, SpotifyPlaylist
+    │   ├── models.py · ml.py · services.py · verificacio.py · signals.py
+    │   ├── audit.py · constants.py · titlecase_catala.py · utils.py
+    │   ├── ml_model.joblib · ml_tfidf.joblib     # slim model post 2026-04-21
+    │   └── migrations/          # 47 migrations (0001 … 0046)
+    │
+    ├── ranking/                 # ConfiguracioGlobal · SenyalDiari
+    │   │                        # RankingSetmanal · RankingProvisional
     │   ├── algorisme.py         # 14-CTE SQL + PPCC aggregation
     │   └── management/commands/calcular_ranking.py
-    ├── web/                     # public website + staff panel
-    │   ├── views/
-    │   │   ├── __init__.py      # public views (homepage, ranking, artistes, mapa, profiles)
-    │   │   └── staff/           # dashboard, cancons, albums, ranking, artistes, pendents, eines
-    │   ├── api/                 # /api/v1/ — DRF map endpoint + location reference API
-    │   ├── templates/web/       # base.html + staff/base_staff, _pagination, _select_all, etc.
-    │   └── static/web/css/style.css
-    ├── comptes/                 # Usuari (custom), UserArtista, PropostaArtista, solicitud flows
-    └── scripts/                 # ad-hoc analysis scripts (not management commands)
+    │
+    ├── ingesta/                 # external-API pipeline (ingest + Spotify export)
+    │   ├── clients/             # deezer.py · lastfm.py · spotify.py · whisper.py
+    │   └── management/commands/
+    │       ├── obtenir_novetats.py · obtenir_metadata.py · obtenir_senyal.py
+    │       ├── actualitzar_score_entrada.py · netejar_caducades.py
+    │       ├── analitzar_whisper.py · arxivar_senyal_vell.py
+    │       ├── autoritzar_spotify.py · configurar_spotify_playlists.py
+    │       └── actualitzar_playlists_spotify.py
+    │
+    ├── comptes/                 # custom Usuari + UserArtista + PropostaArtista
+    │   │                        # + Feedback (user correction reports)
+    │   ├── views.py             # registre · activar · TQLoginView · 2FA flow
+    │   ├── urls.py              # only Caddy-allowlisted routes
+    │   ├── forms.py             # RegistreForm only
+    │   ├── tokens.py
+    │   └── templates/comptes/   # 7 files, all extend _base_auth.html
+    │
+    ├── web/                     # Django API + SEO + error handlers
+    │   ├── api/                 # DRF — the primary Django surface
+    │   │   ├── urls.py          # /api/v1/…
+    │   │   ├── auth_views.py    # me · login · logout · register
+    │   │   ├── ranking_views.py · artistes_views.py · album_views.py
+    │   │   ├── canco_views.py · compte_views.py · staff_views.py
+    │   │   ├── views.py         # localitzacio (territoris/comarques/municipis)
+    │   │   └── middleware.py · VERSIONING.md
+    │   ├── sitemaps.py          # hardcoded SPA URLs for /sitemap.xml
+    │   ├── views/__init__.py    # 404/500/403 error handlers only
+    │   └── templates/web/       # 4 files: robots.txt + 403/404/500
+    │
+    ├── web-react/               # React SPA ── public + staff UI
+    │   ├── vite.config.js       # base: '/'
+    │   ├── package.json
+    │   ├── dist/                # built bundle served by Caddy
+    │   └── src/
+    │       ├── main.jsx · App.jsx
+    │       ├── lib/             # api.js · urls.js
+    │       ├── context/         # AuthContext · FeedbackContext
+    │       ├── components/      # Layout · AccountButton · TopQuarantaLogo
+    │       │   ├── FeedbackButton · ExternalListenLinks
+    │       │   ├── AdminRoute · StaffLayout
+    │       │   └── staff/       # StaffTable · ArtistaPicker
+    │       │                    # ArtistesColPicker · LocationCascade
+    │       └── pages/
+    │           ├── HomePage · TopPage · ArtistesPage · ArtistaPage
+    │           ├── AlbumPage · CancoPage · MapaPage
+    │           ├── AuthPage · ComptePage · ComptePerfilPage
+    │           ├── ProposarArtistaPage · SolicitarGestioPage
+    │           ├── SpotifyCallbackPage
+    │           └── staff/       # 17 pages — full staff panel
+    │                            # StaffDashboard · EstatPage · Pendents
+    │                            # StaffArtistes · ArtistaEdit · ArtistaCrear
+    │                            # StaffCancons · CancoEdit · StaffAlbums
+    │                            # AlbumEdit · StaffRanking · Propostes
+    │                            # PropostaDetail · Solicituds · Senyal
+    │                            # Historial · Configuracio · Auditlog
+    │                            # Usuaris · UsuariDetail · FeedbackPage
+    │
+    ├── scripts/                 # non-command Python
+    │   ├── analisi_lastfm.py · explorar_senyal.py · simular_ranking.py
+    │   ├── model_comparison/    # Whisper vs VoxLingua LID evaluation
+    │   └── archived_commands/   # one-shot migrations already run (kept for history)
+    │
+    ├── vendor/mm-design/        # vendored brand tokens for Django static
+    ├── deploy/                  # Caddyfile · systemd · cron · logrotate
+    └── docs/                    # DEFINITION · DEPRECATION · RETENTION
 ```
 
-## 4. Design system (mm-design)
+## 5. Design system (mm-design)
 
-Single source of truth: `github.com/miquelmatoses/mm-design`. Installed as an
-npm git dependency; `STATICFILES_DIRS` points to `node_modules/mm-design/`.
-Tokens loaded in `base.html` via `{% static 'mm-design/tokens/*.css' %}`.
+Two consumers:
+
+1. **React SPA** — `mm-design` is an npm git dep in `web-react/package.json`;
+   tokens loaded in `main.jsx`. Colours exposed via Tailwind v4 `@theme`
+   (`tq-yellow` `#facc15`, `tq-ink` `#0a0a0a`, `tq-yellow-deep` `#ca8a04`).
+   Palette: **yellow headers on ink body**, accent on territory colours
+   for the HomePage.
+2. **Django auth templates** — `comptes/_base_auth.html` is self-contained.
+   Inline CSS mirrors the SPA palette; no mm-design dependency.
+
+`STATICFILES_DIRS` points to `vendor/mm-design/` for Django; the SPA uses
+the npm version. After `npm update` in `web-react/`, run `npm run build`
+to refresh the dist bundle that Caddy serves.
 
 **Rules:**
-1. All colors, fonts, spacing, shadows come from `var(--mm-*)`. **Never hardcode
-   hex values** in templates, inline styles, or CSS. One acceptable fallback:
-   chaining `var(--mm-color-white)` after `var(--mm-color-background)`.
-2. Fonts: Playfair Display (headings), Roboto (body). No others.
-3. Brand colors never touch directly — always brand + white or brand + black.
-4. Territory accent: `--tq-accent` set by body class `territori-<code>`.
-5. After `npm update`, run `python manage.py collectstatic --noinput`.
+1. Colors / fonts / spacing / shadows come from `var(--mm-*)` or Tailwind's
+   `tq-*` tokens. Never hardcode hex values in templates or components.
+2. Fonts: Playfair Display (headings), Roboto (body).
+3. Territory accent: the React HomePage maps territoris to a hand-picked
+   palette (see `HomePage.jsx`).
 
-## 5. Key decisions
+## 6. Key decisions
 
 | Decision | Rationale |
 |---|---|
-| Last.fm as signal | Spotify popularity deprecated 2024-11; Last.fm has public playcount + listeners. |
-| Deezer as metadata | Spotify API 403 (Premium). Deezer public + 100% ISRC. |
+| Last.fm as signal | Spotify popularity deprecated 2024-11. Last.fm exposes public playcount + listeners. |
+| Deezer as metadata | Spotify API 403 since 2024 (Premium required for new apps). Deezer: public + 100% ISRC. |
 | Algorithm ported, not rewritten | 14-CTE SQL from legacy views → Python in `ranking/algorisme.py`, same math. |
-| PPCC aggregates, not computes | Takes top 40 of each non-aggregate territory, applies position penalty `score × (1 - (pos-1)·0.04)`, dedupes by canco. |
-| Territory on artist (M2M), not track | Legacy duplicated tracks per territory. Territory auto-syncs from `ArtistaLocalitat → Municipi → Territori`. |
+| PPCC aggregates, not computes | Takes top 40 of each non-aggregate territory, applies position penalty, dedupes by canco. |
+| Territory on artist (M2M), not track | Legacy duplicated tracks per territory. Now auto-syncs from ArtistaLocalitat → Municipi → Territori. |
 | Human approval for every auto-discovered artist | Prevents false positives (metal "Aion", anime "Animal"). |
-| ISRC on every Canco | Universal key; enables future cross-system integrations. |
+| ISRC on every Canco | Universal key. Enables cross-DSP resolution (Spotify ISRC deep-links). |
 | 12-month track cutoff | Current music only (`DIES_CADUCITAT` in `music/constants.py`). |
-| No Celery | Daily/weekly cron is enough; avoids broker complexity. |
-| Single gunicorn | Public + staff in one process; `@staff_required` gates `/staff/*`. |
-| Legacy DB reference only | All legacy tables dropped in Phase 8 (see `ROADMAP.md`). |
+| No Celery | Daily/weekly cron is enough. |
+| **React SPA** (Sprint 4, Apr 2026) | Shared brand across public + staff. Django becomes pure API backend. |
+| Session cookie auth for SPA | Same `csrftoken`/`sessionid` as Django. Axes + django-otp work untouched. |
+| **2FA via Django page** | Unverified staff session is bounced full-page from `AdminRoute` to `/compte/2fa/verificar` (Django form); on success same cookie is OTP-flagged and IsStaff API checks pass. |
+| **ML slim** (2026-04-21) | 223 → 76 features. Bayesian smoothing on rejection ratios. 5-fold CV ROC-AUC 0.9994. |
+| **Spotify as playlist output** | One-time OAuth → long-lived refresh_token → daily sync cron. Premium needed on the app owner, free for listeners. |
+| **Invariant: aprovat ⇒ ≥1 Deezer ID** | Enforced by `post_delete` signal on ArtistaDeezer (2026-04-21). Keeps pipeline + data in sync. |
 
-## 6. Shared constants
+## 7. Shared constants
 
-Import from `music/constants.py` rather than duplicating:
+Import from `music/constants.py`:
 - `DIES_CADUCITAT = 365`, `MAX_POSICIONS_TOP = 40`
 - `TERRITORI_NOMS` (dict), `TERRITORIS_VALIDS` (tuple of ranking-eligible codes)
 - `ML_CLASSE_A_THRESHOLD`, `ML_CLASSE_B_THRESHOLD`, `MIN_TRAINING_SAMPLES`,
   `MIN_NEW_DECISIONS`
 - `DEEZER_RATE_LIMIT`, `LASTFM_RATE_LIMIT`, `MAX_API_RETRIES`
-- `MOTIUS_REBUIG`, `MOTIUS_VALIDS`
+- `MOTIUS_REBUIG` — 4 valid reject reasons: `no_catala`, `artista_incorrecte`,
+  `album_incorrecte`, `no_musica`. Semantics in `CLAUDE_STAFF.md §5`.
 
-## 7. Environment (.env)
+## 8. Environment (.env)
 
 ```dotenv
 DJANGO_SECRET_KEY=
@@ -139,13 +253,14 @@ DEBUG=False
 DATABASE_URL=postgres://topquaranta:PASSWORD@localhost:5432/topquaranta
 LASTFM_API_KEY=
 LASTFM_API_SECRET=
-SPOTIFY_CLIENT_ID=   # fallback only
+SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
+SPOTIFY_REDIRECT_URI=https://www.topquaranta.cat/spotify/callback
 ```
 
 Loaded via `python-decouple`. Always access via `from django.conf import settings`.
 
-## 8. Testing
+## 9. Testing
 
 ```ini
 # pytest.ini
@@ -153,23 +268,33 @@ DJANGO_SETTINGS_MODULE = topquaranta.settings.test
 python_files = tests/test_*.py
 ```
 
-Mock all external HTTP — no real API calls in tests.
+Mock all external HTTP — no real API calls. Current suite: **92 passed, 5 skipped**.
 Run: `.venv/bin/python -m pytest -q`.
 
-## 9. Code conventions
+React SPA: Vitest not yet wired for runtime tests; builds validated via
+`npm run build` in CI-style deploys.
+
+## 10. Code conventions
 
 - No `print()` → `logging` or `self.stdout.write()`.
 - No `sys.exit()` → `raise CommandError(...)`.
 - No `TRUNCATE` or raw DDL outside migrations.
-- No raw psycopg2 — always Django ORM (exception: `ranking/algorisme.py` uses
-  raw SQL via `connection.cursor()` for the 14-CTE).
+- No raw psycopg2 — always Django ORM (exception: `ranking/algorisme.py`
+  uses raw SQL for the 14-CTE).
 - All DB writes inside `transaction.atomic()`.
 - Type hints on new functions. `f-strings` in code, `%s` in `logger` calls.
-- black + isort. Comments and docstrings in English.
-- Catalan for user-facing strings (templates, messages, labels).
+- black + isort on Python. Comments and docstrings in English.
+- Catalan for user-facing strings (React pages, Django templates, error
+  messages). Technical English everywhere else.
 
-## 10. Workflow
+## 11. Workflow
 
 Claude Code runs on the production server. GitHub is canonical:
 `git pull --rebase` before pushing. Never commit without explicit request.
 At the end of each session, update `ROADMAP.md` to reflect reality.
+
+**Deploy routine:**
+1. Edit code (Python and/or React).
+2. If SPA touched: `cd web-react && npm run build`.
+3. `sudo systemctl reload topquaranta-web` — graceful worker swap, no 502.
+4. Verify: `curl -sI https://www.topquaranta.cat/api/v1/auth/me/`.

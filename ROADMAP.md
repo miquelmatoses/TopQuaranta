@@ -1,66 +1,62 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-19 — Sessió 17 audit cleanup sweep: split
-> `aprovat` from `pendent_review` (migration 0042, `CheckConstraint`
-> guarding the forbidden state), HistorialRevisio now moves on merge
-> (critical for RF feature continuity), `api_aprovar` 500 → 409 on
-> Deezer-id collision, Whisper feature fallback no longer diverges
-> between training and inference, heuristic classifier unified with
-> RF thresholds, 40 legacy-migration orphans removed + 2 others
-> surfaced. Previous session (16) integrated Whisper LID end-to-end.
+> Last updated: 2026-04-21 — Post-Sprint-4 audit + cleanup. Legacy Django
+> template UI removed; React SPA is the exclusive front-end. ML slimmed from
+> 223 → 76 features; Bayesian smoothing on rejection ratios. Visual
+> `/staff/estat` dashboard added with live flux + feature-importance chart.
+> Spotify playlist sync active (cron 07:15 UTC).
 
 ---
 
-## Current state (2026-04-19)
+## Current state (2026-04-21)
 
-**Public site**: `https://www.topquaranta.cat/` — homepage (PPCC ranking),
-per-territory rankings, artist directory, artist + album + song profiles,
-interactive territorial map (D3.js), user accounts, verified-artist portal.
+**Public site**: `https://www.topquaranta.cat/` — React SPA at the root.
+Routes: `/` (home), `/top` (current weekly ranking per territori), `/artistes`
+(directory + filters), `/artista/<slug>`, `/album/<slug>`,
+`/canco/<slug>` (with multi-line ranking history chart), `/mapa` (territorial
+browse), `/compte` (user dashboard), `/compte/artista/{proposta,gestio}`.
+Every content page has **"Escolta-ho a"** buttons to Spotify / Deezer /
+YouTube Music / Apple Music plus a **"Corregir"** feedback button.
 
-**Staff panel**: `/staff/` — tracks, albums, artists (with manual `crear`
-and `duplicats` filter), pending artists, provisional ranking, historial,
-senyal, management requests, new-artist proposals, configuration. All
-behind `@staff_required`.
+**Staff panel**: `/staff/*` — React pages backed by DRF. 17 pages:
+dashboard, estat (visual health), pendents, artistes (+ crear + editar),
+cançons (+ editar), albums (+ editar), ranking provisional, propostes
+(+ detall), sol·licituds, senyal, historial, configuració, auditoria,
+usuaris (+ detall), feedback. Full collab editing on track edit, artista
+reassignment with cascade-canço toggle.
 
-**Pipeline** (daily/hourly cron, source of truth at
-`deploy/cron.topquaranta`, deployed to `/etc/cron.d/topquaranta`):
+**Authentication**: Django session cookies + CSRF. Staff uses TOTP 2FA
+enforced at the API layer (`IsStaff` requires `user.is_verified()`). The
+2FA pages still render via Django templates under the Caddy allow-list.
+
+**Pipeline** (deploy/cron.topquaranta):
 - Hourly: `obtenir_novetats` (Deezer incremental).
-- **01:30**: `analitzar_whisper --limit 700` (LID over Deezer previews,
-  ~5h15m window, finishes before provisional ranking).
-- 04:00: `netejar_caducades` (drop unverified tracks > 12 months old).
-- 06:00 + 06:30: `obtenir_senyal` (Last.fm) + `actualitzar_score_entrada`.
-- 07:00: `calcular_ranking --provisional` (all eligible territories).
+- **01:30 UTC**: `analitzar_whisper --limit 700` (LID, ~5h15m window).
+- 04:00: `netejar_caducades` (drop unverified > 12 months).
+- 06:00: `obtenir_senyal` (Last.fm) + `actualitzar_score_entrada` (06:30).
+- **07:00**: `calcular_ranking --provisional`.
+- **07:15**: `actualitzar_playlists_spotify` (top-CAT/VAL/BAL/ALT + novetats).
 - Saturday 08:00: `calcular_ranking` (official weekly).
+- Quarterly: `arxivar_senyal_vell`.
+- Daily 03:00: pg_dump via `tq-backup`.
 
-**Database**: PostgreSQL. 25 tables, 44 MB. All legacy tables + views dropped
-in Phase 8. 10 Territoris, 1,825 Municipis, 4,209 Artistes (1,917 live
-+ 2,292 in review queue), ~19,937 Cançons (~10,800 verified), 10,082
-SenyalDiari rows, ~3,900 HistorialRevisio decisions feeding the ML model.
+**Database**: PostgreSQL 14. 37 tables (18 domain + Django/axes/otp internals).
+Post-purge 2026-04-20: 1,920 aprovats + 2,323 pendents = 4,244 Artistes;
+3,563 Albums; 8,144 Cançons (100% with Deezer ID + ISRC); 1,770 verified
+(21.8%); 17,408 SenyalDiari rows; 4,371 HistorialRevisio decisions.
 
-**Artista state machine** (enforced by `CheckConstraint` on
-`music_artista`):
+**ML classifier** (`music/ml.py`) — RandomForestClassifier + TF-IDF.
+**76 features** post-slim (16 structured + 4 Whisper + 60 TF-IDF).
+5-fold CV: ROC-AUC 0.9994, F1 0.9522, accuracy 0.9675. Top features:
+`ratio_rebuig_artista` (22.2%), `ratio_rebuig_registrant` (14.9%),
+`ratio_rebuig_isrc_prefix` (13.6%), all Bayesian-smoothed (k=5, p=0.5).
+Auto-retrain when ≥5 new decisions.
 
-```
-            pendent_review=True          pendent_review=False
-aprovat=False   queue (2292)             descartat (kept for FK, 0 today)
-aprovat=True    FORBIDDEN                live (1917)
-```
-
-`auto_descobert` + `font_descoberta` record how the artist entered the
-system (immutable after creation) and are no longer overwritten by the
-approval flow — see CLAUDE_MODELS.md §Artista.
-
-**ML classifier** (`music/ml.py`) — RandomForestClassifier + TF-IDF
-vectoriser cached with mtime invalidation. **223 features**: 19 metadata
-+ 4 Whisper LID (p_ca, p_es, p_en, margin_ca) + 200 TF-IDF tokens.
-Auto-retrains when ≥5 new staff decisions accumulate since the last
-recalc. Whisper LID backfill in progress at 700 tracks/night; ETA full
-coverage ~27-28 April.
-
-**Infrastructure**: single gunicorn on port 8083, Caddy TLS. Legacy Wagtail
-code is preserved at `/root/TopQuaranta/` but the service is disabled. No
-Django admin, no Wagtail admin.
+**Infrastructure**: Caddy 2.x (TLS + SPA fallback), single gunicorn
+with `ExecReload=HUP` for graceful deploys. SPA bundle at
+`web-react/dist/`. Legacy Wagtail code preserved at `/root/TopQuaranta/`
+but the service is disabled.
 
 ---
 
@@ -79,8 +75,32 @@ Django admin, no Wagtail admin.
 | 8 | Legacy cleanup (tables, code, services) | ✅ done (2026-04-16) |
 | Audit | Consolidation + doc rewrite | ✅ done (2026-04-16) |
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
-| **9** | **Excellence — security, reliability, architecture, cultural transparency** | 🟠 **in progress** (53 findings landed + Sessió 16 additions: Whisper LID staff signal, rich per-language ML features, permanent model-comparison harness, versioned cron, manual artist creation, duplicate-name filter, signal-based deezer_no_trobat sync, pendents UX polish) |
-| 10 | Polish & backlog (tactical cleanups not covered by Phase 9) | ⏳ after 9 |
+| 9 | Excellence — security, reliability, architecture, cultural transparency | ✅ done (landed incrementally across sessions) |
+| **10** | **React SPA migration + cleanup** (April 2026) | ✅ **done** |
+
+### Phase 10 · React SPA migration (completed 2026-04-21)
+
+- **Sprint 1**: Fork of cercol's React scaffold (JS + Vite 8 + Tailwind v4
+  + React Router v7), adapted to TopQuaranta palette. Auth + ranking API +
+  `/beta/top` live.
+- **Sprint 2**: Public pages (artistes directory, artist/album/canço
+  profiles, mapa stub). `Canco.slug` + nested SEO URLs.
+- **Sprint 2D**: `/compte` card-grid dashboard + Perfil edit.
+- **Sprint 3**: Full staff panel in React — 17 pages, shared chrome,
+  sidebar navigation, ~30 DRF endpoints (`web/api/staff_views.py`).
+- **Sprint 4**: Caddy flip — React served from `/`, Django kept for
+  `/api/*`, `/compte/{2fa/*, login, logout, registre, activar}/*`,
+  `/sitemap.xml`, `/robots.txt`. Legacy `/beta/*` redirects to root.
+- **Feedback feature**: `Feedback` model + "Corregir" button on every
+  content page (staff → edit link, user → modal, anonymous → login).
+- **Spotify playlist sync**: one-time OAuth + daily cron.
+- **ML slim**: 223 → 76 features, Bayesian smoothing on rejection
+  ratios, ROC-AUC 0.9994.
+- **Visual `/staff/estat` dashboard**: live BD inventory, cron health,
+  weekly flux, ML feature-importance chart.
+- **Cleanup** (2026-04-21): removed ~7 900 LOC of dead Django-templates
+  UI (39 templates + 10 view modules + legacy URLs); archived 6 one-shot
+  management commands to `scripts/archived_commands/`.
 
 ---
 
