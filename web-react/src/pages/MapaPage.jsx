@@ -77,18 +77,45 @@ function centroidOf(geom) {
   return best
 }
 
-// Polygon / MultiPolygon → SVG "d". Y is negated so northern latitudes
-// render on top.
+// Chaikin's corner-cutting: one pass replaces every vertex with two
+// new points at 1/4 and 3/4 along each edge. Two passes give a nicely
+// rounded silhouette on already-simplified polygons (the simplified
+// source keeps the shape recognisable). Rings stay closed.
+function chaikinClosed(ring, iterations = 2) {
+  let pts = ring
+  if (pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] &&
+      pts[0][1] === pts[pts.length - 1][1]) {
+    pts = pts.slice(0, -1) // drop repeated closing point during smoothing
+  }
+  for (let it = 0; it < iterations; it++) {
+    const out = []
+    const n = pts.length
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = pts[i]
+      const [x1, y1] = pts[(i + 1) % n]
+      out.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25])
+      out.push([x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75])
+    }
+    pts = out
+  }
+  pts.push(pts[0]) // close ring
+  return pts
+}
+
+// Polygon / MultiPolygon → SVG "d". Rings go through Chaikin smoothing
+// so coastlines and outlines read as soft curves instead of polylines.
+// Y is negated so northern latitudes render on top.
 function geometryToPath(geom) {
   const rings = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates
   const parts = []
   for (const poly of rings) {
     for (const ring of poly) {
       if (!ring.length) continue
-      const [x0, y0] = ring[0]
+      const smoothed = ring.length >= 4 ? chaikinClosed(ring, 2) : ring
+      const [x0, y0] = smoothed[0]
       let d = `M${x0.toFixed(4)},${(-y0).toFixed(4)}`
-      for (let i = 1; i < ring.length; i++) {
-        const [x, y] = ring[i]
+      for (let i = 1; i < smoothed.length; i++) {
+        const [x, y] = smoothed[i]
         d += `L${x.toFixed(4)},${(-y).toFixed(4)}`
       }
       d += 'Z'
