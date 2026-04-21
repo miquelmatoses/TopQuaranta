@@ -1,0 +1,39 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ subject }}</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#fff;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a0a;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background:#111;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="background:#facc15;padding:22px 28px;">
+              <div style="font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:28px;color:#0a0a0a;line-height:1;letter-spacing:-0.5px;">
+                TopQuaranta
+              </div>
+              <div style="font-size:11px;color:#0a0a0a;text-transform:uppercase;letter-spacing:2px;margin-top:4px;">
+                {% block pretitle %}Música en català{% endblock %}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 28px;color:#e5e5e5;font-size:15px;line-height:1.6;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#0a0a0a;padding:18px 28px;border-top:1px solid #222;color:#9ca3af;font-size:11px;line-height:1.5;text-align:center;">
+              TopQuaranta · <a href="https://www.topquaranta.cat" style="color:#facc15;text-decoration:none;">topquaranta.cat</a><br>
+              Aquest correu és automàtic. Si no l'esperaves, pots ignorar-lo.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

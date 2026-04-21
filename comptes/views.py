@@ -85,14 +85,22 @@ def registre(request: HttpRequest) -> HttpResponse:
 
 
 def _send_verification_email(request: HttpRequest, user) -> None:
-    """Send email with activation link."""
+    """Send HTML + plain-text email with activation link."""
+    from django.template.loader import render_to_string
+
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = email_verification_token.make_token(user)
     link = request.build_absolute_uri(f"/compte/activar/{uid}/{token}/")
     subject = "Activa el teu compte TopQuaranta"
-    body = f"Hola,\n\nActiva el teu compte fent clic aquí:\n{link}\n\nTopQuaranta"
+    ctx = {"link": link, "subject": subject}
+    html_body = render_to_string("comptes/email_activacio.html", ctx)
+    text_body = (
+        "Benvingut a TopQuaranta.\n\n"
+        f"Activa el teu compte obrint aquest enllaç:\n{link}\n\n"
+        "Si no esperaves aquest correu, pots ignorar-lo.\n"
+    )
     try:
-        send_mail(subject, body, None, [user.email])
+        send_mail(subject, text_body, None, [user.email], html_message=html_body)
     except Exception:
         logger.exception("Failed to send verification email to %s", user.email)
 

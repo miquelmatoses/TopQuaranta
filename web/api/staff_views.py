@@ -1939,8 +1939,10 @@ def usuari_enviar_reset_password(request: Request, pk: int) -> Response:
     host = request.get_host()
     url = f"{scheme}://{host}/compte/nova-clau/{uidb64}/{token}/"
 
+    from django.template.loader import render_to_string
+
     subject = "TopQuaranta · nova contrasenya"
-    body = (
+    text_body = (
         f"Hola,\n\n"
         f"L'equip de TopQuaranta ha generat un enllaç perquè estableixis una "
         f"nova contrasenya del teu compte ({u.email}).\n\n"
@@ -1948,8 +1950,19 @@ def usuari_enviar_reset_password(request: Request, pk: int) -> Response:
         f"L'enllaç caduca a les 24 hores. Si no has demanat aquest canvi, "
         f"pots ignorar aquest missatge.\n"
     )
+    html_body = render_to_string(
+        "comptes/email_reset_password.html",
+        {"link": url, "email": u.email, "subject": subject},
+    )
     try:
-        send_mail(subject, body, None, [u.email], fail_silently=False)
+        send_mail(
+            subject,
+            text_body,
+            None,
+            [u.email],
+            fail_silently=False,
+            html_message=html_body,
+        )
     except Exception as e:
         return Response({"error": f"No s'ha pogut enviar l'email: {e}"}, status=500)
 

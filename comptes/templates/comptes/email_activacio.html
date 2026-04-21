@@ -1,0 +1,21 @@
+{% extends "comptes/email_base.html" %}
+{% block pretitle %}Activa el teu compte{% endblock %}
+{% block content %}
+<h1 style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:900;color:#fff;margin:0 0 14px;line-height:1.15;">
+  Benvingut a TopQuaranta
+</h1>
+<p style="margin:0 0 16px;">
+  Per activar el teu compte, confirma la teva adreça fent clic al botó:
+</p>
+<p style="margin:24px 0;text-align:center;">
+  <a href="{{ link }}" style="display:inline-block;background:#facc15;color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:8px;">
+    Activar el compte
+  </a>
+</p>
+<p style="margin:0 0 8px;color:#9ca3af;font-size:13px;">
+  Si el botó no funciona, copia aquest enllaç al navegador:
+</p>
+<p style="margin:0;word-break:break-all;font-size:12px;color:#d1d5db;">
+  {{ link }}
+</p>
+{% endblock %}
