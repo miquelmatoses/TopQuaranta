@@ -58,6 +58,25 @@ function boundsFromGeoJSON(gj) {
   return { minX, minY, maxX, maxY }
 }
 
+// Approximate centroid of a geometry: bbox centre of the largest ring.
+// Good enough for text labels; no need for proper polygon centroid.
+function centroidOf(geom) {
+  const rings = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates
+  let best = null, bestArea = -1
+  for (const poly of rings) {
+    const outer = poly[0] || []
+    if (!outer.length) continue
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const [x, y] of outer) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x
+      if (y < minY) minY = y; if (y > maxY) maxY = y
+    }
+    const area = (maxX - minX) * (maxY - minY)
+    if (area > bestArea) { bestArea = area; best = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 } }
+  }
+  return best
+}
+
 // Polygon / MultiPolygon → SVG "d". Y is negated so northern latitudes
 // render on top.
 function geometryToPath(geom) {
@@ -101,25 +120,50 @@ function colourFor(n, maxN) {
   return mix('#f97316', '#9a3412', (t - 0.5) / 0.5) // orange → dark brick
 }
 
-// L'Alguer sits in Sardinia, ~8°E, far from the rest of PPCC. At the
-// overview level we translate its polygon westward so the map isn't
-// mostly empty sea. Only applied when rendering paisos.json (overview);
-// when the user drills into ALG we show it at its real coordinates.
-const ALG_SHIFT_LON = -3.8  // degrees; places ALG just east of Balears
-function translateCoords(coords, dx, dy) {
-  if (typeof coords[0] === 'number') return [coords[0] + dx, coords[1] + dy]
-  return coords.map(c => translateCoords(c, dx, dy))
-}
-function maybeShiftFeature(ft, level) {
-  if (level !== 'territori') return ft
-  if (ft.properties?.codi !== 'ALG') return ft
-  return {
-    ...ft,
-    geometry: {
-      type: ft.geometry.type,
-      coordinates: translateCoords(ft.geometry.coordinates, ALG_SHIFT_LON, 0),
-    },
+// L'Alguer sits in Sardinia, ~8°E, too far to include with the rest
+// of PPCC without ~60% empty sea. At the overview level we render it
+// separately in a top-right inset (mimicking how Canaries are drawn
+// on maps of Spain). Drilled-in levels show it at its real position.
+
+// L'Alguer inset: dedicated mini-SVG pinned to the top-right corner of
+// the map container, with a short "separator" hint so it's visually
+// understood as an out-of-frame addition (Canaries-style).
+function AlgerInset({ feature, stats, maxN, selected, hovered, onHover, onClick }) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  function walk(c) {
+    if (typeof c[0] === 'number') {
+      if (c[0] < minX) minX = c[0]; if (c[0] > maxX) maxX = c[0]
+      if (c[1] < minY) minY = c[1]; if (c[1] > maxY) maxY = c[1]
+    } else { for (const x of c) walk(x) }
   }
+  walk(feature.geometry.coordinates)
+  const pad = 0.02
+  const vb = `${minX - pad} ${-maxY - pad} ${maxX - minX + 2 * pad} ${maxY - minY + 2 * pad}`
+  const n = stats?.n_artistes || 0
+  const fill = colourFor(n, maxN)
+  return (
+    <div
+      className="absolute top-3 right-3 w-28 bg-white/80 backdrop-blur rounded border border-tq-ink/20 shadow-sm"
+      style={{ zIndex: 5 }}
+    >
+      <svg viewBox={vb} xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
+        <path
+          d={geometryToPath(feature.geometry)}
+          fill={fill}
+          stroke={selected ? '#0a0a0a' : '#9ca3af'}
+          strokeWidth={selected ? 1.5 : 0.5}
+          opacity={hovered ? 0.85 : 1}
+          onMouseEnter={() => onHover('ALG')}
+          onMouseLeave={() => onHover(null)}
+          onClick={onClick}
+          style={{ cursor: 'pointer', vectorEffect: 'non-scaling-stroke' }}
+        />
+      </svg>
+      <div className="border-t border-tq-ink/10 px-2 py-1 text-[10px] font-semibold text-tq-ink/80 text-center">
+        L'Alguer
+      </div>
+    </div>
+  )
 }
 
 function KPI({ label, value }) {
@@ -208,9 +252,19 @@ export default function MapaPage() {
     } else if (level === 'municipi' && selComarca) {
       feats = feats.filter(ft => ft.properties.comarca === selComarca)
     }
-    // Pull L'Alguer westward at the overview so the map isn't 60% sea.
-    return feats.map(ft => maybeShiftFeature(ft, level))
+    // At the PPCC overview, peel L'Alguer out of the main map — it
+    // renders in a dedicated inset at the top-right corner instead.
+    if (level === 'territori') {
+      feats = feats.filter(ft => ft.properties.codi !== 'ALG')
+    }
+    return feats
   }, [gj, level, selTerritori, selComarca])
+
+  // L'Alguer feature for the inset (only at territori level).
+  const algFeature = useMemo(() => {
+    if (level !== 'territori' || !gj) return null
+    return gj.features.find(ft => ft.properties.codi === 'ALG') || null
+  }, [gj, level])
 
   const featureBounds = useMemo(
     () => (features.length ? boundsFromGeoJSON({ features }) : null),
@@ -303,7 +357,7 @@ export default function MapaPage() {
       <div className="grid lg:grid-cols-[1fr_320px] gap-4">
         {/* ── Map ── */}
         <div
-          className="rounded-lg border border-black/5 p-3 min-h-[500px]"
+          className="relative rounded-lg border border-black/5 p-3 min-h-[500px]"
           style={{ background: 'linear-gradient(180deg, #eef2f7 0%, #f5f7fa 100%)' }}
         >
           {!gj && <p className="text-sm text-tq-ink/60 p-6 text-center">Carregant mapa…</p>}
@@ -337,16 +391,74 @@ export default function MapaPage() {
                     onMouseLeave={() => setHovered(null)}
                     onClick={() => onFeatureClick(ft)}
                     style={{ cursor: 'pointer', vectorEffect: 'non-scaling-stroke' }}
+                  />
+                )
+              })}
+              {/* Territori names — always visible at the overview.
+                  For comarca/municipi the count is too high; rely on
+                  the hover overlay instead. */}
+              {level === 'territori' && features.map((ft, i) => {
+                const c = centroidOf(ft.geometry)
+                if (!c) return null
+                const label = TERRITORI_NOM[ft.properties.codi] || ft.properties.codi
+                return (
+                  <text
+                    key={'lbl-' + i}
+                    x={c.x}
+                    y={-c.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="0.22"
+                    fontWeight="700"
+                    fill="#0a0a0a"
+                    stroke="#ffffff"
+                    strokeWidth="0.06"
+                    paintOrder="stroke"
+                    style={{ pointerEvents: 'none', fontFamily: 'Roboto, sans-serif' }}
                   >
-                    <title>
-                      {ft.properties.municipi || ft.properties.comarca ||
-                        TERRITORI_NOM[ft.properties.codi] || ft.properties.codi}
-                      {s ? ` — ${s.n_artistes} artistes` : ''}
-                    </title>
-                  </path>
+                    {label}
+                  </text>
                 )
               })}
             </svg>
+          )}
+
+          {/* Hover tooltip — floats over the map at the top-left.
+              Shown for all levels; at territori level labels are
+              already painted but the tooltip adds the count. */}
+          {hovered && (() => {
+            const s = statsByKey[hovered]
+            const parts = hovered.split('::')
+            let name
+            if (parts.length === 1) name = TERRITORI_NOM[parts[0]] || parts[0]
+            else if (parts.length === 2) name = parts[1]
+            else name = parts[2]
+            return (
+              <div
+                className="absolute top-4 left-4 bg-tq-ink text-white rounded px-3 py-1.5 text-xs shadow-lg pointer-events-none"
+                style={{ zIndex: 10 }}
+              >
+                <div className="font-semibold">{name}</div>
+                {s && (
+                  <div className="text-tq-yellow">
+                    {s.n_artistes.toLocaleString('ca')} artistes
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* L'Alguer inset — only at the PPCC overview. */}
+          {level === 'territori' && algFeature && (
+            <AlgerInset
+              feature={algFeature}
+              stats={statsByKey['ALG']}
+              maxN={maxN}
+              selected={selTerritori === 'ALG'}
+              hovered={hovered === 'ALG'}
+              onHover={setHovered}
+              onClick={() => onFeatureClick(algFeature)}
+            />
           )}
         </div>
 
