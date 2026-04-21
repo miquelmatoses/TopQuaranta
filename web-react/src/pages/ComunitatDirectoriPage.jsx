@@ -9,7 +9,6 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { ComunitatNav } from './ComunitatPage'
 
 const TERRITORIS = [
   ['',      'Tots els territoris'],
@@ -47,7 +46,6 @@ export default function ComunitatDirectoriPage() {
 
   return (
     <section className="max-w-4xl mx-auto text-white">
-      <ComunitatNav />
       <h1 className="text-2xl font-bold mb-1">Directori de la comunitat</h1>
       <p className="text-xs text-white/60 mb-4">
         Usuaris que han decidit ser visibles. Si no hi apareixes, marca la

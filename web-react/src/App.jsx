@@ -18,6 +18,7 @@ import SolicitarGestioPage from './pages/SolicitarGestioPage'
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
 import PerfilUsuariPage from './pages/PerfilUsuariPage'
+import ComunitatLayout from './components/ComunitatLayout'
 import ComunitatPage from './pages/ComunitatPage'
 import ComunitatPublicaPage from './pages/ComunitatPublicaPage'
 import ComunitatDirectoriPage from './pages/ComunitatDirectoriPage'
@@ -108,12 +109,24 @@ function AppContent() {
         <Route path="/compte/artista/gestio" element={<SolicitarGestioPage />} />
         <Route path="/compte/perfil-usuari" element={<PerfilUsuariPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/comunitat" element={<ComunitatPage />} />
-        <Route path="/comunitat/directori" element={<ComunitatDirectoriPage />} />
-        <Route path="/comunitat/publicar" element={<ComunitatPublicarPage />} />
-        <Route path="/comunitat/public" element={<ComunitatPublicaPage />} />
-        <Route path="/comunitat/:pk" element={<ComunitatDetailPage />} />
-        <Route path="/comunitat/:pk/editar" element={<ComunitatPublicarPage />} />
+        {/* Comunitat — nested under a shared dark-sidebar layout
+            (mirroring Staff). Individual pages render only their own
+            content; the sidebar nav lives in `ComunitatLayout`. */}
+        <Route
+          path="/comunitat/*"
+          element={
+            <ComunitatLayout>
+              <Routes>
+                <Route path="/" element={<ComunitatPage />} />
+                <Route path="/directori" element={<ComunitatDirectoriPage />} />
+                <Route path="/publicar" element={<ComunitatPublicarPage />} />
+                <Route path="/public" element={<ComunitatPublicaPage />} />
+                <Route path="/:pk" element={<ComunitatDetailPage />} />
+                <Route path="/:pk/editar" element={<ComunitatPublicarPage />} />
+              </Routes>
+            </ComunitatLayout>
+          }
+        />
         <Route path="/spotify/callback" element={<SpotifyCallbackPage />} />
         {/* Staff panel. All /staff/* routes sit under a shared
             StaffLayout (dark sidebar) and require `is_staff`. As we

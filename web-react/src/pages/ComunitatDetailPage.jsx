@@ -9,7 +9,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { ComunitatNav } from './ComunitatPage'
 
 function EstatBadge({ estat }) {
   const tone = {
@@ -39,7 +38,6 @@ export default function ComunitatDetailPage() {
   if (err) {
     return (
       <section className="max-w-3xl mx-auto text-white">
-        <ComunitatNav />
         <p className="text-sm text-red-300">{err}</p>
       </section>
     )
@@ -58,7 +56,6 @@ export default function ComunitatDetailPage() {
 
   return (
     <article className="max-w-3xl mx-auto text-white">
-      <ComunitatNav />
       <div className="flex items-start justify-between gap-2 mb-3">
         <div>
           <p className="text-[10px] uppercase tracking-widest text-white/60">

@@ -3,14 +3,14 @@
  *
  * Unified feed of publications. Authenticated users see internal +
  * public publications plus their own drafts/pending/rejected. The
- * anonymous public feed lives at /comunitat/public (separate page)
- * and only shows approved public posts.
+ * anonymous public feed lives at /comunitat/public (separate page).
  *
- * Navigation sidebar exposes sibling pages: Directori (users),
- * Publicar (create).
+ * Layout chrome (sidebar with Feed / Directori / Publicar / Feed
+ * públic) is provided by the shared `ComunitatLayout` via App.jsx.
+ * Individual pages render only their own content.
  */
 import { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -39,26 +39,6 @@ function PillFilter({ value, onChange }) {
         </button>
       ))}
     </div>
-  )
-}
-
-export function ComunitatNav() {
-  const base =
-    'text-xs font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap '
-  const active = 'bg-tq-yellow text-tq-ink'
-  const idle = 'text-white/70 hover:text-white hover:bg-white/10'
-  return (
-    <nav className="flex gap-1 mb-5" aria-label="Navegació comunitat">
-      <NavLink to="/comunitat" end className={({ isActive }) => base + (isActive ? active : idle)}>
-        Feed
-      </NavLink>
-      <NavLink to="/comunitat/directori" className={({ isActive }) => base + (isActive ? active : idle)}>
-        Directori
-      </NavLink>
-      <NavLink to="/comunitat/publicar" className={({ isActive }) => base + (isActive ? active : idle)}>
-        + Publicar
-      </NavLink>
-    </nav>
   )
 }
 
@@ -122,7 +102,6 @@ export default function ComunitatPage() {
 
   return (
     <section className="max-w-3xl mx-auto text-white">
-      <ComunitatNav />
       <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">Feed</h1>

@@ -15,7 +15,6 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { ComunitatNav } from './ComunitatPage'
 
 const inputClass =
   'mt-1 w-full px-3 py-2 rounded-md bg-white text-tq-ink text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tq-yellow'
@@ -71,7 +70,6 @@ export default function ComunitatPublicarPage() {
 
   return (
     <section className="max-w-3xl mx-auto text-white">
-      <ComunitatNav />
       <h1 className="text-2xl font-bold mb-4">
         {isEdit ? 'Editar publicació' : 'Nova publicació'}
       </h1>
