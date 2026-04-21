@@ -1,81 +1,50 @@
-"""F3: sitemap.xml generation for indexing by search engines.
+"""SEO sitemap for TopQuaranta.
 
-Four entries: static pages + every approved artist + every album with a
-verified track + one entry per ranking territory. Changefreq=weekly for
-pages driven by the weekly ranking; monthly for artist/album profiles
-that mostly change when new tracks get verified.
+Django still serves `/sitemap.xml` (via Caddy passthrough) so search
+engines can index the public surface even though the UI now lives in
+the React SPA. Paths are hardcoded here because the SPA owns the
+client-side routes — Django has no URL patterns for them anymore.
+
+If we ever want per-artist/album/canço sitemaps (one row per slug),
+extend this with extra Sitemap subclasses that iterate the relevant
+querysets.
 """
 
 from django.contrib.sitemaps import Sitemap
-from django.urls import reverse
-
-from music.constants import TERRITORIS_VALIDS
-from music.models import Album, Artista
 
 
 class StaticSitemap(Sitemap):
-    changefreq = "weekly"
-    priority = 0.9
-    i18n = False
-    protocol = "https"
+    """Top-level entry points exposed by the SPA."""
 
-    def items(self):
-        return [
-            "web:homepage",
-            "web:ranking",
-            "web:artistes",
-            "web:mapa",
-            "web:com_funciona",
-            "web:com_funciona_historial",
-        ]
-
-    def location(self, item):
-        return reverse(item)
-
-
-class RankingByTerritoriSitemap(Sitemap):
     changefreq = "weekly"
     priority = 0.8
-    i18n = False
     protocol = "https"
 
+    # Hardcoded paths served by the React SPA at the Caddy level. The
+    # location() method below returns these literally; `reverse()` is
+    # no longer applicable since Django has no URL patterns for `/`,
+    # `/top`, etc.
+    URLS = [
+        ("/", 1.0, "daily"),
+        ("/top", 1.0, "daily"),
+        ("/artistes", 0.8, "weekly"),
+        ("/mapa", 0.6, "weekly"),
+        ("/com-funciona", 0.5, "monthly"),
+    ]
+
     def items(self):
-        return [t for t in TERRITORIS_VALIDS]
-
-    def location(self, territori):
-        return f"{reverse('web:ranking')}?t={territori.lower()}"
-
-
-class ArtistSitemap(Sitemap):
-    changefreq = "monthly"
-    priority = 0.7
-    i18n = False
-    protocol = "https"
-
-    def items(self):
-        return Artista.objects.filter(aprovat=True).only("slug")
+        return self.URLS
 
     def location(self, obj):
-        return reverse("web:artista", kwargs={"slug": obj.slug})
+        return obj[0]
 
+    def priority(self, obj):
+        return obj[1]
 
-class AlbumSitemap(Sitemap):
-    changefreq = "monthly"
-    priority = 0.5
-    i18n = False
-    protocol = "https"
-
-    def items(self):
-        # Only albums with at least one verified track are publicly linked.
-        return Album.objects.filter(cancons__verificada=True).distinct().only("slug")
-
-    def location(self, obj):
-        return reverse("web:album", kwargs={"slug": obj.slug})
+    def changefreq(self, obj):
+        return obj[2]
 
 
 sitemaps = {
     "static": StaticSitemap,
-    "rankings": RankingByTerritoriSitemap,
-    "artistes": ArtistSitemap,
-    "albums": AlbumSitemap,
 }

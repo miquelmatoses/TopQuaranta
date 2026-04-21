@@ -1,22 +1,31 @@
-{% extends "web/base.html" %}
-
-{% block title %}Accés restringit (403) — TopQuaranta{% endblock %}
-
-{% block content %}
-<section class="container" style="padding: var(--mm-space-12) 0; text-align: center;">
-  <p class="section-label" style="margin-bottom: var(--mm-space-4);">error 403</p>
-  <h1 class="ranking-title" style="font-size: var(--mm-text-6xl); margin: 0 0 var(--mm-space-6);">
-    Accés restringit
-  </h1>
-  <p style="font-size: var(--mm-text-lg); max-width: 40ch; margin: 0 auto var(--mm-space-8); color: var(--mm-color-text-muted);">
-    Aquesta secció és per a personal autoritzat. Si creus que hi hauries de
-    poder entrar, posa't en contacte amb un administrador.
-  </p>
-  <div style="display: flex; gap: var(--mm-space-3); justify-content: center; flex-wrap: wrap;">
-    <a href="{% url 'web:homepage' %}" class="mm-btn mm-btn--primary">Tornar a l'inici</a>
-    {% if not user.is_authenticated %}
-    <a href="{% url 'comptes:login' %}" class="mm-btn">Inicia sessió</a>
-    {% endif %}
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <title>403 — TopQuaranta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <style>
+    html, body { margin: 0; padding: 0; background: #0a0a0a; color: #fff;
+                 font-family: system-ui, sans-serif; min-height: 100vh;
+                 display: flex; align-items: center; justify-content: center; }
+    .wrap { max-width: 420px; padding: 40px 24px; text-align: center; }
+    .label { color: #facc15; font-size: 11px; text-transform: uppercase;
+             letter-spacing: 0.2em; margin: 0 0 8px; }
+    h1 { font-size: 42px; margin: 0 0 12px; }
+    p  { color: #a1a1aa; font-size: 14px; line-height: 1.55; margin: 0 0 20px; }
+    a  { display: inline-block; padding: 8px 16px; background: #facc15;
+         color: #0a0a0a; text-decoration: none; font-weight: 600;
+         font-size: 13px; border-radius: 6px; }
+    a:hover { background: #ca8a04; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="label">Error 403</p>
+    <h1>Sense permís</h1>
+    <p>No tens accés a aquest recurs.</p>
+    <a href="/">Tornar a l'inici</a>
   </div>
-</section>
-{% endblock %}
+</body>
+</html>

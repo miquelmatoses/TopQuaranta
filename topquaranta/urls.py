@@ -4,11 +4,14 @@ from django.views.generic import TemplateView
 
 from web.sitemaps import sitemaps
 
+# Post Sprint-4 + cleanup: Django serves only API, auth flows that
+# aren't in React yet (2FA, registre, email activation) and the two
+# SEO files. Everything else at the domain root is served by Caddy
+# from the React dist bundle and is unreachable via Django.
 urlpatterns = [
     path("api/v1/", include("web.api.urls")),
     path("compte/", include("comptes.urls")),
-    path("staff/", include("web.views.staff.urls")),
-    # F3: SEO surface — sitemap.xml + robots.txt at the root of the site.
+    # SEO surfaces.
     path(
         "sitemap.xml",
         sitemap,
@@ -22,7 +25,6 @@ urlpatterns = [
             content_type="text/plain",
         ),
     ),
-    path("", include("web.urls")),
 ]
 
 # S13: custom branded error pages (only used when DEBUG=False).

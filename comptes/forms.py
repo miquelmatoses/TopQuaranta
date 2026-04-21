@@ -1,9 +1,12 @@
+"""Forms used by the Django-rendered auth flow.
+
+Since Sprint 4 only the signup form survives as a Django form; the
+artist-gestió / proposta forms moved to React and hit
+`/api/v1/compte/{solicituds,propostes}/` directly.
+"""
+
 from django import forms
 from django.contrib.auth import get_user_model
-
-from music.models import Artista
-
-from .models import PropostaArtista, UserArtista
 
 Usuari = get_user_model()
 
@@ -46,29 +49,3 @@ class RegistreForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-
-
-class SollicitudGestioForm(forms.ModelForm):
-    """Form for requesting management of an existing artist."""
-
-    artista = forms.ModelChoiceField(
-        queryset=Artista.objects.filter(aprovat=True).order_by("nom"),
-        label="Artista",
-        required=True,
-        empty_label="-- Selecciona un artista --",
-        widget=forms.Select(attrs={"class": "filter-search"}),
-    )
-    sollicitud_text = forms.CharField(
-        label="Justificació",
-        widget=forms.Textarea(
-            attrs={
-                "rows": 4,
-                "placeholder": "Explica per què representes aquest artista "
-                "(ets un membre del grup, el/la mànager, etc.)",
-            }
-        ),
-    )
-
-    class Meta:
-        model = UserArtista
-        fields = ("artista", "sollicitud_text")

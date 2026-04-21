@@ -1,8 +1,0 @@
-{
-  "name": "topquaranta",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "mm-design": "github:miquelmatoses/mm-design"
-  }
-}
