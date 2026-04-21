@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+import unicodedata
 
 import requests
 from django.conf import settings
@@ -87,11 +88,14 @@ def _api_call(artist_name: str, track_name: str) -> tuple[dict | None, int | Non
     None otherwise; error_code is the Last.fm error number (e.g. 6 = not found)
     or None for transport errors.
     """
+    # Last.fm's index is in NFC; we occasionally get NFD strings from
+    # Postgres (legacy imports with combining accents). Normalise here
+    # so `Só` stored as O+U+0301 matches `Ó` (U+00D3) on their side.
     params = {
         "method": "track.getInfo",
         "api_key": settings.LASTFM_API_KEY,
-        "artist": artist_name,
-        "track": track_name,
+        "artist": unicodedata.normalize("NFC", artist_name),
+        "track": unicodedata.normalize("NFC", track_name),
         "format": "json",
         "autocorrect": 1,
     }
