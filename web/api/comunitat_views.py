@@ -595,3 +595,119 @@ def staff_directori_toggle_visible(request: Request, usuari_id: int) -> Response
     p.visible_directori = not p.visible_directori
     p.save(update_fields=["visible_directori", "updated_at"])
     return Response({"usuari_id": usuari_id, "visible_directori": p.visible_directori})
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Image upload — shared by publication editor + profile photo
+# ═════════════════════════════════════════════════════════════════════════
+
+
+# Max bytes per upload. 5 MB covers a decent JPEG at 3000×2000 after
+# resize; more than that is almost always an un-optimized source.
+_MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+# Per-user quota on `publicacions/` folder to keep disk bounded.
+_MAX_PER_USER_BYTES = 20 * 1024 * 1024
+
+_ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+# Max width after resize. Taller images keep their aspect ratio.
+_MAX_WIDTH = {"publicacio": 1600, "perfil": 600}
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def upload_imatge(request: Request) -> Response:
+    """Accept one image upload, resize it, store under MEDIA_ROOT.
+
+    Form fields:
+      * `fitxer` (required) — the image file.
+      * `kind`   (optional, default "publicacio") — one of
+                 {"publicacio", "perfil"}; picks target dir and max width.
+
+    Returns `{"url": "/media/..."}` suitable for `imatge_url` fields or
+    markdown `![](url)` inserts.
+    """
+    import io
+    import uuid
+    from pathlib import Path
+
+    from django.conf import settings
+    from PIL import Image, UnidentifiedImageError
+
+    f = request.FILES.get("fitxer")
+    if not f:
+        return Response({"error": "Falta el fitxer."}, status=400)
+    if f.size > _MAX_UPLOAD_BYTES:
+        return Response(
+            {"error": f"Màxim {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB per imatge."},
+            status=400,
+        )
+    if f.content_type not in _ALLOWED_CONTENT_TYPES:
+        return Response(
+            {"error": "Tipus no permès. Només JPEG, PNG o WebP."}, status=400
+        )
+
+    kind = request.POST.get("kind", "publicacio")
+    if kind not in _MAX_WIDTH:
+        return Response({"error": "kind invàlid."}, status=400)
+
+    # Per-user disk quota for publicacions (profile photos overwrite so
+    # they don't accumulate).
+    if kind == "publicacio":
+        user_dir = Path(settings.MEDIA_ROOT) / "publicacions" / str(request.user.pk)
+        if user_dir.exists():
+            used = sum(p.stat().st_size for p in user_dir.rglob("*") if p.is_file())
+            if used + f.size > _MAX_PER_USER_BYTES:
+                return Response(
+                    {
+                        "error": (
+                            "Quota d'imatges superada "
+                            f"({_MAX_PER_USER_BYTES // (1024 * 1024)} MB). "
+                            "Esborra'n alguna o enllaça imatges externes."
+                        )
+                    },
+                    status=400,
+                )
+    else:
+        user_dir = Path(settings.MEDIA_ROOT) / "perfil" / str(request.user.pk)
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        img = Image.open(f)
+        img.load()  # force read so exceptions surface here, not later
+    except (UnidentifiedImageError, OSError):
+        return Response({"error": "El fitxer no és una imatge vàlida."}, status=400)
+
+    # Normalize: convert to RGB for JPEG, strip EXIF, resize if wider
+    # than the target. Square-crop profile photos to a tidy 1:1.
+    max_w = _MAX_WIDTH[kind]
+    if kind == "perfil":
+        # Square-center-crop, then resize.
+        s = min(img.width, img.height)
+        left = (img.width - s) // 2
+        top = (img.height - s) // 2
+        img = img.crop((left, top, left + s, top + s))
+        if img.width > max_w:
+            img = img.resize((max_w, max_w), Image.Resampling.LANCZOS)
+    elif img.width > max_w:
+        ratio = max_w / img.width
+        img = img.resize((max_w, int(img.height * ratio)), Image.Resampling.LANCZOS)
+
+    # Always save as JPEG (smaller than PNG for photos, no transparency
+    # needed for either use case).
+    if img.mode in ("RGBA", "P"):
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        bg.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+        img = bg
+    elif img.mode != "RGB":
+        img = img.convert("RGB")
+
+    filename = f"{uuid.uuid4().hex}.jpg"
+    dest = user_dir / filename
+    img.save(dest, format="JPEG", quality=85, optimize=True)
+
+    # Build public URL. MEDIA_URL is "/media/" so this is relative to
+    # the site root; Caddy serves it directly off disk.
+    rel = dest.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
+    return Response({"url": f"{settings.MEDIA_URL}{rel}"})

@@ -167,6 +167,11 @@ urlpatterns = [
         staff_views.usuari_enviar_reset_password,
         name="staff_usuari_enviar_reset_password",
     ),
+    path(
+        "staff/usuaris/<int:pk>/reenviar-verificacio/",
+        staff_views.usuari_reenviar_verificacio,
+        name="staff_usuari_reenviar_verificacio",
+    ),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes
@@ -187,6 +192,8 @@ urlpatterns = [
         views.api_municipi_lookup,
         name="api_municipi_lookup",
     ),
+    # Image upload (publication editor + profile photo)
+    path("upload/imatge/", comunitat_views.upload_imatge, name="upload_imatge"),
     # ── Grup C · Community platform ──
     # User profile (own, authenticated)
     path(

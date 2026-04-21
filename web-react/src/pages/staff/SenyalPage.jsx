@@ -6,6 +6,7 @@
  * corregit=True can be "accepted" — future drifts are silenced.
  */
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import {
   Btn,
@@ -80,8 +81,26 @@ export default function SenyalPage() {
             {rows?.results?.map(r => (
               <Tr key={r.pk}>
                 <Td className="text-xs">{r.data}</Td>
-                <Td>{r.canco_nom}</Td>
-                <Td>{r.artista_nom}</Td>
+                <Td>
+                  {r.canco_pk ? (
+                    <Link
+                      to={`/staff/cancons/${r.canco_pk}`}
+                      className="underline hover:text-tq-yellow-deep"
+                    >
+                      {r.canco_nom}
+                    </Link>
+                  ) : r.canco_nom}
+                </Td>
+                <Td>
+                  {r.artista_pk ? (
+                    <Link
+                      to={`/staff/artistes/${r.artista_pk}`}
+                      className="underline hover:text-tq-yellow-deep"
+                    >
+                      {r.artista_nom}
+                    </Link>
+                  ) : r.artista_nom}
+                </Td>
                 <Td className="text-xs">{r.lastfm_playcount?.toLocaleString()}</Td>
                 <Td className="text-xs">{r.lastfm_listeners?.toLocaleString()}</Td>
                 <Td>

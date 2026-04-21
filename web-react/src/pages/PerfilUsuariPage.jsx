@@ -9,6 +9,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import LocationCascade from '../components/staff/LocationCascade'
+import ImageUploadButton from '../components/ImageUploadButton'
 
 const inputClass =
   'mt-1 px-3 py-2 rounded-md bg-white text-tq-ink text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tq-yellow'
@@ -114,8 +115,41 @@ export default function PerfilUsuariPage() {
           <textarea rows={4} value={perfil.bio || ''} onChange={e => patch({ bio: e.target.value })} className={inputClass + ' resize-y'} />
         </Field>
 
-        <Field label="URL imatge de perfil" error={errors.imatge_url}>
-          <input type="url" value={perfil.imatge_url || ''} onChange={e => patch({ imatge_url: e.target.value })} className={inputClass} />
+        <Field label="Imatge de perfil" error={errors.imatge_url}>
+          <div className="flex items-start gap-3 mt-1">
+            {perfil.imatge_url && (
+              <img
+                src={perfil.imatge_url}
+                alt=""
+                className="w-20 h-20 rounded-full object-cover border border-white/20"
+              />
+            )}
+            <div className="flex-1 flex flex-col gap-2">
+              <input
+                type="url"
+                placeholder="https://… o puja una imatge"
+                value={perfil.imatge_url || ''}
+                onChange={e => patch({ imatge_url: e.target.value })}
+                className={inputClass}
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <ImageUploadButton
+                  kind="perfil"
+                  onUploaded={url => patch({ imatge_url: url })}
+                  label="📎 Pujar foto"
+                />
+                {perfil.imatge_url && (
+                  <button
+                    type="button"
+                    onClick={() => patch({ imatge_url: '' })}
+                    className="text-xs text-white/60 hover:text-white underline"
+                  >
+                    Treure
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </Field>
 
         <fieldset className="bg-white/5 rounded-md p-4">

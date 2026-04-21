@@ -116,11 +116,6 @@ export default function StaffDashboardPage() {
           count={c.publicacions_pendents}
         />
         <Tile
-          to="/staff/directori-usuaris"
-          title="Directori d'usuaris"
-          desc="Gestió de perfils de comunitat i visibilitat."
-        />
-        <Tile
           to="/staff/cancons"
           title="Cançons"
           desc="Cançons no verificades a revisar."

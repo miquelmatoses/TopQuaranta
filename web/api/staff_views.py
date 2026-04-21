@@ -1567,6 +1567,9 @@ def senyal_list(request: Request) -> Response:
                 "canco_pk": s.canco_id,
                 "canco_nom": s.canco.nom if s.canco else "",
                 "canco_slug": s.canco.slug if s.canco else None,
+                "artista_pk": (
+                    s.canco.artista_id if s.canco and s.canco.artista_id else None
+                ),
                 "artista_nom": (
                     s.canco.artista.nom if s.canco and s.canco.artista else ""
                 ),
@@ -1758,13 +1761,14 @@ def auditlog(request: Request) -> Response:
 @permission_classes([IsStaff])
 def usuaris_list(request: Request) -> Response:
     totp_exists = TOTPDevice.objects.filter(user=OuterRef("pk"), confirmed=True)
-    qs = Usuari.objects.annotate(
+    qs = Usuari.objects.select_related("perfil", "perfil__localitat").annotate(
         n_propostes=Count("propostes_artista", distinct=True),
         n_sollicituds_aprovades=Count(
             "artistes_vinculats",
             filter=Q(artistes_vinculats__estat="aprovat"),
             distinct=True,
         ),
+        n_publicacions=Count("publicacions", distinct=True),
         has_totp=Exists(totp_exists),
     )
     estat = request.GET.get("estat", "")
@@ -1777,33 +1781,50 @@ def usuaris_list(request: Request) -> Response:
         qs = qs.filter(is_staff=True)
     elif rol == "usuari":
         qs = qs.filter(is_staff=False)
+    directori = request.GET.get("directori", "")
+    if directori == "1":
+        qs = qs.filter(perfil__visible_directori=True)
+    elif directori == "0":
+        qs = qs.filter(perfil__visible_directori=False)
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
-        qs = qs.filter(Q(email__icontains=cerca) | Q(username__icontains=cerca))
+        qs = qs.filter(
+            Q(email__icontains=cerca)
+            | Q(username__icontains=cerca)
+            | Q(perfil__nom_public__icontains=cerca)
+        )
     qs = qs.order_by("-date_joined")
     page, meta = _paginate(qs, request)
-    return Response(
-        {
-            "results": [
-                {
-                    "pk": u.pk,
-                    "email": u.email,
-                    "username": u.username,
-                    "is_active": u.is_active,
-                    "is_staff": u.is_staff,
-                    "has_totp": bool(u.has_totp),
-                    "date_joined": (
-                        u.date_joined.isoformat() if u.date_joined else None
-                    ),
-                    "last_login": (u.last_login.isoformat() if u.last_login else None),
-                    "n_propostes": u.n_propostes,
-                    "n_sollicituds_aprovades": u.n_sollicituds_aprovades,
-                }
-                for u in page.object_list
-            ],
-            **meta,
-        }
-    )
+    results = []
+    for u in page.object_list:
+        p = getattr(u, "perfil", None)
+        localitat_nom = None
+        if p and p.localitat_id:
+            m = p.localitat
+            localitat_nom = f"{m.nom}, {m.comarca}" if m else None
+        results.append(
+            {
+                "pk": u.pk,
+                "email": u.email,
+                "username": u.username,
+                "is_active": u.is_active,
+                "is_staff": u.is_staff,
+                "has_totp": bool(u.has_totp),
+                "date_joined": (u.date_joined.isoformat() if u.date_joined else None),
+                "last_login": (u.last_login.isoformat() if u.last_login else None),
+                "n_propostes": u.n_propostes,
+                "n_sollicituds_aprovades": u.n_sollicituds_aprovades,
+                "n_publicacions": u.n_publicacions,
+                # Profile flags — None when no PerfilUsuari row yet.
+                "nom_public": p.nom_public if p else "",
+                "rol_musical": p.rol_musical if p else None,
+                "localitat": localitat_nom,
+                "visible_directori": bool(p and p.visible_directori),
+                "obert_colaboracions": bool(p and p.obert_colaboracions),
+                "imatge_url": (p.imatge_url if p and p.imatge_url else None),
+            }
+        )
+    return Response({"results": results, **meta})
 
 
 @api_view(["GET"])
@@ -1914,6 +1935,32 @@ def usuari_reset_2fa(request: Request, pk: int) -> Response:
         static_removed=static_n,
     )
     return Response({"ok": True, "totp_removed": totp_n, "static_removed": static_n})
+
+
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def usuari_reenviar_verificacio(request: Request, pk: int) -> Response:
+    """Resend the account-activation email to an inactive user.
+
+    Safeguard against the "blocked forever" trap: if a user never
+    clicked their original activation link, staff can regenerate it
+    without having to delete + recreate the account.
+    """
+    from comptes.views import _send_verification_email
+
+    u = get_object_or_404(Usuari, pk=pk)
+    if not u.email:
+        return Response({"error": "L'usuari no té email."}, status=400)
+    if u.is_active:
+        return Response({"error": "L'usuari ja té el compte activat."}, status=400)
+    _send_verification_email(request, u)
+    log_staff_action(
+        request,
+        "usuari_reenviar_verificacio",
+        target=u,
+        email=u.email,
+    )
+    return Response({"ok": True, "email": u.email})
 
 
 @api_view(["POST"])

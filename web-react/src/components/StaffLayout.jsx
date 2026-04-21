@@ -23,7 +23,6 @@ const SECTIONS = [
   { to: '/staff/solicituds', label: 'Sol·licituds' },
   { to: '/staff/feedback',   label: 'Feedback'     },
   { to: '/staff/publicacions',    label: 'Publicacions' },
-  { to: '/staff/directori-usuaris', label: 'Directori usuaris' },
   { to: '/staff/senyal',     label: 'Senyal'       },
   { to: '/staff/historial',  label: 'Historial'    },
   { to: '/staff/configuracio', label: 'Configuració' },

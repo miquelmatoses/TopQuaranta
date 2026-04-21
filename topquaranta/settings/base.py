@@ -153,7 +153,7 @@ STATICFILES_DIRS = [
     # a new snapshot into vendor/ and committing.
     ("mm-design", BASE_DIR / "vendor" / "mm-design"),
 ]
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -48,7 +48,6 @@ import UsuariDetailPage from './pages/staff/UsuariDetailPage'
 import FeedbackPage from './pages/staff/FeedbackPage'
 import EstatPage from './pages/staff/EstatPage'
 import StaffPublicacionsPage from './pages/staff/StaffPublicacionsPage'
-import StaffDirectoriUsuarisPage from './pages/staff/StaffDirectoriUsuarisPage'
 
 /** Top-level error boundary — catches unexpected render errors and
  *  shows a minimal fallback with a reload button. */
@@ -159,7 +158,6 @@ function AppContent() {
                   <Route path="/feedback" element={<FeedbackPage />} />
                   <Route path="/estat" element={<EstatPage />} />
                   <Route path="/publicacions" element={<StaffPublicacionsPage />} />
-                  <Route path="/directori-usuaris" element={<StaffDirectoriUsuarisPage />} />
                 </Routes>
               </StaffLayout>
             </AdminRoute>

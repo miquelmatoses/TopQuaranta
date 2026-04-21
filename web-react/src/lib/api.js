@@ -19,17 +19,19 @@ function readCookie(name) {
 async function request(path, { method = 'GET', body, headers = {} } = {}) {
   const isWrite = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS'
   const csrf = isWrite ? readCookie('csrftoken') : null
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      // For FormData, let the browser set Content-Type with the boundary.
+      ...(body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(csrf ? { 'X-CSRFToken': csrf } : {}),
       ...headers,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body == null ? undefined : isFormData ? body : JSON.stringify(body),
   })
 
   if (!res.ok) {

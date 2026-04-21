@@ -61,6 +61,15 @@ export default function UsuariDetailPage() {
     } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
   }
 
+  async function reenviarVerificacio() {
+    if (!confirm(`Reenviar email de verificació a ${u.email}?`)) return
+    setBusy(true); setErr('')
+    try {
+      await api.post(`/staff/usuaris/${pk}/reenviar-verificacio/`)
+      alert(`Email de verificació enviat a ${u.email}.`)
+    } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
+  }
+
   return (
     <section>
       <PageHeader
@@ -80,6 +89,11 @@ export default function UsuariDetailPage() {
             <Btn size="md" onClick={enviarResetPassword} disabled={busy}>
               Enviar reset de clau
             </Btn>
+            {!u.is_active && (
+              <Btn size="md" onClick={reenviarVerificacio} disabled={busy}>
+                Reenviar verificació
+              </Btn>
+            )}
           </>
         }
       />

@@ -11,10 +11,11 @@
  * pre-wrap block for now so simple line-break authoring works. A real
  * markdown renderer is a nice-to-have follow-up.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import ImageUploadButton from '../components/ImageUploadButton'
 
 const inputClass =
   'mt-1 w-full px-3 py-2 rounded-md bg-white text-tq-ink text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tq-yellow'
@@ -27,6 +28,22 @@ export default function ComunitatPublicarPage() {
 
   const [titol, setTitol] = useState('')
   const [cos, setCos] = useState('')
+  const cosRef = useRef(null)
+
+  function insertAtCursor(text) {
+    const el = cosRef.current
+    if (!el) { setCos(c => c + text); return }
+    const start = el.selectionStart ?? cos.length
+    const end = el.selectionEnd ?? cos.length
+    const next = cos.slice(0, start) + text + cos.slice(end)
+    setCos(next)
+    // Move caret to after inserted text on next tick.
+    setTimeout(() => {
+      el.focus()
+      const pos = start + text.length
+      el.setSelectionRange(pos, pos)
+    }, 0)
+  }
   const [visibilitat, setVisibilitat] = useState('interna')
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
@@ -95,6 +112,7 @@ export default function ComunitatPublicarPage() {
             Cos <span className="opacity-60 font-normal">(markdown: **negreta**, *cursiva*, # títols, - llistes, [text](url), ![](url-imatge))</span>
           </span>
           <textarea
+            ref={cosRef}
             required
             rows={14}
             value={cos}
@@ -103,6 +121,15 @@ export default function ComunitatPublicarPage() {
             className={inputClass + ' resize-y font-mono text-[13px]'}
             placeholder="## El meu primer post&#10;&#10;Estem molt contents de fer aquest primer pas..."
           />
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <ImageUploadButton
+              kind="publicacio"
+              onUploaded={url => insertAtCursor(`\n\n![](${url})\n\n`)}
+            />
+            <span className="text-[11px] text-white/50">
+              Màx 5 MB · JPEG/PNG/WebP · quota per usuari: 20 MB
+            </span>
+          </div>
           {errors.cos && <span className="text-[11px] text-red-300 mt-0.5">{errors.cos}</span>}
         </label>
 

@@ -35,6 +35,12 @@ www.topquaranta.cat {
 		file_server
 	}
 
+	# User-uploaded media (profile photos + publication images).
+	handle_path /media/* {
+		root * /home/topquaranta/app/media
+		file_server
+	}
+
 	# ── Django passthrough: only explicit paths still served by the
 	# old HTML backend. Everything else falls through to the SPA. ──
 	@django {
