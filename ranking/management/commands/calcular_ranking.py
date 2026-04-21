@@ -185,10 +185,13 @@ class Command(BaseCommand):
                 # Clear any stale rows from earlier runs so a formerly-
                 # ranked canco doesn't linger once its territori drops
                 # out (e.g. artist M2M corrected, ALT loses all feeders).
-                if not dry_run and not provisional:
-                    RankingSetmanal.objects.filter(
-                        territori=territori, setmana=setmana
-                    ).delete()
+                if not dry_run:
+                    if provisional:
+                        RankingProvisional.objects.filter(territori=territori).delete()
+                    else:
+                        RankingSetmanal.objects.filter(
+                            territori=territori, setmana=setmana
+                        ).delete()
                 if territori in (TERRITORIS_AGREGATS | TERRITORIS_OPCIONALS):
                     self.stdout.write(
                         f"  No data for {territori} — cleared stale rows."
