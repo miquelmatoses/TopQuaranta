@@ -568,6 +568,12 @@ def _canco_row(c) -> dict:
             if c.album
             else None
         ),
+        # artistes_col is a ManyToMany on Canco. Expose the list on every
+        # row so staff can see collabs at a glance in the edit page.
+        "artistes_col": [
+            {"pk": a.pk, "nom": a.nom, "slug": a.slug, "aprovat": a.aprovat}
+            for a in c.artistes_col.all()
+        ],
     }
 
 
@@ -746,6 +752,37 @@ def canco_detail(request: Request, pk: int) -> Response:
                     new_artista=new_artista.nom,
                 )
         canco.save()
+        # Replace the collaborator list (artistes_col ManyToMany). Expects
+        # an array of Artista PKs. A check in Canco.clean() rejects the
+        # D5 case where the main artist also appears as a collaborator;
+        # we mirror it here so the PATCH surfaces a 400 instead of an
+        # opaque IntegrityError.
+        if "artistes_col_pks" in data:
+            raw_list = data.get("artistes_col_pks") or []
+            try:
+                want_pks = [int(x) for x in raw_list if str(x).strip()]
+            except (TypeError, ValueError):
+                return Response(
+                    {"error": "artistes_col_pks ha de ser una llista d'enters."},
+                    status=400,
+                )
+            if canco.artista_id in want_pks:
+                return Response(
+                    {
+                        "error": (
+                            "L'artista principal no pot ser també "
+                            "col·laborador de la mateixa cançó."
+                        )
+                    },
+                    status=400,
+                )
+            found = list(Artista.objects.filter(pk__in=want_pks))
+            if len(found) != len(set(want_pks)):
+                return Response(
+                    {"error": "Algun dels artistes col·laboradors no existeix."},
+                    status=404,
+                )
+            canco.artistes_col.set(found)
         log_staff_action(request, "canco_edit", target=canco)
     return Response(_canco_row(canco))
 
@@ -901,6 +938,16 @@ def album_detail(request: Request, pk: int) -> Response:
                     "pk", "nom", "slug", "verificada"
                 )
             ],
+            # Collaborators per canço, so the album page can display
+            # them inline next to the track name. Separate query to
+            # avoid N+1 — one prefetched fetch over artistes_col M2M.
+            "cancons_col": {
+                c.pk: [
+                    {"pk": a.pk, "nom": a.nom, "slug": a.slug}
+                    for a in c.artistes_col.all()
+                ]
+                for c in album.cancons.prefetch_related("artistes_col").only("pk")
+            },
         }
     )
 

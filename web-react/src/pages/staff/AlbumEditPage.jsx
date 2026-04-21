@@ -130,18 +130,38 @@ export default function AlbumEditPage() {
           <h2 className="p-3 font-semibold">Cançons ({a.cancons.length})</h2>
           <Table>
             <THead>
-              <tr><Th>Nom</Th><Th>Verificada</Th><Th></Th></tr>
+              <tr><Th>Nom</Th><Th>Col·laboradors</Th><Th>Verificada</Th><Th></Th></tr>
             </THead>
             <tbody>
-              {a.cancons.map(c => (
-                <Tr key={c.pk}>
-                  <Td>{c.nom}</Td>
-                  <Td>{c.verificada ? <Pill tone="green">Sí</Pill> : <Pill tone="gray">No</Pill>}</Td>
-                  <Td className="text-right">
-                    <Link className="underline text-xs" to={`/staff/cancons/${c.pk}`}>editar</Link>
-                  </Td>
-                </Tr>
-              ))}
+              {a.cancons.map(c => {
+                const cols = (a.cancons_col && a.cancons_col[c.pk]) || []
+                return (
+                  <Tr key={c.pk}>
+                    <Td>{c.nom}</Td>
+                    <Td className="text-xs">
+                      {cols.length === 0 ? (
+                        <span className="opacity-40">—</span>
+                      ) : (
+                        cols.map((col, i) => (
+                          <span key={col.pk}>
+                            {i > 0 && ', '}
+                            <Link
+                              to={`/artista/${col.slug}`}
+                              className="underline opacity-80 hover:opacity-100"
+                            >
+                              {col.nom}
+                            </Link>
+                          </span>
+                        ))
+                      )}
+                    </Td>
+                    <Td>{c.verificada ? <Pill tone="green">Sí</Pill> : <Pill tone="gray">No</Pill>}</Td>
+                    <Td className="text-right">
+                      <Link className="underline text-xs" to={`/staff/cancons/${c.pk}`}>editar</Link>
+                    </Td>
+                  </Tr>
+                )
+              })}
             </tbody>
           </Table>
         </TableCard>

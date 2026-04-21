@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { Btn, Input, PageHeader, TableCard } from '../../components/staff/StaffTable'
 import ArtistaPicker from '../../components/staff/ArtistaPicker'
+import ArtistesColPicker from '../../components/staff/ArtistesColPicker'
 
 export default function CancoEditPage() {
   const { pk } = useParams()
@@ -37,8 +38,8 @@ export default function CancoEditPage() {
         activa: c.activa,
         data_llancament: c.data_llancament,
         deezer_id: c.deezer_id,
-        // Empty string means "don't change" on the backend.
         artista_pk: c.artista?.pk,
+        artistes_col_pks: (c.artistes_col || []).map(a => a.pk),
       })
       setC(out)
       setMsg('Desat.')
@@ -88,6 +89,16 @@ export default function CancoEditPage() {
               Si l'artista correcte no existeix, clica "+ Crear" per afegir-lo
               primer, després torna aquí i tria'l de la llista.
             </p>
+          </div>
+          <div className="text-xs font-semibold">
+            Col·laboradors
+            <div className="mt-1 font-normal">
+              <ArtistesColPicker
+                value={c.artistes_col || []}
+                blockedPk={c.artista?.pk}
+                onChange={next => patch({ artistes_col: next })}
+              />
+            </div>
           </div>
           {c.album && (
             <label className="text-xs font-semibold">Àlbum
