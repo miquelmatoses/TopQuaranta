@@ -6,6 +6,7 @@ from . import (
     auth_views,
     canco_views,
     compte_views,
+    comunitat_views,
     ranking_views,
     staff_views,
     views,
@@ -175,5 +176,51 @@ urlpatterns = [
         "localitzacio/municipi-lookup/",
         views.api_municipi_lookup,
         name="api_municipi_lookup",
+    ),
+    # ── Grup C · Community platform ──
+    # User profile (own, authenticated)
+    path(
+        "compte/perfil-usuari/",
+        comunitat_views.perfil_usuari,
+        name="compte_perfil_usuari",
+    ),
+    # Directori (registered users only)
+    path("comunitat/directori/", comunitat_views.directori, name="comunitat_directori"),
+    # Publicacions feed (authenticated view) + public-only feed
+    path(
+        "comunitat/publicacions/",
+        comunitat_views.publicacions,
+        name="comunitat_publicacions",
+    ),
+    path(
+        "comunitat/publicacions/<int:pk>/",
+        comunitat_views.publicacio_detail,
+        name="comunitat_publicacio_detail",
+    ),
+    path(
+        "comunitat/publicacions-publiques/",
+        comunitat_views.publicacions_publiques,
+        name="comunitat_publicacions_publiques",
+    ),
+    # Staff moderation surfaces
+    path(
+        "staff/publicacions/",
+        comunitat_views.staff_publicacions,
+        name="staff_publicacions",
+    ),
+    path(
+        "staff/publicacions/<int:pk>/decidir/",
+        comunitat_views.staff_publicacio_decidir,
+        name="staff_publicacio_decidir",
+    ),
+    path(
+        "staff/directori-usuaris/",
+        comunitat_views.staff_directori_usuaris,
+        name="staff_directori_usuaris",
+    ),
+    path(
+        "staff/directori-usuaris/<int:usuari_id>/toggle/",
+        comunitat_views.staff_directori_toggle_visible,
+        name="staff_directori_toggle_visible",
     ),
 ]

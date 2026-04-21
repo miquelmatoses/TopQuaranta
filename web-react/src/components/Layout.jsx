@@ -80,9 +80,10 @@ function LayoutInner({ children }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navLinks = [
-    { to: '/top',      label: 'Top'      },
-    { to: '/artistes', label: 'Artistes' },
-    { to: '/mapa',     label: 'Mapa'     },
+    { to: '/top',       label: 'Top'       },
+    { to: '/artistes',  label: 'Artistes'  },
+    { to: '/mapa',      label: 'Mapa'      },
+    { to: '/comunitat', label: 'Comunitat' },
     ...(profile?.is_staff ? [{ to: '/staff', label: 'Staff' }] : []),
   ]
 

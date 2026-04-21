@@ -35,7 +35,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from comptes.models import Feedback, PropostaArtista, UserArtista
+from comptes.models import Feedback, PropostaArtista, Publicacio, UserArtista
 from music.audit import log_staff_action
 from music.constants import MOTIUS_REBUIG, MOTIUS_VALIDS, TERRITORI_NOMS
 from music.ml import recalcular_ml_si_cal
@@ -126,6 +126,9 @@ def dashboard(request: Request) -> Response:
                 estat=UserArtista.ESTAT_PENDENT
             ).count(),
             "feedback_obert": Feedback.objects.filter(resolt=False).count(),
+            "publicacions_pendents": Publicacio.objects.filter(
+                estat=Publicacio.ESTAT_PENDENT
+            ).count(),
             "usuaris_total": Usuari.objects.filter(is_active=True).count(),
         }
     )

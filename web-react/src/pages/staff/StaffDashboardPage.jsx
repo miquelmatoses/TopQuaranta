@@ -110,6 +110,17 @@ export default function StaffDashboardPage() {
           count={c.feedback_obert}
         />
         <Tile
+          to="/staff/publicacions"
+          title="Publicacions pendents"
+          desc="Publicacions públiques esperant aprovació."
+          count={c.publicacions_pendents}
+        />
+        <Tile
+          to="/staff/directori-usuaris"
+          title="Directori d'usuaris"
+          desc="Gestió de perfils de comunitat i visibilitat."
+        />
+        <Tile
           to="/staff/cancons"
           title="Cançons"
           desc="Cançons no verificades a revisar."

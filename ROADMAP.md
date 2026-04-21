@@ -77,6 +77,7 @@ but the service is disabled.
 | Ops | Monitoring (tq-health) + daily backups + settings cleanup | ✅ done (2026-04-16) |
 | 9 | Excellence — security, reliability, architecture, cultural transparency | ✅ done (landed incrementally across sessions) |
 | **10** | **React SPA migration + cleanup** (April 2026) | ✅ **done** |
+| **11** | **Community platform** (Grup C, 2026-04-21) | ✅ **done** |
 
 ### Phase 10 · React SPA migration (completed 2026-04-21)
 
@@ -101,6 +102,27 @@ but the service is disabled.
 - **Cleanup** (2026-04-21): removed ~7 900 LOC of dead Django-templates
   UI (39 templates + 10 view modules + legacy URLs); archived 6 one-shot
   management commands to `scripts/archived_commands/`.
+
+### Phase 11 · Community platform — Grup C (completed 2026-04-21)
+
+- New models `PerfilUsuari` (1:1 with Usuari, auto-created via signal)
+  and `Publicacio` (markdown posts with visibilitat=interna/publica +
+  estat pipeline). Migration `comptes/0008_perfilusuari_publicacio`.
+- Post-registration guided onboarding at `/onboarding` with a single
+  "Saltar" escape; accessible later from `/compte/perfil-usuari`.
+- Community routes: `/comunitat` (mixed feed), `/comunitat/directori`
+  (opt-in list of users), `/comunitat/publicar`, `/comunitat/public`
+  (unauthenticated), `/comunitat/:pk` (detail).
+- Staff moderation surfaces: `/staff/publicacions` (with
+  publicar/rebutjar/despublicar + staff notes), `/staff/directori-usuaris`
+  (toggle visibility flag on any profile).
+- `PropostaArtista`: Deezer IDs now required (≥ 1) — without them no
+  track can be verified. Localitzacions now required too and use the
+  LocationCascade (territori → comarca → municipi, with ALT falling
+  back to free-text manual entry).
+- Public nav gains "Comunitat" link. Staff dashboard gains two tiles
+  and sidebar gains two entries. `/api/v1/auth/me/` exposes
+  `onboarding_complet` so first-time logins auto-route to the form.
 
 ---
 

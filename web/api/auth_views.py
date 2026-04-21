@@ -56,6 +56,13 @@ def _profile(request_or_user) -> dict:
 
         has_totp = TOTPDevice.objects.filter(user=user, confirmed=True).exists()
 
+    # onboarding_complet surfaces so the SPA knows whether to auto-route
+    # newly registered users to the guided profile form. Defaults to
+    # True for users that pre-date the PerfilUsuari signal — the
+    # backfill sets the flag on existing rows so they aren't pestered.
+    perfil = getattr(user, "perfil", None)
+    onboarding_complet = bool(perfil.onboarding_complet) if perfil else True
+
     return {
         "id": user.pk,
         "email": user.email,
@@ -65,6 +72,7 @@ def _profile(request_or_user) -> dict:
         "is_authenticated": True,
         "is_verified": is_verified,
         "has_totp": has_totp,
+        "onboarding_complet": onboarding_complet,
     }
 
 

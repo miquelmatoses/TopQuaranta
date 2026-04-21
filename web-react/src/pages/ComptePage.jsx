@@ -162,6 +162,13 @@ export default function ComptePage() {
   if (authLoading) return null
   if (!profile) return <Navigate to="/compte/accedir" replace />
 
+  // Newly registered users without a completed profile land here from
+  // the activation email. Bounce them to the guided form once; they
+  // can come back via /compte/perfil-usuari any time.
+  if (profile.is_authenticated && profile.onboarding_complet === false) {
+    return <Navigate to="/onboarding" replace />
+  }
+
   const handleLogout = async () => {
     await signOut()
     navigate('/', { replace: true })
@@ -178,6 +185,30 @@ export default function ComptePage() {
         {data?.stats && data?.artista_verificat && (
           <StatsCard stats={data.stats} artistaNom={data.artista_verificat.artista.nom} />
         )}
+      </div>
+
+      {/* Perfil comunitari CTA — visible per tots els usuaris */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link
+          to="/compte/perfil-usuari"
+          className="block bg-white/5 border border-white/10 text-white rounded-lg p-4 hover:bg-white/10 transition-colors"
+        >
+          <p className="text-[10px] uppercase tracking-widest text-white/60">Comunitat</p>
+          <p className="font-semibold text-sm mt-1">Perfil de comunitat</p>
+          <p className="text-xs text-white/60 mt-1">
+            Nom públic, localitat, instruments, visibilitat al directori…
+          </p>
+        </Link>
+        <Link
+          to="/comunitat"
+          className="block bg-white/5 border border-white/10 text-white rounded-lg p-4 hover:bg-white/10 transition-colors"
+        >
+          <p className="text-[10px] uppercase tracking-widest text-white/60">Comunitat</p>
+          <p className="font-semibold text-sm mt-1">Anar a Comunitat</p>
+          <p className="text-xs text-white/60 mt-1">
+            Llegir el feed, publicar, explorar el directori.
+          </p>
+        </Link>
       </div>
 
       {/* Staff CTA — surface only for staff users */}

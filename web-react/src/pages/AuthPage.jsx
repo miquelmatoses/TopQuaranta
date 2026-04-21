@@ -69,8 +69,15 @@ export default function AuthPage() {
     setGeneralError(null)
     setBusy(true)
     try {
-      await signIn(email, password)
-      navigate(nextPath || '/')
+      const me = await signIn(email, password)
+      // First-time post-registration users land on onboarding; the
+      // flag is set by the activation-email handler. Users who
+      // already did / skipped it go to their intended destination.
+      if (me && me.is_authenticated && !me.onboarding_complet) {
+        navigate('/onboarding')
+      } else {
+        navigate(nextPath || '/')
+      }
     } catch (err) {
       setGeneralError(err.message || 'Error')
     } finally {

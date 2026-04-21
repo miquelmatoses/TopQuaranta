@@ -16,6 +16,13 @@ import ComptePerfilPage from './pages/ComptePerfilPage'
 import ProposarArtistaPage from './pages/ProposarArtistaPage'
 import SolicitarGestioPage from './pages/SolicitarGestioPage'
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
+import OnboardingPage from './pages/OnboardingPage'
+import PerfilUsuariPage from './pages/PerfilUsuariPage'
+import ComunitatPage from './pages/ComunitatPage'
+import ComunitatPublicaPage from './pages/ComunitatPublicaPage'
+import ComunitatDirectoriPage from './pages/ComunitatDirectoriPage'
+import ComunitatPublicarPage from './pages/ComunitatPublicarPage'
+import ComunitatDetailPage from './pages/ComunitatDetailPage'
 import AdminRoute from './components/AdminRoute'
 import StaffLayout from './components/StaffLayout'
 import StaffDashboardPage from './pages/staff/StaffDashboardPage'
@@ -39,6 +46,8 @@ import UsuarisPage from './pages/staff/UsuarisPage'
 import UsuariDetailPage from './pages/staff/UsuariDetailPage'
 import FeedbackPage from './pages/staff/FeedbackPage'
 import EstatPage from './pages/staff/EstatPage'
+import StaffPublicacionsPage from './pages/staff/StaffPublicacionsPage'
+import StaffDirectoriUsuarisPage from './pages/staff/StaffDirectoriUsuarisPage'
 
 /** Top-level error boundary — catches unexpected render errors and
  *  shows a minimal fallback with a reload button. */
@@ -97,6 +106,14 @@ function AppContent() {
         <Route path="/compte/perfil" element={<ComptePerfilPage />} />
         <Route path="/compte/artista/proposta" element={<ProposarArtistaPage />} />
         <Route path="/compte/artista/gestio" element={<SolicitarGestioPage />} />
+        <Route path="/compte/perfil-usuari" element={<PerfilUsuariPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/comunitat" element={<ComunitatPage />} />
+        <Route path="/comunitat/directori" element={<ComunitatDirectoriPage />} />
+        <Route path="/comunitat/publicar" element={<ComunitatPublicarPage />} />
+        <Route path="/comunitat/public" element={<ComunitatPublicaPage />} />
+        <Route path="/comunitat/:pk" element={<ComunitatDetailPage />} />
+        <Route path="/comunitat/:pk/editar" element={<ComunitatPublicarPage />} />
         <Route path="/spotify/callback" element={<SpotifyCallbackPage />} />
         {/* Staff panel. All /staff/* routes sit under a shared
             StaffLayout (dark sidebar) and require `is_staff`. As we
@@ -128,6 +145,8 @@ function AppContent() {
                   <Route path="/usuaris/:pk" element={<UsuariDetailPage />} />
                   <Route path="/feedback" element={<FeedbackPage />} />
                   <Route path="/estat" element={<EstatPage />} />
+                  <Route path="/publicacions" element={<StaffPublicacionsPage />} />
+                  <Route path="/directori-usuaris" element={<StaffDirectoriUsuarisPage />} />
                 </Routes>
               </StaffLayout>
             </AdminRoute>

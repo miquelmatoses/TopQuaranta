@@ -20,7 +20,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from comptes.models import HTTP_ONLY_URL, Feedback, PropostaArtista, UserArtista, Usuari
-from music.models import Artista
+from music.models import Artista, Municipi
 from ranking.models import RankingSetmanal
 
 
@@ -238,9 +238,14 @@ def proposta_crear(request: Request) -> Response:
     Body:
       nom            str, required
       justificacio   str, required
+      deezer_ids     list, REQUIRED (≥ 1 numeric ID) — without a Deezer
+                     ID no track of the artist can be verified, so the
+                     proposal can't enter the ranking pipeline.
+      localitzacions list, REQUIRED (≥ 1 entry) — each
+                     {"municipi_id": int} or {"manual": str}.
+                     "manual" is reserved for ALT-territori artists
+                     whose localitat isn't in the PPCC Municipi table.
       <social>_url   optional URL fields (one per social network)
-      deezer_ids     optional list of ints / numeric strings
-      localitzacions optional list of {"municipi_id": int} or {"manual": str}
     """
     data = request.data or {}
     errors: dict[str, str] = {}
@@ -262,26 +267,44 @@ def proposta_crear(request: Request) -> Response:
             errors[f] = err
         socials[f] = val
 
+    # ── Deezer IDs (required, ≥ 1) ────────────────────────────────────
+    raw_deezer = data.get("deezer_ids") or []
     deezer_ids: list[int] = []
-    for raw in data.get("deezer_ids") or []:
+    for raw in raw_deezer:
         try:
             deezer_ids.append(int(raw))
         except (TypeError, ValueError):
-            errors["deezer_ids"] = "Un dels IDs no és un número."
+            errors["deezer_ids"] = "Els IDs han de ser números enters."
+            break
+    if "deezer_ids" not in errors and not deezer_ids:
+        errors["deezer_ids"] = (
+            "Cal almenys un Deezer ID. Sense ell no podem verificar "
+            "cap cançó de l'artista ni fer-lo entrar al rànquing."
+        )
 
+    # ── Localitzacions (required, ≥ 1) ────────────────────────────────
+    raw_locs = data.get("localitzacions") or []
     localitzacions: list[dict] = []
-    for loc in data.get("localitzacions") or []:
+    for loc in raw_locs:
         if not isinstance(loc, dict):
             continue
         if loc.get("municipi_id"):
             try:
-                localitzacions.append({"municipi_id": int(loc["municipi_id"])})
+                pk = int(loc["municipi_id"])
             except (TypeError, ValueError):
-                pass
+                continue
+            if not Municipi.objects.filter(pk=pk).exists():
+                continue
+            localitzacions.append({"municipi_id": pk})
         elif loc.get("manual"):
             manual = str(loc["manual"]).strip()
             if manual:
                 localitzacions.append({"manual": manual})
+    if not localitzacions:
+        errors["localitzacions"] = (
+            "Cal indicar almenys una localitat (territori → comarca → "
+            "municipi, o 'Altres' + nom lliure)."
+        )
 
     if errors:
         return Response({"errors": errors}, status=400)

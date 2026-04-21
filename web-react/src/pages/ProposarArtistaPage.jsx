@@ -1,22 +1,26 @@
 /**
  * ProposarArtistaPage — /compte/artista/proposta
  *
- * Authenticated form. Lets a user submit a PropostaArtista with:
+ * Authenticated form. Submits a PropostaArtista.
+ *
  *   - nom (required)
  *   - justificacio (required)
- *   - social URLs (optional, all validated server-side)
- *   - deezer_ids (free-form list; the form exposes one text input per id
- *     with add/remove)
- *   - localitzacions (only "manual" free-text entries from here; the
- *     staff approval step resolves them to a Municipi if they match)
+ *   - deezer_ids (REQUIRED, ≥ 1) — without a Deezer ID no track of
+ *     the artist can be verified, so the proposal can't reach the
+ *     ranking. Enforced both server-side and client-side.
+ *   - localitzacions (REQUIRED, ≥ 1) — cascade territori → comarca →
+ *     municipi. When the user picks territori=ALT the cascade collapses
+ *     into a free-text input for places outside the curated Municipi
+ *     table, same UX as ArtistaEditPage.
+ *   - social URLs (all optional, validated server-side).
  *
- * Sends to POST /api/v1/compte/propostes/. On success, returns the
- * user to /compte where the new proposal appears in the card grid.
+ * POSTs to /api/v1/compte/propostes/. On success, back to /compte.
  */
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import LocationCascade from '../components/staff/LocationCascade'
 
 const SOCIAL_FIELDS = [
   ['spotify_url',    'Spotify'],
@@ -30,10 +34,12 @@ const SOCIAL_FIELDS = [
   ['facebook_url',   'Facebook'],
 ]
 
-function Field({ label, error, children, hint }) {
+function Field({ label, error, children, hint, required }) {
   return (
     <label className="flex flex-col text-sm">
-      <span className="text-xs font-semibold text-white/90">{label}</span>
+      <span className="text-xs font-semibold text-white/90">
+        {label}{required && <span className="text-tq-yellow"> *</span>}
+      </span>
       {children}
       {hint && <span className="text-[11px] text-white/60 mt-0.5">{hint}</span>}
       {error && <span className="text-[11px] text-red-300 mt-0.5">{error}</span>}
@@ -44,6 +50,14 @@ function Field({ label, error, children, hint }) {
 const inputClass =
   'mt-1 px-3 py-2 rounded-md bg-white text-tq-ink text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tq-yellow'
 
+const emptyLoc = () => ({
+  territori: '',
+  comarca: '',
+  municipi_id: null,
+  municipi_nom: '',
+  manual: '',
+})
+
 export default function ProposarArtistaPage() {
   const { profile, loading } = useAuth()
   const navigate = useNavigate()
@@ -52,12 +66,16 @@ export default function ProposarArtistaPage() {
   const [justificacio, setJustificacio] = useState('')
   const [social, setSocial] = useState(Object.fromEntries(SOCIAL_FIELDS.map(([k]) => [k, ''])))
   const [deezerIds, setDeezerIds] = useState([''])
-  const [localitats, setLocalitats] = useState([''])
+  const [locs, setLocs] = useState([emptyLoc()])
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
   if (loading) return null
-  if (!profile) return <Navigate to="/compte/accedir" replace />
+  if (!profile) return <Navigate to="/compte/accedir?next=/compte/artista/proposta" replace />
+
+  function updateLoc(i, partial) {
+    setLocs(locs.map((l, idx) => (idx === i ? { ...l, ...partial } : l)))
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -69,10 +87,15 @@ export default function ProposarArtistaPage() {
         justificacio,
         ...social,
         deezer_ids: deezerIds.map(s => s.trim()).filter(Boolean),
-        localitzacions: localitats
-          .map(s => s.trim())
-          .filter(Boolean)
-          .map(s => ({ manual: s })),
+        // LocationCascade emits either {municipi_id} for PPCC or
+        // {manual} for territori=ALT; the backend accepts both shapes.
+        localitzacions: locs
+          .map(l => {
+            if (l.municipi_id) return { municipi_id: l.municipi_id }
+            if (l.territori === 'ALT' && l.manual) return { manual: l.manual }
+            return null
+          })
+          .filter(Boolean),
       }
       await api.post('/compte/propostes/', payload)
       navigate('/compte')
@@ -99,7 +122,7 @@ export default function ProposarArtistaPage() {
       )}
 
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Nom de l'artista *" error={errors.nom}>
+        <Field label="Nom de l'artista" required error={errors.nom}>
           <input
             required
             value={nom}
@@ -110,7 +133,8 @@ export default function ProposarArtistaPage() {
         </Field>
 
         <Field
-          label="Justificació *"
+          label="Justificació"
+          required
           error={errors.justificacio}
           hint="Per què cal afegir aquest artista? Quins àlbums, activitat recent, etc."
         >
@@ -125,11 +149,13 @@ export default function ProposarArtistaPage() {
 
         <fieldset className="bg-white/5 rounded-md p-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-white/80 px-1">
-            Deezer
+            Deezer IDs <span className="text-tq-yellow">*</span>
           </legend>
           <p className="text-[11px] text-white/60 mb-2">
-            Un o més Deezer artist IDs (numèrics). Es troben a la URL del perfil
-            de Deezer després de <code>/artist/</code>.
+            <strong>Obligatori (almenys un).</strong> Sense un Deezer ID no
+            podem verificar cap cançó de l'artista ni fer-la entrar al
+            ranking. Els trobaràs a la URL del perfil de l'artista a Deezer,
+            després de <code>/artist/</code>.
           </p>
           {deezerIds.map((v, i) => (
             <div key={i} className="flex gap-2 mb-2">
@@ -141,15 +167,18 @@ export default function ProposarArtistaPage() {
                 }
                 className={inputClass + ' flex-1'}
                 placeholder="p. ex. 12345"
+                required={i === 0}
               />
-              <button
-                type="button"
-                onClick={() => setDeezerIds(deezerIds.filter((_, j) => j !== i))}
-                className="px-2 text-sm text-red-300 hover:text-red-200"
-                aria-label="Eliminar"
-              >
-                ✕
-              </button>
+              {deezerIds.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setDeezerIds(deezerIds.filter((_, j) => j !== i))}
+                  className="px-2 text-sm text-red-300 hover:text-red-200"
+                  aria-label="Eliminar"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
           <button
@@ -166,43 +195,47 @@ export default function ProposarArtistaPage() {
 
         <fieldset className="bg-white/5 rounded-md p-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-white/80 px-1">
-            Localitats
+            Localitats <span className="text-tq-yellow">*</span>
           </legend>
           <p className="text-[11px] text-white/60 mb-2">
-            Ciutat / comarca d'origen. Pots posar-ne més d'una.
+            <strong>Obligatori (almenys una).</strong> Tria territori → comarca
+            → municipi. Per a artistes de fora dels Països Catalans, escull
+            "Altres" i escriu el nom a mà.
           </p>
-          {localitats.map((v, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input
-                value={v}
-                onChange={e =>
-                  setLocalitats(localitats.map((x, j) => (j === i ? e.target.value : x)))
-                }
-                className={inputClass + ' flex-1'}
-                placeholder="p. ex. Lleida, Segrià"
-              />
-              <button
-                type="button"
-                onClick={() => setLocalitats(localitats.filter((_, j) => j !== i))}
-                className="px-2 text-sm text-red-300 hover:text-red-200"
-                aria-label="Eliminar"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+          <div className="flex flex-col gap-2">
+            {locs.map((l, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <LocationCascade value={l} onChange={next => updateLoc(i, next)} />
+                </div>
+                {locs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setLocs(locs.filter((_, j) => j !== i))}
+                    className="px-2 text-sm text-red-300 hover:text-red-200"
+                    aria-label="Eliminar"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
           <button
             type="button"
-            onClick={() => setLocalitats([...localitats, ''])}
-            className="text-xs font-semibold text-tq-yellow hover:underline"
+            onClick={() => setLocs([...locs, emptyLoc()])}
+            className="text-xs font-semibold text-tq-yellow hover:underline mt-2"
           >
             + Afegir localitat
           </button>
+          {errors.localitzacions && (
+            <p className="text-[11px] text-red-300 mt-1">{errors.localitzacions}</p>
+          )}
         </fieldset>
 
         <fieldset className="bg-white/5 rounded-md p-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-white/80 px-1">
-            Enllaços
+            Enllaços (opcionals)
           </legend>
           <div className="grid sm:grid-cols-2 gap-3">
             {SOCIAL_FIELDS.map(([field, label]) => (

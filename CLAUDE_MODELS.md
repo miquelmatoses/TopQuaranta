@@ -243,6 +243,42 @@ Proposal for a **new** artist not yet in the system.
 copies social link fields — all inside one `transaction.atomic()`. Links the
 new Artista back via `artista_creat`.
 
+### `PerfilUsuari` — `comptes_perfilusuari` (Grup C, 2026-04)
+1:1 extension of `Usuari`. Created automatically on user creation via
+`comptes/signals.py::create_perfil_usuari` (post_save on AUTH_USER_MODEL),
+so every account row always has a paired profile — downstream code can
+assume `usuari.perfil` exists.
+
+- `usuari` OneToOne → Usuari (CASCADE, related_name="perfil")
+- `nom_public` CharField(120)
+- `localitat` FK → Municipi (SET_NULL, nullable)
+- `imatge_url`, `bio` (≤2000)
+- Social URLs (10 fields, listed in `SOCIAL_FIELDS` — same shape as
+  `Artista.SOCIAL_LINK_FIELDS` plus `instagram_url`)
+- `rol_musical` CharField(choices=escoltador/music/productor/altre)
+- `instruments` CharField(255, free text)
+- `visible_directori` Bool (db_index=True) — gates `/comunitat/directori`
+  listing; default False (opt-in)
+- `obert_colaboracions` Bool
+- `onboarding_complet` Bool — set after the user either fills the
+  onboarding form or explicitly skips it. Surfaced on `/auth/me/` so
+  the SPA can auto-route first-time users to `/onboarding`.
+
+### `Publicacio` — `comptes_publicacio` (Grup C)
+User-authored content at `/comunitat`. Staff bypasses the pending queue
+(posts auto-land in `publicat` regardless of visibilitat). Non-staff
+with `visibilitat=interna` posts directly; with `visibilitat=publica`
+the post goes `pendent` until staff approves.
+
+- `autor` FK → Usuari (CASCADE, related_name="publicacions")
+- `titol` (≤200), `cos` (≤20 000 chars, markdown)
+- `visibilitat` choices: `interna` (registered users only) / `publica` (public)
+- `estat` choices: `esborrany` / `pendent` / `publicat` / `rebutjat`
+- `notes_staff` TextField — reject reason shown to author
+- `publicat_at` — set on transition into `publicat`
+- `created_at` / `updated_at`
+- Indexes: `(estat, -created_at)`, `(visibilitat, estat, -publicat_at)`
+
 ### `Feedback` — `comptes_feedback` (2026-04)
 User-submitted correction reports filed from public artist/album/canço
 pages via the "Corregir" button.
@@ -267,4 +303,4 @@ pages via the "Corregir" button.
   on `aprovat` / `pendent_review`), `0045_canco_slug` (unique slug on Canco),
   `0044_drop_deezer_no_trobat` (dropped the stale cache flag).
 - `ranking/` 0001–0004. Latest: `0004_rankingprovisional`.
-- `comptes/` 0001–0007. Latest: `0007_feedback`.
+- `comptes/` 0001–0008. Latest: `0008_perfilusuari_publicacio`.

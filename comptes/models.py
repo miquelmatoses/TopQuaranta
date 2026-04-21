@@ -216,3 +216,163 @@ class Feedback(models.Model):
 
     def __str__(self) -> str:
         return f"{self.usuari} · {self.target_type}:{self.target_label or self.target_slug}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Grup C — Plataforma de comunitat
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class PerfilUsuari(models.Model):
+    """Extended profile for each Usuari.
+
+    Created automatically via post_save signal on Usuari creation (see
+    `comptes/signals.py`) so every account always has a row — never
+    null-guard downstream.
+
+    `visible_directori` is the gate for /comunitat/directori listing;
+    defaults to False, users opt in from onboarding or later from their
+    account settings.
+    """
+
+    ROL_ESCOLTADOR = "escoltador"
+    ROL_MUSIC = "music"
+    ROL_PRODUCTOR = "productor"
+    ROL_ALTRE = "altre"
+    ROL_CHOICES = [
+        (ROL_ESCOLTADOR, "Escoltador"),
+        (ROL_MUSIC, "Músic"),
+        (ROL_PRODUCTOR, "Productor"),
+        (ROL_ALTRE, "Altre"),
+    ]
+
+    usuari = models.OneToOneField(
+        Usuari, on_delete=models.CASCADE, related_name="perfil"
+    )
+    nom_public = models.CharField(max_length=120, blank=True)
+    localitat = models.ForeignKey(
+        "music.Municipi",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="perfil_usuaris",
+    )
+    imatge_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    bio = models.TextField(blank=True, max_length=2000)
+
+    # Socials — mirror of Artista.SOCIAL_LINK_FIELDS. Kept as flat fields
+    # (not JSON) so filtering by "who has a bandcamp" is a simple query
+    # and the admin/staff UIs can label them cleanly.
+    spotify_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    viasona_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    web_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    bandcamp_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    youtube_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    viquipedia_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    soundcloud_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    tiktok_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    facebook_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+    instagram_url = models.URLField(blank=True, validators=[HTTP_ONLY_URL])
+
+    rol_musical = models.CharField(
+        max_length=20, choices=ROL_CHOICES, default=ROL_ESCOLTADOR
+    )
+    instruments = models.CharField(max_length=255, blank=True)
+
+    visible_directori = models.BooleanField(default=False, db_index=True)
+    obert_colaboracions = models.BooleanField(default=False)
+
+    # Onboarding completion flag. Set when the user either fills the form
+    # or explicitly dismisses it; used by the React AuthContext to know
+    # whether to auto-route to /onboarding on first session.
+    onboarding_complet = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    SOCIAL_FIELDS = [
+        ("spotify_url", "Spotify"),
+        ("viasona_url", "Viasona"),
+        ("web_url", "Web"),
+        ("bandcamp_url", "Bandcamp"),
+        ("youtube_url", "YouTube"),
+        ("viquipedia_url", "Viquipèdia"),
+        ("soundcloud_url", "SoundCloud"),
+        ("tiktok_url", "TikTok"),
+        ("facebook_url", "Facebook"),
+        ("instagram_url", "Instagram"),
+    ]
+
+    class Meta:
+        verbose_name = "Perfil d'usuari"
+        verbose_name_plural = "Perfils d'usuari"
+
+    def __str__(self) -> str:
+        return f"Perfil de {self.usuari}"
+
+
+class Publicacio(models.Model):
+    """User-authored content published at /comunitat.
+
+    Staff writes directly in any visibility (estat=publicat).
+    A regular user with visibilitat=interna posts directly (visible only
+    to registered users). A regular user with visibilitat=publica goes
+    through estat=pendent until staff approves. Rejection flags
+    estat=rebutjat and staff may attach notes.
+    """
+
+    VISIBILITAT_INTERNA = "interna"
+    VISIBILITAT_PUBLICA = "publica"
+    VISIBILITAT_CHOICES = [
+        (VISIBILITAT_INTERNA, "Interna (només usuaris registrats)"),
+        (VISIBILITAT_PUBLICA, "Pública (tothom)"),
+    ]
+
+    ESTAT_ESBORRANY = "esborrany"
+    ESTAT_PENDENT = "pendent"
+    ESTAT_PUBLICAT = "publicat"
+    ESTAT_REBUTJAT = "rebutjat"
+    ESTAT_CHOICES = [
+        (ESTAT_ESBORRANY, "Esborrany"),
+        (ESTAT_PENDENT, "Pendent d'aprovació"),
+        (ESTAT_PUBLICAT, "Publicada"),
+        (ESTAT_REBUTJAT, "Rebutjada"),
+    ]
+
+    autor = models.ForeignKey(
+        Usuari, on_delete=models.CASCADE, related_name="publicacions"
+    )
+    titol = models.CharField(max_length=200)
+    # Body is stored as markdown (rendered client-side). Caps it at 20k
+    # chars which is generous for a post but bounds worst-case payload.
+    cos = models.TextField(max_length=20000)
+    visibilitat = models.CharField(
+        max_length=20,
+        choices=VISIBILITAT_CHOICES,
+        default=VISIBILITAT_INTERNA,
+    )
+    estat = models.CharField(
+        max_length=20,
+        choices=ESTAT_CHOICES,
+        default=ESTAT_ESBORRANY,
+        db_index=True,
+    )
+
+    # Staff note surfaced on rejection.
+    notes_staff = models.TextField(blank=True)
+
+    publicat_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Publicació"
+        verbose_name_plural = "Publicacions"
+        ordering = ["-publicat_at", "-created_at"]
+        indexes = [
+            models.Index(fields=["estat", "-created_at"]),
+            models.Index(fields=["visibilitat", "estat", "-publicat_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.titol} — {self.autor}"
