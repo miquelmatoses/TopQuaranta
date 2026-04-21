@@ -1131,6 +1131,40 @@ def proposta_aprovar(request: Request, pk: int) -> Response:
     p = get_object_or_404(PropostaArtista.objects.select_related("usuari"), pk=pk)
     if p.estat != PropostaArtista.ESTAT_PENDENT:
         return Response({"error": "Ja processada."}, status=400)
+
+    # Validate Deezer IDs *before* opening the transaction. An
+    # IntegrityError inside `atomic()` poisons the surrounding block
+    # (Postgres refuses further statements), so the silent try/except
+    # that used to live in the loop actually crashed the whole approval
+    # with a TransactionManagementError. Check up-front and surface a
+    # 409 with the conflict info so staff can decide how to resolve it
+    # (merge, change the ID on the proposal, etc.).
+    wanted_deezer = p.get_deezer_id_list()
+    if wanted_deezer:
+        clashing = ArtistaDeezer.objects.filter(
+            deezer_id__in=wanted_deezer
+        ).select_related("artista")
+        conflicts = [
+            {
+                "deezer_id": ad.deezer_id,
+                "owner_pk": ad.artista_id,
+                "owner_nom": ad.artista.nom if ad.artista else "?",
+            }
+            for ad in clashing
+        ]
+        if conflicts:
+            return Response(
+                {
+                    "error": (
+                        "Algun dels Deezer IDs de la proposta ja pertany a "
+                        "un altre artista. Resol el conflicte abans "
+                        "d'aprovar (fusiona, o canvia l'ID a la proposta)."
+                    ),
+                    "conflicts": conflicts,
+                },
+                status=409,
+            )
+
     with transaction.atomic():
         artista = Artista.objects.create(
             nom=p.nom,
@@ -1144,13 +1178,10 @@ def proposta_aprovar(request: Request, pk: int) -> Response:
             if val:
                 setattr(artista, f, val)
         artista.save()
-        for i, dz in enumerate(p.get_deezer_id_list()):
-            try:
-                ArtistaDeezer.objects.create(
-                    artista=artista, deezer_id=dz, principal=(i == 0)
-                )
-            except IntegrityError:
-                pass
+        for i, dz in enumerate(wanted_deezer):
+            ArtistaDeezer.objects.create(
+                artista=artista, deezer_id=dz, principal=(i == 0)
+            )
         for loc in p.localitzacions or []:
             if "municipi_id" in loc:
                 try:

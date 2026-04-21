@@ -29,7 +29,16 @@ export default function PropostaDetailPage() {
       const out = await api.post(`/staff/propostes/${pk}/aprovar/`)
       navigate(`/staff/artistes/${out.artista_pk}`)
     } catch (e) {
-      setErr(e.payload?.error || e.message)
+      // 409 conflicts come with a `conflicts` array detailing which
+      // Deezer IDs clash and who owns them — print a useful message.
+      if (e.status === 409 && e.payload?.conflicts) {
+        const lines = e.payload.conflicts
+          .map(c => `· ${c.deezer_id} → «${c.owner_nom}» (pk=${c.owner_pk})`)
+          .join('\n')
+        setErr(`${e.payload.error}\n\n${lines}`)
+      } else {
+        setErr(e.payload?.error || e.message)
+      }
     } finally { setBusy(false) }
   }
 
@@ -61,7 +70,9 @@ export default function PropostaDetailPage() {
           </>
         }
       />
-      {err && <p className="text-red-300 mb-3">{err}</p>}
+      {err && (
+        <pre className="text-red-300 mb-3 whitespace-pre-wrap font-sans text-sm">{err}</pre>
+      )}
 
       <div className="mb-3">
         <Pill tone={p.estat === 'aprovat' ? 'green' : p.estat === 'rebutjat' ? 'gray' : 'yellow'}>{p.estat}</Pill>
