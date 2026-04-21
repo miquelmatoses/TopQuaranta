@@ -34,7 +34,7 @@ def _serialize_entry(entry, is_provisional: bool) -> dict:
         ),
         "canco": {
             "id": canco.pk if canco else None,
-            "nom": canco.nom if canco else entry.canco_nom_snapshot,
+            "nom": canco.nom if canco else getattr(entry, "canco_nom_snapshot", ""),
             "slug": canco.slug if canco else None,
             "isrc": canco.isrc if canco else None,
             "preview_url": canco.preview_url if canco else None,
@@ -43,10 +43,14 @@ def _serialize_entry(entry, is_provisional: bool) -> dict:
         "artista": (
             {
                 "id": artista.pk if artista else None,
-                "nom": artista.nom if artista else entry.artista_nom_snapshot,
+                "nom": (
+                    artista.nom
+                    if artista
+                    else getattr(entry, "artista_nom_snapshot", "")
+                ),
                 "slug": artista.slug if artista else None,
             }
-            if artista or entry.artista_nom_snapshot
+            if artista or getattr(entry, "artista_nom_snapshot", "")
             else None
         ),
         "album": (

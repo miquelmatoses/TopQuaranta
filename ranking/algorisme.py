@@ -88,7 +88,7 @@ WITH cancons_territori AS (
         mt.artista_id = c.artista_id
         OR mt.artista_id = col.artista_id
     )
-    WHERE mt.territori_id = %(territori)s
+    WHERE mt.territori_id = ANY(%(territoris_list)s::text[])
       AND sd.data >= CURRENT_DATE - INTERVAL '7 days'
       AND sd.error = FALSE
       AND sd.score_entrada IS NOT NULL
@@ -307,8 +307,21 @@ def calcular_ranking_territori(territori: str) -> list[dict]:
     if territori == "PPCC":
         return _calcular_ranking_ppcc()
 
+    # ALT is the catch-all bucket: it collects artistes from any PPCC
+    # territori too small to run its own ranking (CNO, AND, FRA, ALG,
+    # CAR below min_cancons_ranking_propi) plus literal ALT (artistes
+    # de fora dels PPCC).
+    if territori == "ALT":
+        eligible = set(territoris_amb_ranking_propi())
+        territoris_list = ["ALT"] + sorted(TERRITORIS_OPCIONALS - eligible)
+    else:
+        territoris_list = [territori]
+
     with connection.cursor() as cursor:
-        cursor.execute(RANKING_SQL, {"territori": territori})
+        cursor.execute(
+            RANKING_SQL,
+            {"territori": territori, "territoris_list": territoris_list},
+        )
         col_names = [col[0] for col in cursor.description]
         results = []
         for row in cursor.fetchall():
@@ -335,8 +348,11 @@ def _calcular_ranking_ppcc() -> list[dict]:
     source_territoris = territoris_amb_ranking_propi()
 
     for t in source_territoris:
-        if t in TERRITORIS_AGREGATS:
-            continue  # Skip PPCC, ALT from feeding into themselves
+        if t == "PPCC":
+            continue  # Avoid feeding PPCC into itself.
+        # ALT feeds PPCC too: it's the only path for tracks from small
+        # territoris (CNO/AND/FRA/ALG/CAR below threshold) to reach the
+        # general top. Skipping ALT would erase those tracks from PPCC.
         territory_results = calcular_ranking_territori(t)
         for r in territory_results:
             r["territori_original"] = t
