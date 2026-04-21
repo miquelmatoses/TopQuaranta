@@ -18,7 +18,7 @@ from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
-from music.models import ArtistaLocalitat, Canco
+from music.models import ArtistaDeezer, ArtistaLocalitat, Canco
 
 
 def _resync(artista_id: int) -> None:
@@ -74,3 +74,35 @@ def prevent_self_collab(sender, instance, action, pk_set, reverse, **kwargs):
                 "D5: an artist cannot be listed as a collaborator on "
                 "their own track."
             )
+
+
+@receiver(post_delete, sender=ArtistaDeezer)
+def unapprove_on_last_deezer_removed(sender, instance, **kwargs):
+    """Invariant: `aprovat=True` ⇒ ArtistaDeezer.count ≥ 1.
+
+    When the last Deezer ID of an artist is removed, the pipeline can
+    no longer ingest new material for them — so their `aprovat` flag
+    stops reflecting reality. Drop them out of the aprovat set (and
+    out of the pendents queue too) so staff doesn't end up with
+    phantom approved artists invisible to obtenir_novetats.
+
+    Runs after `rebutjar_artista`'s mass delete, after a staff PATCH
+    that empties the Deezer list, and after Artista.delete() cascades
+    (in which case the ensuing Artista delete supersedes our update,
+    no harm done).
+    """
+    artista_id = instance.artista_id
+    if not artista_id:
+        return
+    # If any other Deezer ID still references this artist, nothing to do.
+    if ArtistaDeezer.objects.filter(artista_id=artista_id).exists():
+        return
+    # Otherwise: if the artist was aprovat, desaprova'l. The `update()`
+    # path skips `Artista.save()` so we don't retrigger the territori
+    # sync or anything else that only needs to run on real edits.
+    from music.models import Artista
+
+    Artista.objects.filter(pk=artista_id, aprovat=True).update(
+        aprovat=False,
+        pendent_review=False,
+    )
