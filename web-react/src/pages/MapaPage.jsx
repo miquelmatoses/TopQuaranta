@@ -394,32 +394,7 @@ export default function MapaPage() {
                   />
                 )
               })}
-              {/* Territori names — always visible at the overview.
-                  For comarca/municipi the count is too high; rely on
-                  the hover overlay instead. */}
-              {level === 'territori' && features.map((ft, i) => {
-                const c = centroidOf(ft.geometry)
-                if (!c) return null
-                const label = TERRITORI_NOM[ft.properties.codi] || ft.properties.codi
-                return (
-                  <text
-                    key={'lbl-' + i}
-                    x={c.x}
-                    y={-c.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize="0.22"
-                    fontWeight="700"
-                    fill="#0a0a0a"
-                    stroke="#ffffff"
-                    strokeWidth="0.06"
-                    paintOrder="stroke"
-                    style={{ pointerEvents: 'none', fontFamily: 'Roboto, sans-serif' }}
-                  >
-                    {label}
-                  </text>
-                )
-              })}
+              {/* No inline labels — the hover tooltip carries the name. */}
             </svg>
           )}
 

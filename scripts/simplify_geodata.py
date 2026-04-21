@@ -25,7 +25,7 @@ SRC = Path(__file__).resolve().parent.parent / "temp" / "geodata"
 # Where the React SPA expects to fetch them from.
 OUT = Path(__file__).resolve().parent.parent / "web-react" / "public" / "geodata"
 
-TOLERANCE = 0.0005  # degrees — imperceptible at our zoom, ~7% of original size
+TOLERANCE = 0.002  # degrees — stylised polygons, ~3% of original size
 
 # GeoJSON territori name → internal code used by Django + the API.
 NAME_TO_CODE = {
