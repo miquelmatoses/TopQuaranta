@@ -37,9 +37,19 @@ logger = logging.getLogger(__name__)
 MODEL_PATH = Path(__file__).parent / "ml_model.joblib"
 LAST_RECALC_FILE = "/tmp/tq_last_ml_recalc"
 
+# Feature slimming (2026-04-21): the previous 23 structured + 200 TF-IDF
+# model had 7 features with <0.6% importance each (total ~1.9%) plus a
+# long TF-IDF tail where most features were effectively noise. Audit at
+# that date showed the top 10 features carried 77% of the signal, and
+# the bottom ~120 carried <0.01% combined. The set below drops:
+#
+#   isrc_digital, nb_collaboradors, any_llancament,
+#   nb_cancons_aprovades_artista, isrc_any, isrc_prefix_q, artista_aprovat
+#
+# and cuts TF-IDF from 200 → 60 features (more than enough capacity for
+# a char-n-gram signal from <5 k distinct titles). Total dim: 76.
 FEATURE_NAMES = [
     "isrc_es",
-    "isrc_digital",
     "isrc_international",
     "isrc_empty",
     "deezer_nb_fan",
@@ -49,26 +59,30 @@ FEATURE_NAMES = [
     "nb_decisions_artista",
     "ratio_rebuig_artista",
     "ratio_rebuig_isrc_prefix",
-    "nb_collaboradors",
     "mes_llancament",
-    "any_llancament",
-    "nb_cancons_aprovades_artista",
     "ratio_rebuig_registrant",
-    "isrc_any",
-    "isrc_prefix_q",
-    "artista_aprovat",
     # Whisper LID features. Extracted from Canco.whisper_all_probs (the
     # full 99-language distribution) to capture near-miss cases like
     # "Whisper says it=0.50 ca=0.45" — a much weaker rejection signal
     # than "it=0.95 ca=0.01". Missing data falls back to 0.0.
-    "whisper_p_ca",  # p(ca)
-    "whisper_p_es",  # p(es) — primary confusion neighbour
-    "whisper_p_en",  # p(en) — second confusion neighbour
-    "whisper_margin_ca",  # p(ca) − max(p over non-ca) in [-1, 1]
-] + [f"tfidf_{i}" for i in range(200)]
+    "whisper_p_ca",
+    "whisper_p_es",
+    "whisper_p_en",
+    "whisper_margin_ca",
+] + [f"tfidf_{i}" for i in range(60)]
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
-TFIDF_MAX_FEATURES = 200
+TFIDF_MAX_FEATURES = 60
+
+# Bayesian smoothing on the three "ratio_rebuig_*" features. When an
+# artist / prefix / registrant has very few decisions the raw ratio
+# rej/total is extremely noisy — two rejections in a row push it to
+# 100% and feed a reinforcement loop where the RF then doubles down
+# on rejection. By mixing in PRIOR_K "virtual" decisions at PRIOR_P
+# (=0.5 = neutral), the ratio only drifts away from 0.5 once there's
+# enough real signal to overcome the prior.
+RATIO_PRIOR_K = 5
+RATIO_PRIOR_P = 0.5
 
 # P2: module-level cache for the two joblib artifacts (RF classifier +
 # TF-IDF vectorizer), keyed on file mtime so recalcular_ml writing a new
@@ -134,6 +148,16 @@ def _isrc_category(isrc: str) -> tuple[int, int, int, int]:
     return (0, 0, 1, 0)
 
 
+def _smoothed(rej: int, total: int) -> float:
+    """Bayesian-smoothed rejection ratio.
+
+    Returns `(rej + prior_k * prior_p) / (total + prior_k)`, so an
+    artist/prefix/registrant with few decisions can't jump straight
+    to 0 or 1 from one or two calls. See RATIO_PRIOR_K / RATIO_PRIOR_P.
+    """
+    return (rej + RATIO_PRIOR_K * RATIO_PRIOR_P) / (total + RATIO_PRIOR_K)
+
+
 def _get_rejection_ratio(artista_nom: str) -> tuple[int, float]:
     from music.models import HistorialRevisio
 
@@ -143,7 +167,7 @@ def _get_rejection_ratio(artista_nom: str) -> tuple[int, float]:
     rej = HistorialRevisio.objects.filter(
         artista_nom=artista_nom, decisio="rebutjada"
     ).count()
-    return (total, rej / total)
+    return (total, _smoothed(rej, total))
 
 
 def _get_isrc_prefix_rejection_ratio(isrc: str) -> float:
@@ -153,12 +177,12 @@ def _get_isrc_prefix_rejection_ratio(isrc: str) -> float:
     if not prefix:
         return 0.5
     total = HistorialRevisio.objects.filter(isrc_prefix=prefix).count()
-    if total < 3:
+    if total == 0:
         return 0.5
     rej = HistorialRevisio.objects.filter(
         isrc_prefix=prefix, decisio="rebutjada"
     ).count()
-    return rej / total
+    return _smoothed(rej, total)
 
 
 def _get_registrant_rejection_ratio(isrc: str) -> float:
@@ -171,9 +195,9 @@ def _get_registrant_rejection_ratio(isrc: str) -> float:
         canco_isrc__regex=f"^.{{2}}{re.escape(registrant)}"
     )
     total = decs.count()
-    if total < 3:
+    if total == 0:
         return 0.5
-    return decs.filter(decisio="rebutjada").count() / total
+    return _smoothed(decs.filter(decisio="rebutjada").count(), total)
 
 
 def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> float:
@@ -186,9 +210,9 @@ def _get_registrant_rejection_ratio_excluding(isrc: str, exclude_pk: int) -> flo
         canco_isrc__regex=f"^.{{2}}{re.escape(registrant)}"
     ).exclude(pk=exclude_pk)
     total = decs.count()
-    if total < 3:
+    if total == 0:
         return 0.5
-    return decs.filter(decisio="rebutjada").count() / total
+    return _smoothed(decs.filter(decisio="rebutjada").count(), total)
 
 
 def _whisper_features(
@@ -221,20 +245,20 @@ def _whisper_features(
 
 
 def _build_features(canco) -> list[float]:
-    """Extract feature vector from a Canco."""
-    from music.models import Canco  # lazy: ml.py may be imported before apps ready
+    """Extract feature vector from a Canco.
 
-    artista = canco.artista
+    Must stay aligned with `FEATURE_NAMES` and with
+    `_build_features_from_historial` (training side). After the
+    2026-04-21 slim, structured part = 12 features + 4 Whisper.
+    """
     isrc = canco.isrc or ""
-    es, digital, intl, empty = _isrc_category(isrc)
+    es, _digital, intl, empty = _isrc_category(isrc)
+    artista = canco.artista
     nb_decisions, ratio_reb = _get_rejection_ratio(artista.nom)
-    nb_col = canco.artistes_col.count()
-    nb_approved = Canco.objects.filter(artista=artista, verificada=True).count()
 
     return (
         [
             float(es),
-            float(digital),
             float(intl),
             float(empty),
             float(artista.deezer_nb_fan or 0),
@@ -248,14 +272,8 @@ def _build_features(canco) -> list[float]:
             float(nb_decisions),
             float(ratio_reb),
             float(_get_isrc_prefix_rejection_ratio(isrc)),
-            float(nb_col),
             float(canco.data_llancament.month if canco.data_llancament else 0),
-            float(canco.data_llancament.year if canco.data_llancament else 0),
-            float(nb_approved),
             float(_get_registrant_rejection_ratio(isrc)),
-            float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
-            float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
-            float(1 if artista.aprovat else 0),
         ]
         + _whisper_features(
             canco.whisper_all_probs,
@@ -267,37 +285,45 @@ def _build_features(canco) -> list[float]:
 
 
 def _build_features_from_historial(rec) -> list[float]:
-    """Extract feature vector from an HistorialRevisio record."""
+    """Extract feature vector from an HistorialRevisio record.
+
+    Mirrors `_build_features` (inference) but:
+      * Excludes the rec itself from the rejection-ratio counts to
+        prevent target leakage (the training row would "know" its own
+        label via the ratio).
+      * Smoothing still applies (same RATIO_PRIOR_K / RATIO_PRIOR_P).
+    """
     from music.models import HistorialRevisio
 
     isrc = rec.canco_isrc or ""
-    es, digital, intl, empty = _isrc_category(isrc)
+    es, _digital, intl, empty = _isrc_category(isrc)
     prefix = isrc[:2].upper() if len(isrc) >= 2 else ""
 
-    # Rejection ratios from historial (excluding this record to avoid leak)
+    # Artist-level smoothed rejection ratio, excluding self.
     others = HistorialRevisio.objects.filter(artista_nom=rec.artista_nom).exclude(
         pk=rec.pk
     )
     total_others = others.count()
     if total_others > 0:
-        rej_others = others.filter(decisio="rebutjada").count()
-        ratio_reb = rej_others / total_others
+        ratio_reb = _smoothed(others.filter(decisio="rebutjada").count(), total_others)
     else:
         ratio_reb = 0.5
 
+    # ISRC-prefix smoothed rejection ratio, excluding self.
     prefix_others = HistorialRevisio.objects.filter(isrc_prefix=prefix).exclude(
         pk=rec.pk
     )
     total_prefix = prefix_others.count()
-    if total_prefix >= 3:
-        ratio_prefix = prefix_others.filter(decisio="rebutjada").count() / total_prefix
+    if total_prefix > 0:
+        ratio_prefix = _smoothed(
+            prefix_others.filter(decisio="rebutjada").count(), total_prefix
+        )
     else:
         ratio_prefix = 0.5
 
     return (
         [
             float(es),
-            float(digital),
             float(intl),
             float(empty),
             float(rec.artista_deezer_nb_fan or 0),
@@ -311,14 +337,8 @@ def _build_features_from_historial(rec) -> list[float]:
             float(total_others),
             float(ratio_reb),
             float(ratio_prefix),
-            0.0,  # nb_collaboradors not available in historial
             float(rec.data_llancament.month if rec.data_llancament else 0),
-            float(rec.data_llancament.year if rec.data_llancament else 0),
-            0.0,  # nb_cancons_aprovades not available in historial
             float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
-            float(int(isrc[5:7]) if len(isrc) >= 7 and isrc[5:7].isdigit() else 0),
-            float(1 if isrc[:2].upper() in ("QT", "QM", "QZ") else 0),
-            float(_artista_aprovat_from_historial(rec)),
         ]
         + _whisper_features_from_historial(rec)
         + _tfidf_features(rec.canco_nom)
