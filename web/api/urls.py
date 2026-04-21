@@ -197,8 +197,14 @@ urlpatterns = [
     path("albums/<slug:slug>/", album_views.album_detail, name="album_detail"),
     # Cançons
     path("cancons/<slug:slug>/", canco_views.canco_detail, name="canco_detail"),
-    # Mapa (existing)
+    # Mapa (existing + drill-down)
     path("mapa/artistes/", views.mapa_artistes, name="mapa_artistes"),
+    path("mapa/stats/", views.mapa_stats, name="mapa_stats"),
+    path(
+        "mapa/municipi-artistes/",
+        views.mapa_municipi_artistes,
+        name="mapa_municipi_artistes",
+    ),
     # Location API — reference data, no auth required
     path("localitzacio/territoris/", views.api_territoris, name="api_territoris"),
     path("localitzacio/comarques/", views.api_comarques, name="api_comarques"),

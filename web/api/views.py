@@ -192,3 +192,218 @@ def mapa_artistes(request: Request) -> Response:
             "municipis": municipis_data,
         }
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Map stats — /mapa drill-down (territori → comarca → municipi)
+# ─────────────────────────────────────────────────────────────────────────
+
+_MAPA_STATS_CACHE: dict = {"key": None, "data": None, "ts": 0.0}
+_MAPA_STATS_TTL = 600  # seconds
+
+
+@api_view(["GET"])
+def mapa_stats(request: Request) -> Response:
+    """Per-region stats for the /mapa drill-down page.
+
+    Query params:
+      * `level` — "territori" (default), "comarca" or "municipi".
+      * `parent` — when `level=comarca`, the parent territori code.
+                   When `level=municipi`, the parent comarca name.
+      * `territori` — optional when `level=municipi`, disambiguates
+                      comarques that share a name across territoris.
+
+    Returns `[ { codi?, nom, n_artistes, n_albums, n_cancons, n_ranking } ]`.
+    Only counts approved artists with a linked Municipi (localitat_manual
+    without municipi is excluded, per design).
+    """
+    import time
+
+    from django.db.models import Count
+    from django.db.models.functions import Lower
+
+    from comptes.models import Usuari  # noqa: F401 (keeps import graph stable)
+    from music.models import (
+        Album,
+        ArtistaLocalitat,
+        Canco,
+        Municipi,
+        Territori,
+    )
+    from ranking.models import RankingSetmanal
+
+    level = (request.GET.get("level") or "territori").strip()
+    parent = (request.GET.get("parent") or "").strip()
+    parent_territori = (request.GET.get("territori") or "").strip()
+
+    if level not in {"territori", "comarca", "municipi"}:
+        return Response({"error": "level invàlid"}, status=400)
+
+    cache_key = (level, parent, parent_territori)
+    now = time.time()
+    cached = _MAPA_STATS_CACHE
+    if (
+        cached["key"] == cache_key
+        and cached["data"] is not None
+        and (now - cached["ts"]) < _MAPA_STATS_TTL
+    ):
+        return Response(cached["data"])
+
+    # Latest setmanal week — fallback to any setmanal we have, else empty set.
+    latest_setmana = (
+        RankingSetmanal.objects.order_by("-setmana")
+        .values_list("setmana", flat=True)
+        .first()
+    )
+    ranking_canco_ids: set[int] = set()
+    if latest_setmana is not None:
+        ranking_canco_ids = set(
+            RankingSetmanal.objects.filter(setmana=latest_setmana)
+            .values_list("canco_id", flat=True)
+            .distinct()
+        )
+
+    # All (artista, municipi) pairs for approved artists with a linked
+    # Municipi. Deduplicated per (artista_id, municipi_id).
+    al_qs = ArtistaLocalitat.objects.filter(
+        artista__aprovat=True, municipi__isnull=False
+    ).values_list(
+        "artista_id",
+        "municipi_id",
+        "municipi__territori_id",
+        "municipi__comarca",
+        "municipi__nom",
+    )
+    pairs = list(al_qs)
+    if not pairs:
+        return Response([])
+
+    # For each artista_id collect the set of albums / cancons so we can
+    # aggregate per region without double-counting.
+    artista_ids = {p[0] for p in pairs}
+    cancons_by_artista: dict[int, set[int]] = {a: set() for a in artista_ids}
+    albums_by_artista: dict[int, set[int]] = {a: set() for a in artista_ids}
+    for c_pk, a_pk, alb_pk in Canco.objects.filter(
+        artista_id__in=artista_ids
+    ).values_list("pk", "artista_id", "album_id"):
+        cancons_by_artista[a_pk].add(c_pk)
+        if alb_pk:
+            albums_by_artista[a_pk].add(alb_pk)
+
+    # Aggregate into the requested level.
+    groups: dict[tuple, dict] = {}
+    for a_pk, m_pk, ter_id, comarca, mun_nom in pairs:
+        if level == "territori":
+            key = (ter_id,)
+            display = {"codi": ter_id}
+        elif level == "comarca":
+            if parent and ter_id != parent:
+                continue
+            key = (ter_id, comarca)
+            display = {"codi": ter_id, "comarca": comarca}
+        else:  # municipi
+            if parent_territori and ter_id != parent_territori:
+                continue
+            if parent and comarca != parent:
+                continue
+            key = (ter_id, comarca, mun_nom)
+            display = {"codi": ter_id, "comarca": comarca, "municipi": mun_nom}
+
+        slot = groups.get(key)
+        if slot is None:
+            slot = {
+                **display,
+                "artistes": set(),
+                "albums": set(),
+                "cancons": set(),
+                "ranking_cancons": set(),
+            }
+            groups[key] = slot
+        slot["artistes"].add(a_pk)
+        for alb in albums_by_artista.get(a_pk, ()):
+            slot["albums"].add(alb)
+        for c in cancons_by_artista.get(a_pk, ()):
+            slot["cancons"].add(c)
+            if c in ranking_canco_ids:
+                slot["ranking_cancons"].add(c)
+
+    results = []
+    for slot in groups.values():
+        row = {
+            k: v
+            for k, v in slot.items()
+            if k not in {"artistes", "albums", "cancons", "ranking_cancons"}
+        }
+        row["n_artistes"] = len(slot["artistes"])
+        row["n_albums"] = len(slot["albums"])
+        row["n_cancons"] = len(slot["cancons"])
+        row["n_ranking"] = len(slot["ranking_cancons"])
+        results.append(row)
+
+    results.sort(key=lambda r: -r["n_artistes"])
+    _MAPA_STATS_CACHE.update({"key": cache_key, "data": results, "ts": now})
+    return Response(results)
+
+
+@api_view(["GET"])
+def mapa_municipi_artistes(request: Request) -> Response:
+    """Approved artists living in a specific municipi.
+
+    Query: `territori` (code), `comarca` (name), `municipi` (name).
+    Returns a compact list sorted alphabetically, with basic ranking
+    info to drive the side-panel detail view on /mapa.
+    """
+    from music.models import ArtistaLocalitat
+    from ranking.models import RankingSetmanal
+
+    ter = (request.GET.get("territori") or "").strip()
+    com = (request.GET.get("comarca") or "").strip()
+    mun = (request.GET.get("municipi") or "").strip()
+    if not (ter and com and mun):
+        return Response({"error": "Cal territori, comarca i municipi"}, status=400)
+
+    qs = (
+        ArtistaLocalitat.objects.filter(
+            artista__aprovat=True,
+            municipi__isnull=False,
+            municipi__territori_id=ter,
+            municipi__comarca=com,
+            municipi__nom=mun,
+        )
+        .select_related("artista")
+        .order_by("artista__nom")
+    )
+
+    # Which of their songs are in the latest weekly ranking?
+    latest_setmana = (
+        RankingSetmanal.objects.order_by("-setmana")
+        .values_list("setmana", flat=True)
+        .first()
+    )
+    ranking_by_artista: dict[int, int] = {}
+    if latest_setmana is not None:
+        from django.db.models import Count
+
+        for row in (
+            RankingSetmanal.objects.filter(setmana=latest_setmana)
+            .values("canco__artista_id")
+            .annotate(n=Count("pk", distinct=True))
+        ):
+            ranking_by_artista[row["canco__artista_id"]] = row["n"]
+
+    seen = set()
+    results = []
+    for al in qs:
+        a = al.artista
+        if a.pk in seen:
+            continue
+        seen.add(a.pk)
+        results.append(
+            {
+                "pk": a.pk,
+                "nom": a.nom,
+                "slug": a.slug,
+                "n_ranking": ranking_by_artista.get(a.pk, 0),
+            }
+        )
+    return Response(results)

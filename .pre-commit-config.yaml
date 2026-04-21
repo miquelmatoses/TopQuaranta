@@ -20,7 +20,11 @@ repos:
       - id: check-toml
       - id: check-merge-conflict
       - id: check-added-large-files
+        # Simplified GeoJSONs for the /mapa page are large static assets
+        # by nature (~5 MB total across 17 files). They pass through
+        # Shapely simplification and are served off disk by Caddy.
         args: ["--maxkb=512"]
+        exclude: "^web-react/public/geodata/"
       - id: detect-private-key
 
   - repo: https://github.com/psf/black
