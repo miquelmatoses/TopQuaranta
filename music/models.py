@@ -257,24 +257,32 @@ class Artista(models.Model):
     def sync_territoris_from_localitats(self) -> None:
         """Recompute M2M territoris from ArtistaLocalitat → Municipi → Territori.
 
-        Called automatically by ArtistaLocalitat signals. If artist has no
-        localitats at all, the M2M is left unchanged (preserves legacy data
-        during migration). If all localitats have municipi=NULL, territory
-        defaults to ALT.
+        Called automatically by ArtistaLocalitat signals. Rules:
+
+          * Every PPCC municipi contributes its territori (CAT, VAL, …).
+          * Every `localitat_manual` (municipi=NULL) contributes ALT —
+            even if the artist also has PPCC localitats. An artist with
+            a member from outside the PPCC should show up both in their
+            PPCC territori and in the catch-all Altres top.
+          * Artists with zero ArtistaLocalitat rows keep their legacy
+            M2M (migration safety net).
         """
         if not self.pk:
             return
         localitats_qs = self.localitats.all()
         if not localitats_qs.exists():
             return  # No ArtistaLocalitat entries — keep legacy M2M
-        # Collect territories from municipis
         territori_ids = set(
             localitats_qs.filter(municipi__isnull=False).values_list(
                 "municipi__territori_id", flat=True
             )
         )
-        # If all entries have municipi=NULL → non-PPCC artist → ALT
+        has_manual = localitats_qs.filter(municipi__isnull=True).exists()
+        if has_manual:
+            territori_ids.add("ALT")
         if not territori_ids:
+            # Paranoia: shouldn't happen given the guards above, but keep
+            # the invariant that an approved artist has ≥1 territori.
             territori_ids = {"ALT"}
         self.territoris.set(list(territori_ids))
 
