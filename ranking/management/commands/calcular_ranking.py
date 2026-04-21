@@ -182,12 +182,22 @@ class Command(BaseCommand):
             top40 = [r for r in results if r["posicio"] <= 40]
 
             if not results:
-                # For PPCC/ALT and optional territories, silently skip if no data
+                # Clear any stale rows from earlier runs so a formerly-
+                # ranked canco doesn't linger once its territori drops
+                # out (e.g. artist M2M corrected, ALT loses all feeders).
+                if not dry_run and not provisional:
+                    RankingSetmanal.objects.filter(
+                        territori=territori, setmana=setmana
+                    ).delete()
                 if territori in (TERRITORIS_AGREGATS | TERRITORIS_OPCIONALS):
-                    self.stdout.write(f"  No data for {territori} — skipping.")
+                    self.stdout.write(
+                        f"  No data for {territori} — cleared stale rows."
+                    )
                 else:
                     self.stdout.write(
-                        self.style.WARNING(f"  No results for {territori}")
+                        self.style.WARNING(
+                            f"  No results for {territori} — cleared stale rows."
+                        )
                     )
                 continue
 

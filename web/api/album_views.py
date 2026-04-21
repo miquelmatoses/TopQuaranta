@@ -21,8 +21,12 @@ def album_detail(request: Request, slug: str) -> Response:
         slug=slug,
     )
 
+    # Only verified tracks surface publicly. Unverified/discarded tracks
+    # are noise for the listener (think Rosalía's latest album with 1
+    # Catalan track vs 15 Spanish-only ones we chose not to publish).
     cancons = list(
-        album.cancons.select_related("artista")
+        album.cancons.filter(verificada=True)
+        .select_related("artista")
         .prefetch_related("artistes_col")
         .order_by("id")
     )
