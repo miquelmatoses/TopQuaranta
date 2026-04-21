@@ -1,0 +1,22 @@
+{% extends "comptes/_base_auth.html" %}
+{% block title %}Eliminar compte — TopQuaranta{% endblock %}
+{% block content %}
+<div class="tq-card">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Eliminar el teu compte</h1>
+  <p class="tq-sub">
+    Estàs a punt d'eliminar definitivament el compte
+    <strong>{{ email }}</strong>. Les teves publicacions i comentaris
+    s'esborraran o quedaran com a anònims. Aquesta acció és irreversible.
+  </p>
+  <form method="post" class="tq-stack" style="margin-top:24px;">
+    {% csrf_token %}
+    <button type="submit" class="tq-btn" style="background:#dc2626;color:#fff;">
+      Sí, eliminar el compte
+    </button>
+  </form>
+  <p class="tq-small" style="margin-top:18px;text-align:center">
+    <a href="/">Tornar sense fer res</a>
+  </p>
+</div>
+{% endblock %}

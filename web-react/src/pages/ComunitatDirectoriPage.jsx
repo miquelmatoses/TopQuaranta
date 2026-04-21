@@ -119,6 +119,14 @@ export default function ComunitatDirectoriPage() {
                 )}
               </div>
             </div>
+            <div className="mt-3 flex justify-end">
+              <Link
+                to={`/compte/missatges?amb=${u.usuari_id}`}
+                className="text-xs font-semibold px-3 py-1.5 bg-tq-ink text-tq-yellow rounded hover:bg-tq-ink/90"
+              >
+                ✉ Missatge
+              </Link>
+            </div>
           </li>
         ))}
       </ul>

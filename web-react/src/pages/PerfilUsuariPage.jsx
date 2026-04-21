@@ -165,6 +165,26 @@ export default function PerfilUsuariPage() {
         </fieldset>
 
         <fieldset className="bg-white/5 rounded-md p-4">
+          <legend className="text-xs font-semibold uppercase tracking-wide text-white/80 px-1">Notificacions per email</legend>
+          <label className="flex items-center gap-2 text-sm mb-2">
+            <input
+              type="checkbox"
+              checked={perfil.notificar_missatges_email !== false}
+              onChange={e => patch({ notificar_missatges_email: e.target.checked })}
+            />
+            Avisa'm quan rebo un <strong>missatge</strong>.
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={perfil.notificar_comentaris_email !== false}
+              onChange={e => patch({ notificar_comentaris_email: e.target.checked })}
+            />
+            Avisa'm quan <strong>comenten una publicació meva</strong>.
+          </label>
+        </fieldset>
+
+        <fieldset className="bg-white/5 rounded-md p-4">
           <legend className="text-xs font-semibold uppercase tracking-wide text-white/80 px-1">Enllaços</legend>
           <div className="grid sm:grid-cols-2 gap-3">
             {(perfil.social_fields || []).map(([f, label]) => (
@@ -183,6 +203,29 @@ export default function PerfilUsuariPage() {
             Tornar
           </button>
         </div>
+
+        <fieldset className="bg-red-900/20 border border-red-400/30 rounded-md p-4 mt-6">
+          <legend className="text-xs font-semibold uppercase tracking-wide text-red-300 px-1">Zona perillosa</legend>
+          <p className="text-sm text-white/80 mb-2">
+            Eliminar el compte és una acció irreversible. Et enviarem un email
+            per confirmar abans que s'executi.
+          </p>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm('Enviar email de confirmació per eliminar el compte?')) return
+              try {
+                const out = await api.post('/compte/esborrar-sollicitud/', {})
+                alert(`Email enviat a ${out.email}. Obre'l i segueix l'enllaç per confirmar.`)
+              } catch (e) {
+                alert(e.payload?.error || e.message)
+              }
+            }}
+            className="px-3 py-1.5 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700"
+          >
+            Eliminar el meu compte…
+          </button>
+        </fieldset>
       </div>
     </section>
   )

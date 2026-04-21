@@ -127,6 +127,37 @@ def activar(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
 # ─────────────────────────────────────────────────────────────────────────
 
 
+def esborrar_compte(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
+    """Confirm and execute self-deletion from the email link.
+
+    GET  → show confirmation page with a single "Esborra ara" button.
+    POST → validate the token again, delete the Usuari, render done page.
+    """
+    from django.contrib.auth import logout
+    from django.contrib.auth.tokens import default_token_generator
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = Usuari.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Usuari.DoesNotExist):
+        user = None
+
+    if not user or not default_token_generator.check_token(user, token):
+        return render(request, "comptes/esborrar_compte_error.html", status=400)
+    if user.is_staff:
+        # Belt-and-braces: refuse even if the token is valid.
+        return render(request, "comptes/esborrar_compte_error.html", status=400)
+
+    if request.method == "POST":
+        email = user.email
+        if request.user.is_authenticated and request.user.pk == user.pk:
+            logout(request)
+        user.delete()
+        return render(request, "comptes/esborrar_compte_ok.html", {"email": email})
+
+    return render(request, "comptes/esborrar_compte.html", {"email": user.email})
+
+
 def nova_clau(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
     """Land on a token-signed URL, show a form, set the new password."""
     from django.contrib.auth.forms import SetPasswordForm

@@ -282,6 +282,10 @@ class PerfilUsuari(models.Model):
     visible_directori = models.BooleanField(default=False, db_index=True)
     obert_colaboracions = models.BooleanField(default=False)
 
+    # Notification preferences. Default ON — users explicitly opt out.
+    notificar_missatges_email = models.BooleanField(default=True)
+    notificar_comentaris_email = models.BooleanField(default=True)
+
     # Onboarding completion flag. Set when the user either fills the form
     # or explicitly dismisses it; used by the React AuthContext to know
     # whether to auto-route to /onboarding on first session.
@@ -376,3 +380,68 @@ class Publicacio(models.Model):
 
     def __str__(self) -> str:
         return f"{self.titol} — {self.autor}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Missatgeria interna
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class Missatge(models.Model):
+    """Direct message between two users.
+
+    Simple inbox model — no threading, no attachments. Each message
+    lives independently; "conversations" are reconstructed in the UI by
+    pairing sender/receiver.
+    """
+
+    remitent = models.ForeignKey(
+        Usuari, on_delete=models.SET_NULL, null=True, related_name="missatges_enviats"
+    )
+    destinatari = models.ForeignKey(
+        Usuari, on_delete=models.CASCADE, related_name="missatges_rebuts"
+    )
+    assumpte = models.CharField(max_length=200, blank=True)
+    cos = models.TextField(max_length=10000)
+
+    llegit_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["destinatari", "-created_at"]),
+            models.Index(fields=["remitent", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.remitent} → {self.destinatari}: {self.assumpte}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Comentaris a publicacions de la comunitat
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class Comentari(models.Model):
+    """Flat comment attached to a Publicacio.
+
+    No nested threads — a single list per post ordered by creation.
+    Moderation lives on the parent post (staff can delete individual
+    comments via the detail page).
+    """
+
+    publicacio = models.ForeignKey(
+        Publicacio, on_delete=models.CASCADE, related_name="comentaris"
+    )
+    autor = models.ForeignKey(
+        Usuari, on_delete=models.SET_NULL, null=True, related_name="comentaris"
+    )
+    cos = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self) -> str:
+        return f"comentari #{self.pk} de {self.autor} a {self.publicacio_id}"

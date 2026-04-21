@@ -50,6 +50,7 @@ www.topquaranta.cat {
 		path /compte/2fa/*
 		path /compte/activar/*
 		path /compte/nova-clau/*
+		path /compte/esborrar/*
 		path /compte/registre/
 		path /compte/login/
 		path /compte/logout/

@@ -31,6 +31,7 @@ export default function ComunitatLayout({ children }) {
         { to: '/comunitat',           label: 'Feed',       end: true },
         { to: '/comunitat/directori', label: 'Directori'   },
         { to: '/comunitat/publicar',  label: '+ Publicar'  },
+        { to: '/compte/missatges',    label: 'Missatges'   },
         { to: '/comunitat/public',    label: 'Feed públic' },
       ]
     : [

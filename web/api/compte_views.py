@@ -466,3 +466,62 @@ def feedback_crear(request: Request) -> Response:
         missatge=missatge,
     )
     return Response({"ok": True, "pk": fb.pk}, status=201)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def compte_esborrar_sollicitar(request: Request) -> Response:
+    """User requests self-deletion. Sends a signed confirmation email.
+
+    We never delete on this call — the GET handler at
+    /compte/esborrar/<uidb64>/<token>/ completes the action after the
+    user clicks the email link. That keeps the audit trail clean and
+    prevents a compromised session from nuking an account in one click.
+    """
+    import logging
+
+    from django.contrib.auth.tokens import default_token_generator
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    logger = logging.getLogger(__name__)
+    u = request.user
+    if not u.email:
+        return Response({"error": "El teu compte no té email."}, status=400)
+    if u.is_staff:
+        return Response(
+            {
+                "error": (
+                    "Els comptes staff no es poden auto-esborrar. "
+                    "Contacta amb un altre administrador."
+                )
+            },
+            status=400,
+        )
+
+    uidb64 = urlsafe_base64_encode(force_bytes(u.pk))
+    token = default_token_generator.make_token(u)
+    scheme = "https" if request.is_secure() else "http"
+    host = request.get_host()
+    link = f"{scheme}://{host}/compte/esborrar/{uidb64}/{token}/"
+
+    subject = "TopQuaranta · confirma l'eliminació del teu compte"
+    ctx = {"link": link, "email": u.email, "subject": subject}
+    html = render_to_string("comptes/email_esborrar_compte.html", ctx)
+    text = (
+        f"Hola,\n\n"
+        f"Has demanat eliminar el teu compte de TopQuaranta ({u.email}).\n"
+        f"Confirma obrint aquest enllaç (caduca a les 24 hores):\n\n"
+        f"{link}\n\n"
+        f"Si no has sigut tu, pots ignorar aquest missatge.\n"
+    )
+    try:
+        send_mail(
+            subject, text, None, [u.email], html_message=html, fail_silently=False
+        )
+    except Exception as e:
+        logger.exception("Failed to send account-deletion email to %s", u.email)
+        return Response({"error": f"No s'ha pogut enviar l'email: {e}"}, status=500)
+    return Response({"ok": True, "email": u.email})

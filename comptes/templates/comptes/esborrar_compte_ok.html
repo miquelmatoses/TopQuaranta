@@ -1,0 +1,15 @@
+{% extends "comptes/_base_auth.html" %}
+{% block title %}Compte eliminat — TopQuaranta{% endblock %}
+{% block content %}
+<div class="tq-card">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Compte eliminat</h1>
+  <p class="tq-sub">
+    El compte associat a <strong>{{ email }}</strong> ha estat eliminat
+    definitivament. Si algun dia hi vols tornar, et pots registrar de nou.
+  </p>
+  <p class="tq-small" style="margin-top:24px;text-align:center">
+    <a href="/">Tornar a la portada</a>
+  </p>
+</div>
+{% endblock %}

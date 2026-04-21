@@ -61,6 +61,18 @@ export default function UsuariDetailPage() {
     } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
   }
 
+  async function esborrar() {
+    if (!confirm(`ESBORRAR DEFINITIVAMENT ${u.email}?\n\nAquesta acció és irreversible. Les seves publicacions i propostes s'eliminen en cascada.`)) return
+    if (!confirm(`Segur? Escriu "ok" al següent prompt per continuar.`)) return
+    const ok = prompt('Escriu "ok" per confirmar:')
+    if (ok !== 'ok') return
+    setBusy(true); setErr('')
+    try {
+      await api.post(`/staff/usuaris/${pk}/esborrar/`)
+      navigate('/staff/usuaris')
+    } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
+  }
+
   async function reenviarVerificacio() {
     if (!confirm(`Reenviar email de verificació a ${u.email}?`)) return
     setBusy(true); setErr('')
@@ -92,6 +104,11 @@ export default function UsuariDetailPage() {
             {!u.is_active && (
               <Btn size="md" onClick={reenviarVerificacio} disabled={busy}>
                 Reenviar verificació
+              </Btn>
+            )}
+            {!u.is_staff && (
+              <Btn tone="danger" size="md" onClick={esborrar} disabled={busy}>
+                Esborrar usuari
               </Btn>
             )}
           </>

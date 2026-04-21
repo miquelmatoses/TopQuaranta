@@ -18,6 +18,7 @@ import SolicitarGestioPage from './pages/SolicitarGestioPage'
 import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
 import PerfilUsuariPage from './pages/PerfilUsuariPage'
+import MissatgesPage from './pages/MissatgesPage'
 import ComunitatLayout from './components/ComunitatLayout'
 import ComunitatPage from './pages/ComunitatPage'
 import ComunitatPublicaPage from './pages/ComunitatPublicaPage'
@@ -107,6 +108,7 @@ function AppContent() {
         <Route path="/compte/artista/proposta" element={<ProposarArtistaPage />} />
         <Route path="/compte/artista/gestio" element={<SolicitarGestioPage />} />
         <Route path="/compte/perfil-usuari" element={<PerfilUsuariPage />} />
+        <Route path="/compte/missatges" element={<MissatgesPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         {/* Comunitat — nested under a shared dark-sidebar layout
             (mirroring Staff). Individual pages render only their own

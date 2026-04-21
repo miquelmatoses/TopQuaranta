@@ -1,0 +1,15 @@
+{% extends "comptes/_base_auth.html" %}
+{% block title %}Enllaç invàlid — TopQuaranta{% endblock %}
+{% block content %}
+<div class="tq-card">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Enllaç invàlid o caducat</h1>
+  <p class="tq-sub">
+    Aquest enllaç d'eliminació de compte ja no és vàlid. Torna a iniciar
+    el procés des del teu perfil si vols continuar.
+  </p>
+  <p class="tq-small" style="margin-top:24px;text-align:center">
+    <a href="/compte/perfil">Tornar al perfil</a>
+  </p>
+</div>
+{% endblock %}

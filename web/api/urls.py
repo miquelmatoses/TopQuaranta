@@ -35,6 +35,12 @@ urlpatterns = [
     ),
     # Public feedback (authenticated, any user)
     path("feedback/", compte_views.feedback_crear, name="feedback_crear"),
+    # Account deletion (self-service): request sends a confirmation email.
+    path(
+        "compte/esborrar-sollicitud/",
+        compte_views.compte_esborrar_sollicitar,
+        name="compte_esborrar_sollicitar",
+    ),
     # ── Staff (is_staff required) ──
     path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
     path("staff/estat/", staff_views.estat, name="staff_estat"),
@@ -177,6 +183,11 @@ urlpatterns = [
         staff_views.usuari_reenviar_verificacio,
         name="staff_usuari_reenviar_verificacio",
     ),
+    path(
+        "staff/usuaris/<int:pk>/esborrar/",
+        staff_views.usuari_esborrar,
+        name="staff_usuari_esborrar",
+    ),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes
@@ -199,6 +210,33 @@ urlpatterns = [
     ),
     # Image upload (publication editor + profile photo)
     path("upload/imatge/", comunitat_views.upload_imatge, name="upload_imatge"),
+    # Missatgeria interna
+    path(
+        "missatges/",
+        comunitat_views.missatges_inbox,
+        name="missatges_inbox",
+    ),
+    path(
+        "missatges/nou/",
+        comunitat_views.missatge_crear,
+        name="missatge_crear",
+    ),
+    path(
+        "missatges/amb/<int:altre_pk>/",
+        comunitat_views.missatges_amb_usuari,
+        name="missatges_amb_usuari",
+    ),
+    # Comentaris a publicacions
+    path(
+        "comunitat/publicacions/<int:pk>/comentaris/",
+        comunitat_views.publicacio_comentaris,
+        name="publicacio_comentaris",
+    ),
+    path(
+        "comunitat/comentaris/<int:pk>/",
+        comunitat_views.comentari_esborrar,
+        name="comentari_esborrar",
+    ),
     # ── Grup C · Community platform ──
     # User profile (own, authenticated)
     path(

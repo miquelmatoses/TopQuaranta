@@ -68,6 +68,8 @@ def _serialize_perfil(p: PerfilUsuari, *, include_private: bool = False) -> dict
         "instruments": p.instruments or "",
         "visible_directori": p.visible_directori,
         "obert_colaboracions": p.obert_colaboracions,
+        "notificar_missatges_email": p.notificar_missatges_email,
+        "notificar_comentaris_email": p.notificar_comentaris_email,
         "social": {f: getattr(p, f) or "" for f, _ in PerfilUsuari.SOCIAL_FIELDS},
         "localitat": (
             {
@@ -156,7 +158,13 @@ def perfil_usuari(request: Request) -> Response:
             else:
                 perfil.rol_musical = v
 
-        for flag in ("visible_directori", "obert_colaboracions", "onboarding_complet"):
+        for flag in (
+            "visible_directori",
+            "obert_colaboracions",
+            "onboarding_complet",
+            "notificar_missatges_email",
+            "notificar_comentaris_email",
+        ):
             if flag in data:
                 setattr(perfil, flag, bool(data.get(flag)))
 
@@ -707,7 +715,351 @@ def upload_imatge(request: Request) -> Response:
     dest = user_dir / filename
     img.save(dest, format="JPEG", quality=85, optimize=True)
 
-    # Build public URL. MEDIA_URL is "/media/" so this is relative to
-    # the site root; Caddy serves it directly off disk.
+    # Build a canonical absolute URL so it satisfies URLField validators
+    # (HTTP_ONLY_URL) when stored on PerfilUsuari.imatge_url. Caddy
+    # serves /media/* directly off disk.
     rel = dest.relative_to(Path(settings.MEDIA_ROOT)).as_posix()
-    return Response({"url": f"{settings.MEDIA_URL}{rel}"})
+    url = request.build_absolute_uri(f"{settings.MEDIA_URL}{rel}")
+    return Response({"url": url})
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Missatgeria interna
+# ═════════════════════════════════════════════════════════════════════════
+
+
+def _serialize_missatge(m, viewer) -> dict:
+    """Compact shape for inbox lists / thread views."""
+    other = m.remitent if m.destinatari_id == viewer.pk else m.destinatari
+    return {
+        "pk": m.pk,
+        "remitent": (
+            {
+                "pk": m.remitent.pk,
+                "username": m.remitent.username,
+                "nom_public": getattr(
+                    getattr(m.remitent, "perfil", None), "nom_public", ""
+                ),
+            }
+            if m.remitent_id
+            else None
+        ),
+        "destinatari": {
+            "pk": m.destinatari.pk,
+            "username": m.destinatari.username,
+        },
+        "altre": (
+            {
+                "pk": other.pk,
+                "username": other.username,
+                "nom_public": getattr(getattr(other, "perfil", None), "nom_public", ""),
+            }
+            if other is not None
+            else None
+        ),
+        "assumpte": m.assumpte,
+        "cos": m.cos,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+        "llegit_at": m.llegit_at.isoformat() if m.llegit_at else None,
+        "meu": m.remitent_id == viewer.pk,
+    }
+
+
+def _enviar_notificacio_missatge(request, msg) -> None:
+    """Email the recipient a "you have a new message" heads-up.
+
+    Skipped silently if the recipient opted out or doesn't have an
+    email configured. Failures never block the message itself.
+    """
+    import logging
+
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+
+    logger = logging.getLogger(__name__)
+    dest = msg.destinatari
+    if not dest.email:
+        return
+    perfil = getattr(dest, "perfil", None)
+    if perfil and not perfil.notificar_missatges_email:
+        return
+
+    remitent_nom = (
+        (getattr(getattr(msg.remitent, "perfil", None), "nom_public", None) or "")
+        if msg.remitent_id
+        else ""
+    ) or (msg.remitent.username if msg.remitent_id else "un usuari")
+    host = request.get_host()
+    scheme = "https" if request.is_secure() else "http"
+    link = f"{scheme}://{host}/compte/missatges"
+    ctx = {
+        "remitent_nom": remitent_nom,
+        "assumpte": msg.assumpte or "(sense assumpte)",
+        "preview": (msg.cos or "")[:300],
+        "link": link,
+        "subject": f"TopQuaranta · missatge de {remitent_nom}",
+    }
+    html = render_to_string("comptes/email_missatge.html", ctx)
+    text = (
+        f"Hola,\n\n"
+        f"{remitent_nom} t'ha enviat un missatge a TopQuaranta.\n\n"
+        f"Assumpte: {ctx['assumpte']}\n\n"
+        f"{ctx['preview']}\n\n"
+        f"Llegeix-lo aquí:\n{link}\n"
+    )
+    try:
+        send_mail(ctx["subject"], text, None, [dest.email], html_message=html)
+    except Exception:
+        logger.exception("Failed to send message notification to %s", dest.email)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def missatges_inbox(request: Request) -> Response:
+    """Conversation list: latest message per other user, with unread counter."""
+    viewer = request.user
+
+    # Aggregate per "altre usuari": most recent message timestamp + unread count.
+    from comptes.models import Missatge
+
+    qs = Missatge.objects.filter(
+        Q(remitent=viewer) | Q(destinatari=viewer)
+    ).select_related("remitent__perfil", "destinatari__perfil")
+
+    per_altre: dict[int, dict] = {}
+    for m in qs.order_by("-created_at"):
+        other_id = m.remitent_id if m.destinatari_id == viewer.pk else m.destinatari_id
+        if other_id is None or other_id == viewer.pk:
+            continue
+        slot = per_altre.get(other_id)
+        if slot is None:
+            other = m.remitent if m.destinatari_id == viewer.pk else m.destinatari
+            slot = {
+                "altre": {
+                    "pk": other.pk,
+                    "username": other.username,
+                    "nom_public": getattr(
+                        getattr(other, "perfil", None), "nom_public", ""
+                    ),
+                    "imatge_url": getattr(
+                        getattr(other, "perfil", None), "imatge_url", ""
+                    ),
+                },
+                "darrer_missatge": _serialize_missatge(m, viewer),
+                "no_llegits": 0,
+            }
+            per_altre[other_id] = slot
+        # Count unread (only incoming + not yet read).
+        if m.destinatari_id == viewer.pk and m.llegit_at is None:
+            slot["no_llegits"] += 1
+
+    converses = sorted(
+        per_altre.values(),
+        key=lambda x: x["darrer_missatge"]["created_at"] or "",
+        reverse=True,
+    )
+    return Response(
+        {
+            "results": converses,
+            "no_llegits_total": sum(c["no_llegits"] for c in converses),
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def missatges_amb_usuari(request: Request, altre_pk: int) -> Response:
+    """Thread of messages exchanged with `altre_pk`, oldest → newest.
+
+    Marks all incoming-from-altre as read as a side effect.
+    """
+    from django.utils import timezone
+
+    from comptes.models import Missatge
+    from comptes.models import Usuari as _U
+
+    viewer = request.user
+    altre = get_object_or_404(_U, pk=altre_pk)
+    if altre.pk == viewer.pk:
+        return Response({"error": "No pots xatejar amb tu mateix."}, status=400)
+
+    qs = (
+        Missatge.objects.filter(
+            (Q(remitent=viewer) & Q(destinatari=altre))
+            | (Q(remitent=altre) & Q(destinatari=viewer))
+        )
+        .select_related("remitent__perfil", "destinatari__perfil")
+        .order_by("created_at")
+    )
+    msgs = list(qs)
+    Missatge.objects.filter(
+        remitent=altre, destinatari=viewer, llegit_at__isnull=True
+    ).update(llegit_at=timezone.now())
+
+    return Response(
+        {
+            "altre": {
+                "pk": altre.pk,
+                "username": altre.username,
+                "nom_public": getattr(getattr(altre, "perfil", None), "nom_public", ""),
+                "imatge_url": getattr(getattr(altre, "perfil", None), "imatge_url", ""),
+            },
+            "missatges": [_serialize_missatge(m, viewer) for m in msgs],
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def missatge_crear(request: Request) -> Response:
+    """Send a new message. Body: `{destinatari_pk, assumpte, cos}`."""
+    from comptes.models import Missatge
+    from comptes.models import Usuari as _U
+
+    viewer = request.user
+    data = request.data or {}
+    try:
+        dest_pk = int(data.get("destinatari_pk"))
+    except (TypeError, ValueError):
+        return Response({"error": "Destinatari invàlid."}, status=400)
+    if dest_pk == viewer.pk:
+        return Response(
+            {"error": "No pots enviar-te un missatge a tu mateix."}, status=400
+        )
+    destinatari = get_object_or_404(_U, pk=dest_pk)
+    cos = (data.get("cos") or "").strip()
+    if not cos:
+        return Response({"error": "El missatge no pot estar buit."}, status=400)
+    if len(cos) > 10000:
+        return Response({"error": "Màxim 10 000 caràcters."}, status=400)
+    assumpte = (data.get("assumpte") or "")[:200]
+
+    m = Missatge.objects.create(
+        remitent=viewer,
+        destinatari=destinatari,
+        assumpte=assumpte,
+        cos=cos,
+    )
+    _enviar_notificacio_missatge(request, m)
+    return Response(_serialize_missatge(m, viewer), status=201)
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Comentaris a publicacions
+# ═════════════════════════════════════════════════════════════════════════
+
+
+def _serialize_comentari(c) -> dict:
+    autor = c.autor
+    perfil = getattr(autor, "perfil", None) if autor else None
+    return {
+        "pk": c.pk,
+        "cos": c.cos,
+        "created_at": c.created_at.isoformat() if c.created_at else None,
+        "autor": (
+            {
+                "pk": autor.pk,
+                "username": autor.username,
+                "nom_public": getattr(perfil, "nom_public", "") or autor.username,
+                "imatge_url": getattr(perfil, "imatge_url", "") or "",
+                "is_staff": autor.is_staff,
+            }
+            if autor is not None
+            else None
+        ),
+    }
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def publicacio_comentaris(request: Request, pk: int) -> Response:
+    """List + create comments for a publication. List is public-ish
+    (requires auth same as the containing post); create is authenticated."""
+    pub = get_object_or_404(Publicacio, pk=pk)
+    # Only allow comments on posts the viewer can see.
+    if pub.estat != Publicacio.ESTAT_PUBLICAT:
+        if not (request.user.is_staff or request.user.pk == pub.autor_id):
+            return Response({"error": "Publicació no disponible."}, status=404)
+
+    from comptes.models import Comentari
+
+    if request.method == "GET":
+        rows = list(
+            pub.comentaris.select_related("autor__perfil").order_by("created_at")
+        )
+        return Response([_serialize_comentari(c) for c in rows])
+
+    cos = (request.data.get("cos") or "").strip()
+    if not cos:
+        return Response({"error": "El comentari no pot estar buit."}, status=400)
+    if len(cos) > 2000:
+        return Response({"error": "Màxim 2 000 caràcters."}, status=400)
+
+    c = Comentari.objects.create(publicacio=pub, autor=request.user, cos=cos)
+    _enviar_notificacio_comentari(request, c)
+    return Response(_serialize_comentari(c), status=201)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def comentari_esborrar(request: Request, pk: int) -> Response:
+    from comptes.models import Comentari
+
+    c = get_object_or_404(Comentari, pk=pk)
+    # Author, post owner or staff can delete.
+    if not (
+        request.user.is_staff
+        or request.user.pk == c.autor_id
+        or request.user.pk == c.publicacio.autor_id
+    ):
+        return Response({"error": "No autoritzat."}, status=403)
+    c.delete()
+    return Response(status=204)
+
+
+def _enviar_notificacio_comentari(request, comentari) -> None:
+    """Tell the post author someone commented on their publication.
+
+    Skipped if the commenter IS the author (no self-pings), if the
+    author opted out or lacks an email.
+    """
+    import logging
+
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+
+    logger = logging.getLogger(__name__)
+    pub = comentari.publicacio
+    if not pub.autor_id or pub.autor_id == comentari.autor_id:
+        return
+    autor_post = pub.autor
+    if not autor_post.email:
+        return
+    perfil = getattr(autor_post, "perfil", None)
+    if perfil and not perfil.notificar_comentaris_email:
+        return
+
+    commenter_nom = (
+        getattr(getattr(comentari.autor, "perfil", None), "nom_public", None)
+        or comentari.autor.username
+    )
+    host = request.get_host()
+    scheme = "https" if request.is_secure() else "http"
+    link = f"{scheme}://{host}/comunitat/{pub.pk}"
+    ctx = {
+        "commenter_nom": commenter_nom,
+        "titol_post": pub.titol,
+        "preview": (comentari.cos or "")[:300],
+        "link": link,
+        "subject": f"TopQuaranta · nou comentari a «{pub.titol}»",
+    }
+    html = render_to_string("comptes/email_comentari.html", ctx)
+    text = (
+        f"Hola,\n\n"
+        f"{commenter_nom} ha comentat a la teva publicació "
+        f"«{pub.titol}»:\n\n{ctx['preview']}\n\nRespon aquí:\n{link}\n"
+    )
+    try:
+        send_mail(ctx["subject"], text, None, [autor_post.email], html_message=html)
+    except Exception:
+        logger.exception("Failed to send comment notification to %s", autor_post.email)

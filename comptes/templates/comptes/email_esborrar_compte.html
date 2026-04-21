@@ -1,0 +1,22 @@
+{% extends "comptes/email_base.html" %}
+{% block pretitle %}Eliminació del compte{% endblock %}
+{% block content %}
+<h1 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:900;color:#fff;margin:0 0 14px;line-height:1.2;">
+  Confirma l'eliminació del teu compte
+</h1>
+<p style="margin:0 0 16px;">
+  Has demanat eliminar el compte de TopQuaranta associat a
+  <strong style="color:#facc15;">{{ email }}</strong>. Aquesta acció és
+  <strong>irreversible</strong> — les teves publicacions, comentaris i
+  preferències es perdran.
+</p>
+<p style="margin:24px 0;text-align:center;">
+  <a href="{{ link }}" style="display:inline-block;background:#dc2626;color:#fff;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:8px;">
+    Confirmar eliminació
+  </a>
+</p>
+<p style="margin:0;color:#9ca3af;font-size:13px;">
+  Si no has sigut tu, pots ignorar aquest missatge — el compte no es
+  tocarà. L'enllaç caduca a les 24 hores.
+</p>
+{% endblock %}

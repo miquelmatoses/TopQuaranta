@@ -2026,6 +2026,34 @@ def usuari_reset_2fa(request: Request, pk: int) -> Response:
 
 @api_view(["POST"])
 @permission_classes([IsStaff])
+def usuari_esborrar(request: Request, pk: int) -> Response:
+    """Hard-delete a user account. Staff-only, refuses to delete other staff."""
+    u = get_object_or_404(Usuari, pk=pk)
+    if u.is_staff:
+        return Response(
+            {"error": "No pots esborrar un altre staff des d'aquí."}, status=400
+        )
+    if u.pk == request.user.pk:
+        return Response(
+            {"error": "Usa el flux de compte per auto-esborrar-te."}, status=400
+        )
+    email = u.email
+    label = str(u)
+    pk_val = u.pk
+    u.delete()
+    log_staff_action(
+        request,
+        "usuari_esborrar",
+        target=None,
+        target_id_deleted=pk_val,
+        target_label_deleted=label,
+        email=email,
+    )
+    return Response({"ok": True})
+
+
+@api_view(["POST"])
+@permission_classes([IsStaff])
 def usuari_reenviar_verificacio(request: Request, pk: int) -> Response:
     """Resend the account-activation email to an inactive user.
 
