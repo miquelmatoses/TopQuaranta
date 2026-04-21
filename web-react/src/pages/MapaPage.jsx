@@ -306,19 +306,28 @@ export default function MapaPage() {
     selTerritori ? 'Territori' :
     'Mapa complet'
 
-  // Artist list for the selected municipi.
+  // Top artistes for whatever region scope is active. Shown at every
+  // level (PPCC by default, drilled-down when the user clicks into a
+  // territori / comarca / municipi). Sorted by cumulative Last.fm
+  // plays on the backend.
   const [artistes, setArtistes] = useState(null)
   useEffect(() => {
-    if (!selMunicipi) { setArtistes(null); return }
-    const p = new URLSearchParams({
-      territori: selMunicipi.codi,
-      comarca: selMunicipi.comarca,
-      municipi: selMunicipi.municipi,
-    })
-    api.get(`/mapa/municipi-artistes/?${p}`)
+    const p = new URLSearchParams({ limit: '60' })
+    if (selMunicipi) {
+      p.set('territori', selMunicipi.codi)
+      p.set('comarca', selMunicipi.comarca)
+      p.set('municipi', selMunicipi.municipi)
+    } else if (selComarca && selTerritori) {
+      p.set('territori', selTerritori)
+      p.set('comarca', selComarca)
+    } else if (selTerritori) {
+      p.set('territori', selTerritori)
+    }
+    setArtistes(null)
+    api.get(`/mapa/artistes-top/?${p}`)
       .then(setArtistes)
       .catch(() => setArtistes([]))
-  }, [selMunicipi])
+  }, [selTerritori, selComarca, selMunicipi])
 
   // Which KPIs does the panel show?
   let kpi
@@ -467,36 +476,47 @@ export default function MapaPage() {
             <KPI label="Al ranking" value={kpi.n_ranking} />
           </div>
 
-          {selMunicipi && (
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-tq-ink/70 mb-2 mt-4">
-                Artistes del municipi
-              </h2>
-              {artistes === null && <p className="text-sm text-tq-ink/60">Carregant…</p>}
-              {artistes && artistes.length === 0 && (
-                <p className="text-sm text-tq-ink/60 italic">Cap artista aprovat encara.</p>
-              )}
-              {artistes && artistes.length > 0 && (
-                <ul className="space-y-1 max-h-[40vh] overflow-y-auto">
-                  {artistes.map(a => (
-                    <li key={a.pk}>
-                      <Link
-                        to={`/artista/${a.slug}`}
-                        className="text-sm underline hover:text-tq-yellow-deep"
-                      >
+          {/* Top artistes grid — square thumbnails + name, sorted by
+              cumulative Last.fm plays. Shown at every scope. */}
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-tq-ink/70 mb-2 mt-4">
+              Artistes més escoltats
+            </h2>
+            {artistes === null && <p className="text-sm text-tq-ink/60">Carregant…</p>}
+            {artistes && artistes.length === 0 && (
+              <p className="text-sm text-tq-ink/60 italic">Sense artistes aquí.</p>
+            )}
+            {artistes && artistes.length > 0 && (
+              <ul className="grid grid-cols-3 gap-2 max-h-[55vh] overflow-y-auto pr-1">
+                {artistes.map(a => (
+                  <li key={a.pk}>
+                    <Link
+                      to={`/artista/${a.slug}`}
+                      className="block group"
+                    >
+                      <div className="aspect-square rounded overflow-hidden bg-tq-ink/5 relative">
+                        {a.imatge_url ? (
+                          <img
+                            src={a.imatge_url}
+                            alt=""
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg font-bold text-tq-ink/40">
+                            {(a.nom || '?').slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-1 text-[11px] font-semibold leading-tight line-clamp-2 group-hover:text-tq-yellow-deep">
                         {a.nom}
-                      </Link>
-                      {a.n_ranking > 0 && (
-                        <span className="ml-2 text-[10px] font-semibold uppercase text-tq-yellow-deep">
-                          {a.n_ranking} al top
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {!selTerritori && (
             <p className="text-[11px] text-tq-ink/60 mt-4">

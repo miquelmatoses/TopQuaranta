@@ -407,3 +407,92 @@ def mapa_municipi_artistes(request: Request) -> Response:
             }
         )
     return Response(results)
+
+
+@api_view(["GET"])
+def mapa_artistes_top(request: Request) -> Response:
+    """Artistes for the /mapa side panel, sorted by listens, any level.
+
+    Query (all optional — no filters → all PPCC):
+      * `territori` — restrict to a territori code.
+      * `comarca`   — restrict to a comarca within that territori.
+      * `municipi`  — restrict to a specific municipi.
+      * `limit`     — max rows (default 60, max 200).
+
+    Sort key: the sum, across the artista's cançons, of the most
+    recent Last.fm playcount we stored (SenyalDiari.lastfm_playcount
+    is cumulative, so the max across days per canco ≈ the latest
+    non-zero value). Artists with no senyal data yet tie-break by
+    name alphabetically.
+    """
+    from django.db.models import Max
+
+    from music.models import Album, ArtistaLocalitat, Canco
+
+    ter = (request.GET.get("territori") or "").strip()
+    com = (request.GET.get("comarca") or "").strip()
+    mun = (request.GET.get("municipi") or "").strip()
+    try:
+        limit = min(int(request.GET.get("limit") or 60), 200)
+    except ValueError:
+        limit = 60
+
+    # Scope artistes via their linked Municipi (localitat_manual without
+    # municipi is excluded by design — those are the ALT bucket).
+    al_qs = ArtistaLocalitat.objects.filter(
+        artista__aprovat=True, municipi__isnull=False
+    )
+    if ter:
+        al_qs = al_qs.filter(municipi__territori_id=ter)
+    if com:
+        al_qs = al_qs.filter(municipi__comarca=com)
+    if mun:
+        al_qs = al_qs.filter(municipi__nom=mun)
+
+    artista_ids = set(al_qs.values_list("artista_id", flat=True))
+    if not artista_ids:
+        return Response([])
+
+    # Per-canco max playcount (cumulative metric so max == latest),
+    # then fold into per-artista totals in one pass.
+    canco_rows = (
+        Canco.objects.filter(artista_id__in=artista_ids)
+        .annotate(plays=Max("senyals__lastfm_playcount"))
+        .values_list("artista_id", "plays")
+    )
+    plays_by_artista: dict[int, int] = {}
+    for artista_id, plays in canco_rows:
+        plays_by_artista[artista_id] = plays_by_artista.get(artista_id, 0) + (
+            plays or 0
+        )
+
+    # Latest album cover per artista (for the grid thumbnail).
+    cover_rows = (
+        Album.objects.filter(artista_id__in=artista_ids)
+        .exclude(imatge_url="")
+        .order_by("artista_id", "-data_llancament")
+        .values_list("artista_id", "imatge_url")
+    )
+    cover_by_artista: dict[int, str] = {}
+    for artista_id, url in cover_rows:
+        cover_by_artista.setdefault(artista_id, url)
+
+    # Pull artistes we kept, sort by plays desc then name.
+    from music.models import Artista
+
+    rows = list(Artista.objects.filter(pk__in=artista_ids).values("pk", "nom", "slug"))
+    rows.sort(key=lambda r: (-plays_by_artista.get(r["pk"], 0), r["nom"].lower()))
+    rows = rows[:limit]
+
+    return Response(
+        [
+            {
+                "pk": r["pk"],
+                "nom": r["nom"],
+                "slug": r["slug"],
+                "imatge_url": cover_by_artista.get(r["pk"]) or None,
+                "plays": plays_by_artista.get(r["pk"], 0),
+            }
+            for r in rows
+        ]
+    )

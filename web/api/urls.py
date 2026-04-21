@@ -205,6 +205,11 @@ urlpatterns = [
         views.mapa_municipi_artistes,
         name="mapa_municipi_artistes",
     ),
+    path(
+        "mapa/artistes-top/",
+        views.mapa_artistes_top,
+        name="mapa_artistes_top",
+    ),
     # Location API — reference data, no auth required
     path("localitzacio/territoris/", views.api_territoris, name="api_territoris"),
     path("localitzacio/comarques/", views.api_comarques, name="api_comarques"),
