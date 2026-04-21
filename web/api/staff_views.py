@@ -55,7 +55,12 @@ from music.services import (
     rebutjar_artista,
     rebutjar_canco,
 )
-from ranking.models import ConfiguracioGlobal, RankingProvisional, SenyalDiari
+from ranking.models import (
+    ConfiguracioGlobal,
+    RankingProvisional,
+    RankingSetmanal,
+    SenyalDiari,
+)
 
 Usuari = get_user_model()
 
@@ -1766,6 +1771,96 @@ def estat(request: Request) -> Response:
     c_isrc = Canco.objects.exclude(isrc__in=["", None]).count()
     c_preview = Canco.objects.exclude(preview_url__in=["", None]).count()
 
+    # ── Flux setmanal: entrades + caducitats + target de verificació ──
+    #
+    # Intake: `created_at` captures quan el pipeline veu per primera
+    # vegada una cançó. La mitjana bruta sobre els últims 28 dies pot
+    # quedar distorsionada per una reingesta massiva ocasional (p.ex.
+    # migracions, backfills), així que publiquem dues vistes:
+    #
+    #   * intake_setmanal_robust — dies d'alta entrada anòmala (>500
+    #     noves en un dia) s'exclouen del càlcul de mitjana. El que
+    #     queda es divideix pels dies vàlids i es multiplica per 7.
+    #   * intake_setmanal_bruta — la lectura directa, útil per veure
+    #     la realitat absoluta.
+    #   * intake_7d — last-week total, el senyal més actual.
+    #
+    # Caducaran: cançons `verificada=False` amb `data_llancament` que
+    # cau fora dels 365 dies la setmana que ve. `netejar_caducades`
+    # les esborra cada dia a les 04:30, així que efectivament marxen.
+    from datetime import timedelta as _td
+
+    from django.db.models.functions import TruncDate
+
+    from music.constants import DIES_CADUCITAT
+
+    today = datetime.date.today()
+    four_weeks_ago = datetime.datetime.combine(today - _td(days=28), datetime.time.min)
+
+    # Per-day histogram of last 28 days (skipping empty days so the
+    # robust mean isn't dragged to zero by idle backfill periods).
+    daily_rows = list(
+        Canco.objects.filter(created_at__gte=four_weeks_ago)
+        .annotate(d=TruncDate("created_at"))
+        .values("d")
+        .annotate(n=Count("pk"))
+    )
+    daily_by_day = {r["d"]: r["n"] for r in daily_rows}
+    intake_28d_total = sum(daily_by_day.values())
+    intake_setmanal_bruta = round(intake_28d_total / 4.0, 1)
+
+    ANOMALY_DAY_THRESHOLD = 500  # migracions, reingestes massives
+    normal_days_counts = [
+        n for n in daily_by_day.values() if 0 < n <= ANOMALY_DAY_THRESHOLD
+    ]
+    if normal_days_counts:
+        avg_per_day = sum(normal_days_counts) / len(normal_days_counts)
+        intake_setmanal_robust = round(avg_per_day * 7, 1)
+    else:
+        intake_setmanal_robust = intake_setmanal_bruta
+
+    seven_days_ago = datetime.datetime.combine(today - _td(days=6), datetime.time.min)
+    intake_7d = Canco.objects.filter(created_at__gte=seven_days_ago).count()
+
+    # Per-week breakdown (oldest → newest), for the trend sparkline.
+    intake_setmanes: list[dict] = []
+    for w in range(4):
+        wk_start = datetime.datetime.combine(
+            today - _td(days=(w + 1) * 7 - 1), datetime.time.min
+        )
+        wk_end = (
+            datetime.datetime.combine(today + _td(days=1), datetime.time.min)
+            if w == 0
+            else datetime.datetime.combine(
+                today - _td(days=w * 7 - 1), datetime.time.min
+            )
+        )
+        n = Canco.objects.filter(
+            created_at__gte=wk_start, created_at__lt=wk_end
+        ).count()
+        label = f"-{(w + 1) * 7}d → -{w * 7}d"
+        intake_setmanes.append({"label": label, "n": n})
+    intake_setmanes = list(reversed(intake_setmanes))
+
+    cutoff_today = today - _td(days=DIES_CADUCITAT)
+    cutoff_next_week = today - _td(days=DIES_CADUCITAT - 7)
+    caducaran_7d = Canco.objects.filter(
+        verificada=False,
+        data_llancament__gte=cutoff_today,
+        data_llancament__lt=cutoff_next_week,
+    ).count()
+    cutoff_next_month = today - _td(days=DIES_CADUCITAT - 30)
+    caducaran_30d = Canco.objects.filter(
+        verificada=False,
+        data_llancament__gte=cutoff_today,
+        data_llancament__lt=cutoff_next_month,
+    ).count()
+
+    # Target: per no acumular backlog la ràtio setmanal de verificació
+    # ha de cobrir les entrades netes (robustes) menys el que caducarà
+    # naturalment. Si el signe és negatiu el backlog baixa sol.
+    target_verificacio_setmanal = max(0, round(intake_setmanal_robust - caducaran_7d))
+
     # ── Whisper LID coverage ────────────────────────────────────────────
     w_ca = Canco.objects.filter(whisper_lang="ca").count()
     w_no = (
@@ -1903,6 +1998,21 @@ def estat(request: Request) -> Response:
                     "amb_isrc": c_isrc,
                     "amb_preview": c_preview,
                 },
+            },
+            "flux": {
+                "intake_ultim_mes": intake_28d_total,
+                "intake_setmanal_bruta": intake_setmanal_bruta,
+                "intake_setmanal_robust": intake_setmanal_robust,
+                "intake_7d": intake_7d,
+                "intake_per_setmana": intake_setmanes,
+                "anomaly_day_threshold": ANOMALY_DAY_THRESHOLD,
+                "anomaly_days_excluded": sum(
+                    1 for n in daily_by_day.values() if n > ANOMALY_DAY_THRESHOLD
+                ),
+                "caducaran_7d": caducaran_7d,
+                "caducaran_30d": caducaran_30d,
+                "target_verificacio_setmanal": target_verificacio_setmanal,
+                "backlog_no_verificades": c_no_verif,
             },
             "whisper": {
                 "ca": w_ca,

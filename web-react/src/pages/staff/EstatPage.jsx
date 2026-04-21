@@ -152,7 +152,7 @@ export default function EstatPage() {
     )
   }
 
-  const { bd, whisper, ranking, senyal, comunitat, crons, ml } = data
+  const { bd, whisper, ranking, senyal, comunitat, crons, ml, flux } = data
 
   // Biggest importance for scaling bars.
   const maxImp = ml?.importances?.[0]?.value || 1
@@ -173,6 +173,96 @@ export default function EstatPage() {
         title="Estat del sistema"
         subtitle="Salut, dades i rendiment del pipeline en temps real"
       />
+
+      {/* ─── Flux setmanal — la lectura més crítica a la part de dalt ─── */}
+      {flux && (
+        <section>
+          <h2 className="text-sm uppercase tracking-widest text-white/60 mb-2">
+            Flux de verificació
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <BigNumber
+              label="Entren / setmana"
+              value={flux.intake_setmanal_robust}
+              sub={
+                flux.anomaly_days_excluded > 0
+                  ? `robust · últims 7d: ${flux.intake_7d}`
+                  : `últims 7d: ${flux.intake_7d}`
+              }
+              tone="yellow"
+            />
+            <BigNumber
+              label="Caducaran en 7 dies"
+              value={flux.caducaran_7d}
+              sub={`${flux.caducaran_30d} en els propers 30d`}
+              tone="gray"
+            />
+            <BigNumber
+              label="Target setmanal"
+              value={flux.target_verificacio_setmanal}
+              sub="Per no acumular backlog"
+              tone={
+                flux.target_verificacio_setmanal === 0
+                  ? 'green'
+                  : flux.target_verificacio_setmanal > 200
+                  ? 'red'
+                  : 'yellow'
+              }
+            />
+            <BigNumber
+              label="Backlog actual"
+              value={flux.backlog_no_verificades}
+              sub="Cançons no verificades"
+              tone={flux.backlog_no_verificades > 5000 ? 'red' : 'ink'}
+            />
+          </div>
+          <div className="mt-3 bg-white text-tq-ink rounded-lg p-4">
+            <div className="flex items-baseline gap-3 mb-2">
+              <p className="text-[11px] uppercase tracking-widest opacity-60">
+                Entrades per setmana (últimes 4)
+              </p>
+              {flux.anomaly_days_excluded > 0 && (
+                <p className="text-[11px] text-tq-yellow-deep">
+                  ({flux.anomaly_days_excluded} dies d'anomalia exclosos del càlcul robust — llindar {flux.anomaly_day_threshold}/dia)
+                </p>
+              )}
+            </div>
+            <div className="flex items-end gap-2 h-28">
+              {flux.intake_per_setmana.map(w => {
+                const maxN = Math.max(...flux.intake_per_setmana.map(x => x.n), 1)
+                const pct = (w.n / maxN) * 100
+                return (
+                  <div
+                    key={w.label}
+                    className="flex-1 flex flex-col items-center gap-1 min-w-0"
+                  >
+                    <div className="w-full flex items-end" style={{ height: '80%' }}>
+                      <div
+                        className="w-full bg-tq-ink rounded-t"
+                        style={{ height: `${pct}%` }}
+                        title={`${w.label}: ${w.n} entrades`}
+                      />
+                    </div>
+                    <div className="text-[10px] tabular-nums opacity-70 truncate w-full text-center">
+                      {w.n.toLocaleString('ca')}
+                    </div>
+                    <div className="text-[9px] opacity-50 truncate w-full text-center">
+                      {w.label}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-[11px] opacity-60 mt-3 leading-relaxed">
+              <strong>Lectura:</strong> amb ~{flux.intake_setmanal_robust} entrades setmanals i{' '}
+              {flux.caducaran_7d} caducitats en els propers 7 dies, cal verificar com a mínim{' '}
+              <strong>{flux.target_verificacio_setmanal} cançons per setmana</strong> per
+              no acumular més backlog. El backlog actual és de{' '}
+              {flux.backlog_no_verificades.toLocaleString('ca')} cançons.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* ─── BD inventory ─── */}
       <section>
