@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
+import { stripMarkdown } from '../lib/strip-markdown'
 
 export default function ComunitatPublicaPage() {
   const [data, setData] = useState(null)
@@ -41,7 +42,7 @@ export default function ComunitatPublicaPage() {
               className="block bg-white text-tq-ink rounded-lg p-4 hover:shadow transition-shadow"
             >
               <h2 className="font-bold text-lg mb-1">{p.titol}</h2>
-              <p className="text-sm text-tq-ink/70 line-clamp-3 whitespace-pre-wrap">{p.cos}</p>
+              <p className="text-sm text-tq-ink/70 line-clamp-3 whitespace-pre-wrap">{stripMarkdown(p.cos)}</p>
               <p className="text-[11px] text-tq-ink/50 mt-2">
                 per {p.autor.nom_public}
                 {p.autor.is_staff && ' · staff'}

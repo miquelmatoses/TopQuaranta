@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { stripMarkdown } from '../lib/strip-markdown'
 import { useAuth } from '../context/AuthContext'
 
 function PillFilter({ value, onChange }) {
@@ -134,7 +135,7 @@ export default function ComunitatPage() {
                   <EstatBadge estat={p.estat} />
                 </div>
               </div>
-              <p className="text-sm text-tq-ink/70 line-clamp-3 whitespace-pre-wrap">{p.cos}</p>
+              <p className="text-sm text-tq-ink/70 line-clamp-3 whitespace-pre-wrap">{stripMarkdown(p.cos)}</p>
               <p className="text-[11px] text-tq-ink/50 mt-2">
                 per {p.autor.nom_public}
                 {p.autor.is_staff && ' · staff'}

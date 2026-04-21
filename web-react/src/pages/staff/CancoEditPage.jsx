@@ -27,6 +27,24 @@ export default function CancoEditPage() {
 
   function patch(p) { setC(prev => ({ ...prev, ...p })) }
 
+  async function refetchSenyal() {
+    setBusy(true); setErr(''); setMsg('')
+    try {
+      const out = await api.post(`/staff/cancons/${pk}/refetch-senyal/`)
+      if (out.ok) {
+        setMsg(
+          `Last.fm OK · ${out.playcount?.toLocaleString() || 0} plays · ` +
+          `${out.listeners?.toLocaleString() || 0} listeners` +
+          (out.drift ? ` (drift: artista="${out.returned_artist}", tema="${out.returned_track}")` : '')
+        )
+      } else {
+        setErr(out.error || 'Last.fm no ha tornat resultat.')
+      }
+    } catch (e) {
+      setErr(e.payload?.error || e.message)
+    } finally { setBusy(false) }
+  }
+
   async function save() {
     setBusy(true); setErr(''); setMsg('')
     try {
@@ -110,9 +128,29 @@ export default function CancoEditPage() {
           <label className="text-xs font-semibold">ISRC
             <Input value={c.isrc || ''} onChange={e => patch({ isrc: e.target.value })} className="w-full mt-1 font-normal" />
           </label>
-          <label className="text-xs font-semibold">Nom Last.fm
-            <Input value={c.lastfm_nom || ''} onChange={e => patch({ lastfm_nom: e.target.value })} className="w-full mt-1 font-normal" />
-          </label>
+          <div className="text-xs font-semibold">
+            Nom Last.fm
+            <Input
+              value={c.lastfm_nom || ''}
+              onChange={e => patch({ lastfm_nom: e.target.value })}
+              className="w-full mt-1 font-normal"
+            />
+            <p className="mt-1 text-[11px] font-normal text-tq-ink/60">
+              Si Last.fm no troba la cançó, el pipeline queda bloquejat fins demà.
+              Desa el canvi i prem "Reintentar Last.fm" per forçar la consulta ara.
+              Recorda que també pot ser el <em>Nom a Last.fm</em> de l'artista el que falla.
+            </p>
+            <div className="mt-2">
+              <Btn
+                size="sm"
+                tone="secondary"
+                onClick={refetchSenyal}
+                disabled={busy}
+              >
+                Reintentar Last.fm ara
+              </Btn>
+            </div>
+          </div>
           <label className="text-xs font-semibold">Deezer ID
             <Input value={c.deezer_id || ''} inputMode="numeric" onChange={e => patch({ deezer_id: e.target.value })} className="w-full mt-1 font-normal" />
           </label>

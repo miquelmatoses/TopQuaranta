@@ -21,7 +21,15 @@ from ranking.models import RankingSetmanal
 
 @api_view(["GET"])
 def api_territoris(request: Request) -> Response:
-    """List territories that have municipis."""
+    """List territories as shown in the cascade picker.
+
+    Returns every Territori that has at least one Municipi *plus* the
+    always-available ALT bucket (free-text localities outside PPCC —
+    there are no curated municipis for it by design, so it wouldn't
+    surface from the Municipi join alone).
+    """
+    from music.models import Territori
+
     result = []
     seen: set[str] = set()
     for m in Municipi.objects.values("territori__codi", "territori__nom").distinct():
@@ -29,6 +37,10 @@ def api_territoris(request: Request) -> Response:
         if codi not in seen:
             result.append({"codi": codi, "nom": m["territori__nom"]})
             seen.add(codi)
+    if "ALT" not in seen:
+        alt = Territori.objects.filter(codi="ALT").values("codi", "nom").first()
+        if alt:
+            result.append({"codi": alt["codi"], "nom": alt["nom"]})
     result.sort(key=lambda x: x["codi"])
     return Response(result)
 

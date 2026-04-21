@@ -75,6 +75,11 @@ urlpatterns = [
         staff_views.canco_detail,
         name="staff_canco_detail",
     ),
+    path(
+        "staff/cancons/<int:pk>/refetch-senyal/",
+        staff_views.canco_refetch_senyal,
+        name="staff_canco_refetch_senyal",
+    ),
     # Albums
     path("staff/albums/", staff_views.albums_list, name="staff_albums_list"),
     path(

@@ -1602,6 +1602,93 @@ def senyal_acceptar_correccio(request: Request, canco_pk: int) -> Response:
     return Response({"ok": True})
 
 
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def canco_refetch_senyal(request: Request, pk: int) -> Response:
+    """Retry the Last.fm signal lookup for a single Canco, on demand.
+
+    After staff fixes `artista.lastfm_nom` or `canco.lastfm_nom`, the
+    scheduled cron won't revisit today's failure until tomorrow — and
+    a permanent error row stays flagged indefinitely. This endpoint
+    replays the same lookup immediately with current values and writes
+    a fresh SenyalDiari for today (overwriting any error/drift row).
+    """
+    from ingesta.clients.lastfm import get_track_info
+
+    canco = get_object_or_404(Canco.objects.select_related("artista"), pk=pk)
+    artist_name = canco.artista.lastfm_nom or canco.artista.nom
+    track_name = canco.lastfm_lookup_nom
+    result = get_track_info(artist_name, track_name)
+    today = datetime.date.today()
+
+    # Replace any existing row for today — we want the freshest truth.
+    SenyalDiari.objects.filter(canco=canco, data=today).delete()
+
+    if result is None:
+        SenyalDiari.objects.create(
+            canco=canco,
+            data=today,
+            lastfm_playcount=None,
+            lastfm_listeners=None,
+            lastfm_returned_track="",
+            lastfm_returned_artista="",
+            corregit=False,
+            error=True,
+            error_msg=(f"Last.fm lookup failed for '{artist_name}' / '{track_name}'"),
+        )
+        log_staff_action(
+            request, "canco_edit", target=canco, source="refetch_senyal", ok=False
+        )
+        return Response(
+            {
+                "ok": False,
+                "error": (
+                    "Last.fm no ha tornat cap resultat. Revisa el Nom a "
+                    "Last.fm de la cançó i de l'artista."
+                ),
+                "lookup": {"artist": artist_name, "track": track_name},
+            },
+            status=200,
+        )
+
+    from ingesta.management.commands.obtenir_senyal import _detect_drift
+
+    returned_artist = result.get("returned_artist", "") or ""
+    returned_track = result.get("returned_track", "") or ""
+    is_drift = not canco.lastfm_confirmed and _detect_drift(
+        artist_name, track_name, returned_artist, returned_track
+    )
+    SenyalDiari.objects.create(
+        canco=canco,
+        data=today,
+        lastfm_playcount=result["playcount"],
+        lastfm_listeners=result["listeners"],
+        lastfm_returned_track=returned_track[:500],
+        lastfm_returned_artista=returned_artist[:255],
+        corregit=is_drift,
+        error=False,
+        error_msg="",
+    )
+    log_staff_action(
+        request,
+        "canco_edit",
+        target=canco,
+        source="refetch_senyal",
+        ok=True,
+        drift=is_drift,
+    )
+    return Response(
+        {
+            "ok": True,
+            "playcount": result["playcount"],
+            "listeners": result["listeners"],
+            "drift": is_drift,
+            "returned_artist": returned_artist,
+            "returned_track": returned_track,
+        }
+    )
+
+
 # ═════════════════════════════════════════════════════════════════════════
 # Historial (read-only)
 # ═════════════════════════════════════════════════════════════════════════
