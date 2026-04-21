@@ -282,6 +282,30 @@ def proposta_crear(request: Request) -> Response:
             "cap cançó de l'artista ni fer-lo entrar al rànquing."
         )
 
+    # ── Stopper: block a proposta if any Deezer ID is already on an
+    # aprovat=True artist. The system already knows this artist — the
+    # proposal adds noise to the staff queue without giving any new
+    # signal. For Deezer IDs on pending (non-aprovat) artists we let
+    # the proposal through; the pendents page aggregates the "n
+    # propostes" counter so staff can see the repeated interest. ────
+    from music.models import ArtistaDeezer
+
+    if deezer_ids and "deezer_ids" not in errors:
+        already_live = list(
+            ArtistaDeezer.objects.filter(
+                deezer_id__in=deezer_ids, artista__aprovat=True
+            ).select_related("artista")
+        )
+        if already_live:
+            names = ", ".join(
+                f"«{ad.artista.nom}» (Deezer {ad.deezer_id})" for ad in already_live
+            )
+            errors["deezer_ids"] = (
+                "Aquest Deezer ID ja pertany a un artista ja registrat i "
+                f"aprovat al sistema: {names}. No cal proposar-lo — "
+                "prova de demanar-ne la gestió des del seu perfil."
+            )
+
     # ── Localitzacions (required, ≥ 1) ────────────────────────────────
     raw_locs = data.get("localitzacions") or []
     localitzacions: list[dict] = []

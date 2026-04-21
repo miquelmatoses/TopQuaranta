@@ -24,7 +24,20 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Avg, Count, Exists, F, Max, Min, OuterRef, Q
+from django.db.models import (
+    Avg,
+    Case,
+    Count,
+    Exists,
+    F,
+    IntegerField,
+    Max,
+    Min,
+    OuterRef,
+    Q,
+    Value,
+    When,
+)
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
@@ -139,6 +152,40 @@ def dashboard(request: Request) -> Response:
 # ═════════════════════════════════════════════════════════════════════════
 
 
+def _compute_propostes_per_artista_map() -> dict[int, int]:
+    """Return {artista_pk: #pending_propostes_referencing_its_deezer_ids}.
+
+    A single proposal that references two Deezer IDs of the same
+    artist counts as 1 hit on that artist (the set() below dedups).
+    A proposal that references IDs of multiple artists increments
+    every affected artist by 1.
+
+    Scoped to `estat=pendent` — approved/rejected proposals don't
+    add noise to the triage queue.
+    """
+    from collections import defaultdict
+
+    pending = PropostaArtista.objects.filter(
+        estat=PropostaArtista.ESTAT_PENDENT
+    ).values_list("deezer_ids", flat=True)
+    # Map Deezer ID → Artista.pk once so the inner loop is O(1).
+    dz_to_artista = dict(ArtistaDeezer.objects.values_list("deezer_id", "artista_id"))
+    counter: dict[int, int] = defaultdict(int)
+    for raw_list in pending:
+        hit_artistes: set[int] = set()
+        for raw in raw_list or []:
+            try:
+                dz = int(raw)
+            except (TypeError, ValueError):
+                continue
+            aid = dz_to_artista.get(dz)
+            if aid is not None:
+                hit_artistes.add(aid)
+        for aid in hit_artistes:
+            counter[aid] += 1
+    return dict(counter)
+
+
 def _artista_card(a) -> dict:
     """Compact artist shape for staff tables (pendents + artistes)."""
     loc = a.localitats.select_related("municipi__territori").first()
@@ -180,26 +227,56 @@ def _artista_card(a) -> dict:
 @api_view(["GET"])
 @permission_classes([IsStaff])
 def pendents_list(request: Request) -> Response:
+    # distinct=True on both Count() calls to avoid the cartesian
+    # multiplication that happens when two LEFT JOINs stack up (Django
+    # ticket #10060). Without it, an artist with 3 main tracks and 4
+    # collab tracks reported 12 verified, not 7.
     qs = (
         Artista.objects.filter(aprovat=False, pendent_review=True)
         .prefetch_related("territoris", "deezer_ids", "localitats__municipi")
         .annotate(
-            nb_verif_main=Count("cancons", filter=Q(cancons__verificada=True)),
+            nb_verif_main=Count(
+                "cancons", filter=Q(cancons__verificada=True), distinct=True
+            ),
             nb_verif_col=Count(
-                "participacions", filter=Q(participacions__verificada=True)
+                "participacions",
+                filter=Q(participacions__verificada=True),
+                distinct=True,
             ),
         )
         .annotate(nb_verif=F("nb_verif_main") + F("nb_verif_col"))
-        .order_by("-nb_verif", "nom")
     )
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(nom__icontains=cerca)
+
+    # Annotate with n_propostes: count of pending PropostaArtista rows
+    # whose deezer_ids JSON array references any of this artist's
+    # Deezer IDs. Computed in Python because JSON-list overlap is a
+    # Postgres-specific query and the set of pending proposals is
+    # small (<100 in practice).
+    propostes_per_artista = _compute_propostes_per_artista_map()
+    if propostes_per_artista:
+        # Build a Case/When that maps Artista.pk → count. With <100
+        # pending proposals this is ~dozens of branches at most.
+        when_clauses = [
+            When(pk=aid, then=Value(n)) for aid, n in propostes_per_artista.items()
+        ]
+        qs = qs.annotate(
+            n_propostes=Case(
+                *when_clauses, default=Value(0), output_field=IntegerField()
+            )
+        )
+    else:
+        qs = qs.annotate(n_propostes=Value(0, output_field=IntegerField()))
+
+    qs = qs.order_by("-n_propostes", "-nb_verif", "nom")
     page, meta = _paginate(qs, request)
     rows = []
     for a in page.object_list:
         row = _artista_card(a)
         row["nb_verif"] = a.nb_verif
+        row["n_propostes"] = getattr(a, "n_propostes", 0) or 0
         rows.append(row)
     return Response({"results": rows, **meta})
 
@@ -611,12 +688,14 @@ def cancons_list(request: Request) -> Response:
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
-    # Scope to a single artist (used by the "X cançons verificades" link
-    # on the pendents page so staff can drill into exactly that list).
+    # Scope to a single artist — includes main artist AND collaborator
+    # participations so the "X cançons verificades" drill-down from the
+    # pendents page matches the nb_verif count exactly.
     artista_pk = request.GET.get("artista_pk", "")
     if artista_pk:
         try:
-            qs = qs.filter(artista_id=int(artista_pk))
+            pk = int(artista_pk)
+            qs = qs.filter(Q(artista_id=pk) | Q(artistes_col__pk=pk)).distinct()
         except ValueError:
             pass
     # Sorting: `sort` accepts the same allow-list as the Django staff
@@ -1149,16 +1228,23 @@ def proposta_aprovar(request: Request, pk: int) -> Response:
                 "deezer_id": ad.deezer_id,
                 "owner_pk": ad.artista_id,
                 "owner_nom": ad.artista.nom if ad.artista else "?",
+                "owner_aprovat": bool(ad.artista.aprovat) if ad.artista else False,
+                "owner_pendent_review": (
+                    bool(ad.artista.pendent_review) if ad.artista else False
+                ),
+                "owner_slug": ad.artista.slug if ad.artista else "",
             }
             for ad in clashing
         ]
         if conflicts:
+            # The UI uses this to offer interactive options: go to the
+            # existing artist, merge the proposal into it, or reject
+            # the proposal. No silent pass.
             return Response(
                 {
                     "error": (
                         "Algun dels Deezer IDs de la proposta ja pertany a "
-                        "un altre artista. Resol el conflicte abans "
-                        "d'aprovar (fusiona, o canvia l'ID a la proposta)."
+                        "un altre artista."
                     ),
                     "conflicts": conflicts,
                 },
@@ -1221,6 +1307,124 @@ def proposta_rebutjar(request: Request, pk: int) -> Response:
         usuari_proposant=p.usuari.email if p.usuari_id else "",
     )
     return Response({"ok": True})
+
+
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def proposta_fusionar(request: Request, pk: int) -> Response:
+    """Merge a pending proposta into an existing Artista.
+
+    Body: `{"artista_pk": <int>}`. The target artist receives:
+      * any Deezer IDs from the proposal that aren't already attached
+        somewhere (conflicts on *other* artists abort the operation
+        with 409 so staff can sort the triple-collision case out by
+        hand);
+      * any localitzacions (municipi_id preserved, manual entries
+        kept as-is) that the target doesn't already have;
+      * any social URLs the target doesn't already fill (never
+        overwrite an existing value — staff curates, proposals propose).
+
+    The proposta is marked `aprovat` with `artista_creat=<target>`
+    so the user sees their submission acknowledged.
+    """
+    p = get_object_or_404(PropostaArtista.objects.select_related("usuari"), pk=pk)
+    if p.estat != PropostaArtista.ESTAT_PENDENT:
+        return Response({"error": "Ja processada."}, status=400)
+
+    target_pk_raw = (request.data or {}).get("artista_pk")
+    try:
+        target = Artista.objects.get(pk=int(target_pk_raw))
+    except (TypeError, ValueError, Artista.DoesNotExist):
+        return Response({"error": "Artista de destí no trobat."}, status=404)
+
+    # Any Deezer IDs the proposal brings that are already owned by a
+    # DIFFERENT artist: abort. Merging those would require a second
+    # merge (artist↔artist) which is a separate operation.
+    wanted_deezer = p.get_deezer_id_list()
+    foreign = (
+        ArtistaDeezer.objects.filter(deezer_id__in=wanted_deezer)
+        .exclude(artista=target)
+        .select_related("artista")
+    )
+    if foreign.exists():
+        ad = foreign.first()
+        return Response(
+            {
+                "error": (
+                    f"El Deezer ID {ad.deezer_id} pertany a «{ad.artista.nom}» "
+                    f"(pk={ad.artista_id}), no a l'objectiu de fusió. "
+                    "Resol això primer fusionant els dos artistes."
+                )
+            },
+            status=409,
+        )
+
+    with transaction.atomic():
+        # Attach every missing Deezer ID.
+        existing_dz = set(target.deezer_ids.values_list("deezer_id", flat=True))
+        for dz in wanted_deezer:
+            if dz in existing_dz:
+                continue
+            ArtistaDeezer.objects.create(
+                artista=target,
+                deezer_id=dz,
+                principal=not existing_dz,
+            )
+            existing_dz.add(dz)
+
+        # Merge localitzacions (skip duplicates by municipi_id).
+        existing_municipi_ids = set(
+            target.localitats.filter(municipi__isnull=False).values_list(
+                "municipi_id", flat=True
+            )
+        )
+        for loc in p.localitzacions or []:
+            mid = loc.get("municipi_id")
+            manual = (loc.get("manual") or "").strip()
+            if mid and mid not in existing_municipi_ids:
+                try:
+                    m = Municipi.objects.get(pk=int(mid))
+                    ArtistaLocalitat.objects.create(artista=target, municipi=m)
+                    existing_municipi_ids.add(m.pk)
+                except (ValueError, Municipi.DoesNotExist):
+                    pass
+            elif manual:
+                ArtistaLocalitat.objects.create(
+                    artista=target, municipi=None, localitat_manual=manual
+                )
+
+        # Social URLs: only fill fields that are currently empty.
+        for field, _ in Artista.SOCIAL_LINK_FIELDS:
+            if getattr(target, field, ""):
+                continue
+            val = getattr(p, field, "")
+            if val:
+                setattr(target, field, val)
+
+        # If the target was a pendent auto-discovery, a merge with a
+        # human-curated proposal is a strong approval signal — flip
+        # aprovat on but only when the target now satisfies the
+        # aprovat-needs-Deezer invariant (which it does, we just
+        # attached IDs).
+        if target.pendent_review and target.deezer_ids.exists():
+            target.aprovat = True
+            target.pendent_review = False
+        target.save()
+
+        p.estat = PropostaArtista.ESTAT_APROVAT
+        p.artista_creat = target
+        p.save(update_fields=["estat", "artista_creat"])
+
+    log_staff_action(
+        request,
+        "proposta_aprovar",
+        target=p,
+        action_taken="fusionat",
+        artista_creat_id=target.pk,
+        artista_nom=target.nom,
+        usuari_proposant=p.usuari.email if p.usuari_id else "",
+    )
+    return Response({"ok": True, "artista_pk": target.pk, "slug": target.slug})
 
 
 # ═════════════════════════════════════════════════════════════════════════

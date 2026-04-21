@@ -98,6 +98,11 @@ urlpatterns = [
         name="staff_proposta_aprovar",
     ),
     path(
+        "staff/propostes/<int:pk>/fusionar/",
+        staff_views.proposta_fusionar,
+        name="staff_proposta_fusionar",
+    ),
+    path(
         "staff/propostes/<int:pk>/rebutjar/",
         staff_views.proposta_rebutjar,
         name="staff_proposta_rebutjar",

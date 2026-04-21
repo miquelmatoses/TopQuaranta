@@ -118,6 +118,14 @@ function Row({ a, onApproved, onDiscarded }) {
           ) : (
             <span>0 cançons verificades</span>
           )}
+          {a.n_propostes > 0 && (
+            <>
+              <span>·</span>
+              <Pill tone="yellow">
+                {a.n_propostes} {a.n_propostes === 1 ? 'proposta' : 'propostes'}
+              </Pill>
+            </>
+          )}
           <span>·</span>
           <span>{a.font_descoberta}</span>
           <span>·</span>
