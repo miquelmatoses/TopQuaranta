@@ -92,7 +92,7 @@ export default function ComunitatPublicarPage() {
 
         <label className="flex flex-col text-sm">
           <span className="text-xs font-semibold text-white/90">
-            Cos (markdown accepted)
+            Cos <span className="opacity-60 font-normal">(markdown: **negreta**, *cursiva*, # títols, - llistes, [text](url))</span>
           </span>
           <textarea
             required

@@ -387,6 +387,25 @@ def pendent_aprovar(request: Request, pk: int) -> Response:
         artista.pendent_review = False
         artista.save(update_fields=["aprovat", "pendent_review"])
 
+        # Auto-approve any user propostes that reference this artist
+        # via Deezer ID overlap. Saves staff from a second click on a
+        # proposta that's already resolved by the pendent approval.
+        artista_dz = list(artista.deezer_ids.values_list("deezer_id", flat=True))
+        propostes_auto = []
+        if artista_dz:
+            q = Q()
+            for dz in artista_dz:
+                q |= Q(deezer_ids__contains=dz)
+            propostes_auto = list(
+                PropostaArtista.objects.filter(
+                    estat=PropostaArtista.ESTAT_PENDENT
+                ).filter(q)
+            )
+            for p in propostes_auto:
+                p.estat = PropostaArtista.ESTAT_APROVAT
+                p.artista_creat = artista
+                p.save(update_fields=["estat", "artista_creat"])
+
     log_staff_action(
         request,
         "pendent_aprovar",
@@ -394,8 +413,15 @@ def pendent_aprovar(request: Request, pk: int) -> Response:
         territori=territori,
         localitat=audit_loc,
         deezer_id_afegit=deezer_id,
+        propostes_auto_aprovades=[p.pk for p in propostes_auto],
     )
-    return Response({"ok": True, "territori": territori})
+    return Response(
+        {
+            "ok": True,
+            "territori": territori,
+            "propostes_auto_aprovades": len(propostes_auto),
+        }
+    )
 
 
 @api_view(["POST"])
@@ -2058,43 +2084,37 @@ def estat(request: Request) -> Response:
 
     # ── Flux setmanal: entrades + caducitats + target de verificació ──
     #
-    # Intake: `created_at` captures quan el pipeline veu per primera
-    # vegada una cançó. La mitjana bruta sobre els últims 28 dies pot
-    # quedar distorsionada per una reingesta massiva ocasional (p.ex.
-    # migracions, backfills), així que publiquem dues vistes:
+    # Intake: `data_llancament` — la data de publicació real de la
+    # cançó. És el que importa pel ranking (el pipeline pot veure una
+    # cançó antiga en fer un backfill, però això no és "flux nou"). Les
+    # cançons sense data_llancament s'exclouen de la mètrica.
     #
-    #   * intake_setmanal_robust — dies d'alta entrada anòmala (>500
-    #     noves en un dia) s'exclouen del càlcul de mitjana. El que
-    #     queda es divideix pels dies vàlids i es multiplica per 7.
-    #   * intake_setmanal_bruta — la lectura directa, útil per veure
-    #     la realitat absoluta.
-    #   * intake_7d — last-week total, el senyal més actual.
+    #   * intake_setmanal_robust — dies amb volum anòmal (>500) exclosos
+    #     del càlcul de mitjana.
+    #   * intake_setmanal_bruta — lectura directa.
+    #   * intake_7d — últims 7 dies.
     #
     # Caducaran: cançons `verificada=False` amb `data_llancament` que
     # cau fora dels 365 dies la setmana que ve. `netejar_caducades`
     # les esborra cada dia a les 04:30, així que efectivament marxen.
     from datetime import timedelta as _td
 
-    from django.db.models.functions import TruncDate
-
     from music.constants import DIES_CADUCITAT
 
     today = datetime.date.today()
-    four_weeks_ago = datetime.datetime.combine(today - _td(days=28), datetime.time.min)
+    four_weeks_ago = today - _td(days=28)
 
-    # Per-day histogram of last 28 days (skipping empty days so the
-    # robust mean isn't dragged to zero by idle backfill periods).
+    # Per-day histogram of last 28 days by release date.
     daily_rows = list(
-        Canco.objects.filter(created_at__gte=four_weeks_ago)
-        .annotate(d=TruncDate("created_at"))
-        .values("d")
+        Canco.objects.filter(data_llancament__gte=four_weeks_ago)
+        .values("data_llancament")
         .annotate(n=Count("pk"))
     )
-    daily_by_day = {r["d"]: r["n"] for r in daily_rows}
+    daily_by_day = {r["data_llancament"]: r["n"] for r in daily_rows}
     intake_28d_total = sum(daily_by_day.values())
     intake_setmanal_bruta = round(intake_28d_total / 4.0, 1)
 
-    ANOMALY_DAY_THRESHOLD = 500  # migracions, reingestes massives
+    ANOMALY_DAY_THRESHOLD = 500
     normal_days_counts = [
         n for n in daily_by_day.values() if 0 < n <= ANOMALY_DAY_THRESHOLD
     ]
@@ -2104,24 +2124,16 @@ def estat(request: Request) -> Response:
     else:
         intake_setmanal_robust = intake_setmanal_bruta
 
-    seven_days_ago = datetime.datetime.combine(today - _td(days=6), datetime.time.min)
-    intake_7d = Canco.objects.filter(created_at__gte=seven_days_ago).count()
+    seven_days_ago = today - _td(days=6)
+    intake_7d = Canco.objects.filter(data_llancament__gte=seven_days_ago).count()
 
     # Per-week breakdown (oldest → newest), for the trend sparkline.
     intake_setmanes: list[dict] = []
     for w in range(4):
-        wk_start = datetime.datetime.combine(
-            today - _td(days=(w + 1) * 7 - 1), datetime.time.min
-        )
-        wk_end = (
-            datetime.datetime.combine(today + _td(days=1), datetime.time.min)
-            if w == 0
-            else datetime.datetime.combine(
-                today - _td(days=w * 7 - 1), datetime.time.min
-            )
-        )
+        wk_start = today - _td(days=(w + 1) * 7 - 1)
+        wk_end = today + _td(days=1) if w == 0 else today - _td(days=w * 7 - 1)
         n = Canco.objects.filter(
-            created_at__gte=wk_start, created_at__lt=wk_end
+            data_llancament__gte=wk_start, data_llancament__lt=wk_end
         ).count()
         label = f"-{(w + 1) * 7}d → -{w * 7}d"
         intake_setmanes.append({"label": label, "n": n})

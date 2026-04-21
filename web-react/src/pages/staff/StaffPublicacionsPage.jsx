@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
+import Markdown from '../../components/Markdown'
 import {
   Btn,
   EmptyState,
@@ -120,7 +121,9 @@ export default function StaffPublicacionsPage() {
                       <div className="grid lg:grid-cols-[1fr_280px] gap-4">
                         <div>
                           <p className="text-[10px] uppercase tracking-wide opacity-60 mb-1">Cos</p>
-                          <p className="text-sm whitespace-pre-wrap">{pub.cos}</p>
+                          <div className="text-sm bg-white text-tq-ink rounded p-3">
+                            <Markdown>{pub.cos}</Markdown>
+                          </div>
                         </div>
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] uppercase tracking-wide opacity-60">Notes staff (visibles a l'autor si es rebutja)</label>

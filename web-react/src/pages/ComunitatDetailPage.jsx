@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import Markdown from '../components/Markdown'
 
 function EstatBadge({ estat }) {
   const tone = {
@@ -77,8 +78,8 @@ export default function ComunitatDetailPage() {
         <p className="text-xs text-white/50 mb-4">Publicat {pub.publicat_at.slice(0, 10)}</p>
       )}
 
-      <div className="bg-white text-tq-ink rounded-lg p-6 whitespace-pre-wrap leading-relaxed">
-        {pub.cos}
+      <div className="bg-white text-tq-ink rounded-lg p-6">
+        <Markdown>{pub.cos}</Markdown>
       </div>
 
       {pub.notes_staff && (
