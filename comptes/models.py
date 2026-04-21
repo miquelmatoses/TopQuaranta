@@ -240,9 +240,9 @@ class PerfilUsuari(models.Model):
     ROL_PRODUCTOR = "productor"
     ROL_ALTRE = "altre"
     ROL_CHOICES = [
-        (ROL_ESCOLTADOR, "Escoltador"),
-        (ROL_MUSIC, "Músic"),
-        (ROL_PRODUCTOR, "Productor"),
+        (ROL_ESCOLTADOR, "Oïdor/a"),
+        (ROL_MUSIC, "Músic/a"),
+        (ROL_PRODUCTOR, "Productor/a"),
         (ROL_ALTRE, "Altre"),
     ]
 

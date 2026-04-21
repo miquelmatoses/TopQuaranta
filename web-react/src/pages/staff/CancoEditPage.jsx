@@ -38,7 +38,13 @@ export default function CancoEditPage() {
           (out.drift ? ` (drift: artista="${out.returned_artist}", tema="${out.returned_track}")` : '')
         )
       } else {
-        setErr(out.error || 'Last.fm no ha tornat resultat.')
+        // Not an exception — Last.fm simply doesn't have this track.
+        // Surface as a neutral notice instead of a red error.
+        setMsg(
+          'ℹ️ ' + (out.error || 'Last.fm no té aquesta cançó indexada.') +
+          ' · És normal si ningú no l\'ha escoltada mai a Last.fm; ' +
+          'el senyal seguirà sent zero fins que hi hagi scrobbles.'
+        )
       }
     } catch (e) {
       setErr(e.payload?.error || e.message)

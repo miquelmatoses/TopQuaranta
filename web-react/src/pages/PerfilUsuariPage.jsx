@@ -207,7 +207,7 @@ export default function PerfilUsuariPage() {
         <fieldset className="bg-red-900/20 border border-red-400/30 rounded-md p-4 mt-6">
           <legend className="text-xs font-semibold uppercase tracking-wide text-red-300 px-1">Zona perillosa</legend>
           <p className="text-sm text-white/80 mb-2">
-            Eliminar el compte és una acció irreversible. Et enviarem un email
+            Eliminar el compte és una acció irreversible. T'enviarem un email
             per confirmar abans que s'executi.
           </p>
           <button

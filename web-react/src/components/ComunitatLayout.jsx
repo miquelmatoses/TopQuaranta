@@ -28,6 +28,7 @@ export default function ComunitatLayout({ children }) {
 
   const sections = profile
     ? [
+        { to: '/compte/perfil-usuari', label: 'Perfil'     },
         { to: '/comunitat',           label: 'Feed',       end: true },
         { to: '/comunitat/directori', label: 'Directori'   },
         { to: '/comunitat/publicar',  label: '+ Publicar'  },

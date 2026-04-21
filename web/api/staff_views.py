@@ -668,7 +668,16 @@ def _canco_row(c) -> dict:
         ),
         "lastfm_nom": c.lastfm_nom or "",
         "whisper_lang": c.whisper_lang or "",
-        "artista": {"pk": c.artista_id, "nom": c.artista.nom if c.artista else ""},
+        "artista": (
+            {
+                "pk": c.artista_id,
+                "nom": c.artista.nom,
+                "aprovat": c.artista.aprovat,
+                "pendent_review": c.artista.pendent_review,
+            }
+            if c.artista
+            else None
+        ),
         "album": (
             {"pk": c.album_id, "nom": c.album.nom, "slug": c.album.slug}
             if c.album
