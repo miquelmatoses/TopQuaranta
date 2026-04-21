@@ -13,6 +13,7 @@ import { NavLink } from 'react-router-dom'
 
 const SECTIONS = [
   { to: '/staff',            label: 'Panel',       end: true },
+  { to: '/staff/estat',      label: 'Estat'        },
   { to: '/staff/pendents',   label: 'Pendents'     },
   { to: '/staff/artistes',   label: 'Artistes'     },
   { to: '/staff/cancons',    label: 'Cançons'      },

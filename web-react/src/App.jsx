@@ -38,6 +38,7 @@ import AuditlogPage from './pages/staff/AuditlogPage'
 import UsuarisPage from './pages/staff/UsuarisPage'
 import UsuariDetailPage from './pages/staff/UsuariDetailPage'
 import FeedbackPage from './pages/staff/FeedbackPage'
+import EstatPage from './pages/staff/EstatPage'
 
 /** Top-level error boundary — catches unexpected render errors and
  *  shows a minimal fallback with a reload button. */
@@ -126,6 +127,7 @@ function AppContent() {
                   <Route path="/usuaris" element={<UsuarisPage />} />
                   <Route path="/usuaris/:pk" element={<UsuariDetailPage />} />
                   <Route path="/feedback" element={<FeedbackPage />} />
+                  <Route path="/estat" element={<EstatPage />} />
                 </Routes>
               </StaffLayout>
             </AdminRoute>

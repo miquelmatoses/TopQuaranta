@@ -81,6 +81,11 @@ export default function StaffDashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Tile
+          to="/staff/estat"
+          title="Estat del sistema"
+          desc="Inventari, pipelines, ML i cues — dashboard visual."
+        />
+        <Tile
           to="/staff/pendents"
           title="Artistes pendents"
           desc="Aprovar o descartar artistes auto-descoberts per la ingesta."

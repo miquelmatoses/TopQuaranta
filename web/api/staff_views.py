@@ -24,7 +24,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Exists, F, OuterRef, Q
+from django.db.models import Avg, Count, Exists, F, Max, Min, OuterRef, Q
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
@@ -1682,3 +1682,250 @@ def feedback_resolve(request: Request, pk: int) -> Response:
         missatge_snippet=fb.missatge[:120],
     )
     return Response(_feedback_row(fb))
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# Estat del sistema — visual dashboard at /staff/estat
+# ═════════════════════════════════════════════════════════════════════════
+
+
+def _read_status_file(path):
+    """Parse one of /var/log/topquaranta/status/<name>.status.
+
+    Format is a flat `key=value` file emitted by `tq-run` after every
+    cron run. The `last_output<<EOF` block is multi-line; we only
+    keep the `status` / `last_run` / `exit_code` / `attempts` keys.
+    """
+    from pathlib import Path
+
+    p = Path(path)
+    if not p.exists():
+        return None
+    data = {}
+    try:
+        with p.open() as fh:
+            in_heredoc = False
+            for line in fh:
+                line = line.rstrip("\n")
+                if in_heredoc:
+                    if line == "EOF":
+                        in_heredoc = False
+                    continue
+                if "<<EOF" in line:
+                    in_heredoc = True
+                    continue
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    data[k] = v
+    except OSError:
+        return None
+    return data
+
+
+@api_view(["GET"])
+@permission_classes([IsStaff])
+def estat(request: Request) -> Response:
+    """Aggregate everything the visual dashboard needs in one call.
+
+    Shape:
+      {
+        bd:        counts (artistes/albums/cançons by state),
+        whisper:   LID coverage + daily rate,
+        ranking:   setmanal + provisional,
+        senyal:    daily feed stats,
+        comunitat: feedback/propostes/sol·licituds,
+        crons:     per-cron last-run status,
+        ml: {
+          model_mtime, features_total, training_size, class_balance,
+          classe_distribution, confianca_avg, importances [{name,value}],
+          noise_count,
+        },
+      }
+    """
+    import os
+    from pathlib import Path
+
+    import joblib
+
+    from music.ml import FEATURE_NAMES, MODEL_PATH, TFIDF_PATH
+
+    # ── BD inventory ────────────────────────────────────────────────────
+    a_total = Artista.objects.count()
+    a_aprovat = Artista.objects.filter(aprovat=True).count()
+    a_pendent = Artista.objects.filter(aprovat=False, pendent_review=True).count()
+    a_descartat = a_total - a_aprovat - a_pendent
+
+    alb_total = Album.objects.count()
+    alb_descartat = Album.objects.filter(descartat=True).count()
+
+    c_total = Canco.objects.count()
+    c_verif = Canco.objects.filter(verificada=True).count()
+    c_no_verif = Canco.objects.filter(verificada=False, activa=True).count()
+    c_inactiva = Canco.objects.filter(activa=False).count()
+    c_deezer = Canco.objects.filter(deezer_id__isnull=False).count()
+    c_isrc = Canco.objects.exclude(isrc__in=["", None]).count()
+    c_preview = Canco.objects.exclude(preview_url__in=["", None]).count()
+
+    # ── Whisper LID coverage ────────────────────────────────────────────
+    w_ca = Canco.objects.filter(whisper_lang="ca").count()
+    w_no = (
+        Canco.objects.filter(whisper_processat_at__isnull=False)
+        .exclude(whisper_lang="ca")
+        .count()
+    )
+    w_pend = Canco.objects.filter(whisper_processat_at__isnull=True).count()
+
+    # ── Ranking ─────────────────────────────────────────────────────────
+    setmanes = RankingSetmanal.objects.values("setmana").distinct().count()
+    r_prov = RankingProvisional.objects.count()
+    last_oficial = (
+        RankingSetmanal.objects.order_by("-setmana")
+        .values_list("setmana", flat=True)
+        .first()
+    )
+
+    # ── Senyal ──────────────────────────────────────────────────────────
+    s_total = SenyalDiari.objects.count()
+    s_recent = (
+        SenyalDiari.objects.order_by("-data").values_list("data", flat=True).first()
+    )
+
+    # ── Comunitat ───────────────────────────────────────────────────────
+    fb_obert = Feedback.objects.filter(resolt=False).count()
+    fb_total = Feedback.objects.count()
+    prop_pend = PropostaArtista.objects.filter(
+        estat=PropostaArtista.ESTAT_PENDENT
+    ).count()
+    sol_pend = UserArtista.objects.filter(estat=UserArtista.ESTAT_PENDENT).count()
+
+    # ── Cron status ─────────────────────────────────────────────────────
+    status_dir = Path("/var/log/topquaranta/status")
+    crons = []
+    if status_dir.exists():
+        for f in sorted(status_dir.glob("*.status")):
+            parsed = _read_status_file(f)
+            if not parsed:
+                continue
+            crons.append(
+                {
+                    "name": f.stem,
+                    "command": parsed.get("command", ""),
+                    "args": parsed.get("args", ""),
+                    "last_run": parsed.get("last_run", ""),
+                    "status": parsed.get("status", ""),
+                    "exit_code": parsed.get("exit_code", ""),
+                    "attempts": parsed.get("attempts", ""),
+                }
+            )
+
+    # ── ML ──────────────────────────────────────────────────────────────
+    ml = {
+        "trained": False,
+        "features_total": None,
+        "training_size": None,
+        "class_balance": None,
+        "model_mtime": None,
+        "tfidf_mtime": None,
+        "importances": [],
+        "noise_count": None,
+        "classe_distribution": {},
+        "confianca_avg": None,
+        "confianca_min": None,
+        "confianca_max": None,
+    }
+    if MODEL_PATH.exists():
+        try:
+            clf = joblib.load(MODEL_PATH)
+            ml["trained"] = True
+            ml["features_total"] = getattr(clf, "n_features_in_", None)
+            ml["model_mtime"] = datetime.datetime.fromtimestamp(
+                os.path.getmtime(MODEL_PATH)
+            ).isoformat()
+            if TFIDF_PATH.exists():
+                ml["tfidf_mtime"] = datetime.datetime.fromtimestamp(
+                    os.path.getmtime(TFIDF_PATH)
+                ).isoformat()
+            if hasattr(clf, "feature_importances_"):
+                importances = list(clf.feature_importances_)
+                names = FEATURE_NAMES
+                if len(names) != len(importances):
+                    # Names out of sync (ex. mid-deploy). Fall back to indices.
+                    names = [f"f{i}" for i in range(len(importances))]
+                pairs = sorted(zip(names, importances), key=lambda x: -x[1])
+                ml["importances"] = [
+                    {"name": n, "value": round(float(v), 5)} for n, v in pairs
+                ]
+                ml["noise_count"] = sum(1 for _, v in pairs if v < 0.0005)
+        except Exception as exc:  # noqa: BLE001
+            ml["error"] = str(exc)
+
+    ml["training_size"] = HistorialRevisio.objects.count()
+    apv = HistorialRevisio.objects.filter(decisio="aprovada").count()
+    rej = HistorialRevisio.objects.filter(decisio="rebutjada").count()
+    ml["class_balance"] = {"aprovades": apv, "rebutjades": rej}
+
+    for row in (
+        Canco.objects.values("ml_classe").annotate(n=Count("pk")).order_by("ml_classe")
+    ):
+        key = row["ml_classe"] or "none"
+        ml["classe_distribution"][key] = row["n"]
+
+    conf_agg = Canco.objects.exclude(ml_confianca__isnull=True).aggregate(
+        avg=Avg("ml_confianca"),
+        mn=Min("ml_confianca"),
+        mx=Max("ml_confianca"),
+    )
+    if conf_agg["avg"] is not None:
+        ml["confianca_avg"] = round(float(conf_agg["avg"]), 3)
+        ml["confianca_min"] = round(float(conf_agg["mn"]), 3)
+        ml["confianca_max"] = round(float(conf_agg["mx"]), 3)
+
+    return Response(
+        {
+            "bd": {
+                "artistes": {
+                    "total": a_total,
+                    "aprovats": a_aprovat,
+                    "pendents": a_pendent,
+                    "descartats": a_descartat,
+                },
+                "albums": {
+                    "total": alb_total,
+                    "actius": alb_total - alb_descartat,
+                    "descartats": alb_descartat,
+                },
+                "cancons": {
+                    "total": c_total,
+                    "verificades": c_verif,
+                    "no_verificades_actives": c_no_verif,
+                    "inactives": c_inactiva,
+                    "amb_deezer": c_deezer,
+                    "amb_isrc": c_isrc,
+                    "amb_preview": c_preview,
+                },
+            },
+            "whisper": {
+                "ca": w_ca,
+                "no_ca": w_no,
+                "pendent": w_pend,
+                "total": c_total,
+            },
+            "ranking": {
+                "setmanes_historiques": setmanes,
+                "provisional_ara": r_prov,
+                "ultim_oficial": last_oficial.isoformat() if last_oficial else None,
+            },
+            "senyal": {
+                "total": s_total,
+                "data_recent": s_recent.isoformat() if s_recent else None,
+            },
+            "comunitat": {
+                "feedback_obert": fb_obert,
+                "feedback_total": fb_total,
+                "propostes_pendents": prop_pend,
+                "solicituds_pendents": sol_pend,
+            },
+            "crons": crons,
+            "ml": ml,
+        }
+    )

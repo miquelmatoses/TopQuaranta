@@ -36,6 +36,7 @@ urlpatterns = [
     path("feedback/", compte_views.feedback_crear, name="feedback_crear"),
     # ── Staff (is_staff required) ──
     path("staff/dashboard/", staff_views.dashboard, name="staff_dashboard"),
+    path("staff/estat/", staff_views.estat, name="staff_estat"),
     # Pendents
     path("staff/pendents/", staff_views.pendents_list, name="staff_pendents_list"),
     path(
