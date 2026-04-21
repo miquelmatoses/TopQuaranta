@@ -115,6 +115,39 @@ def activar(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# Password reset (triggered by staff from /staff/usuaris/<pk>/)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def nova_clau(request: HttpRequest, uidb64: str, token: str) -> HttpResponse:
+    """Land on a token-signed URL, show a form, set the new password."""
+    from django.contrib.auth.forms import SetPasswordForm
+    from django.contrib.auth.tokens import default_token_generator
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = Usuari.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Usuari.DoesNotExist):
+        user = None
+
+    if not user or not default_token_generator.check_token(user, token):
+        return render(request, "comptes/nova_clau_error.html", status=400)
+
+    if request.method == "POST":
+        form = SetPasswordForm(user, request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Contrasenya canviada. Ja pots iniciar sessió.")
+            return redirect("comptes:login")
+    else:
+        form = SetPasswordForm(user)
+
+    return render(
+        request, "comptes/nova_clau.html", {"form": form, "email": user.email}
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # Login / logout
 # ─────────────────────────────────────────────────────────────────────────
 

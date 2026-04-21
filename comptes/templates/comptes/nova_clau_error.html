@@ -1,0 +1,17 @@
+{% extends "comptes/_base_auth.html" %}
+
+{% block title %}Enllaç caducat — TopQuaranta{% endblock %}
+
+{% block content %}
+<div class="tq-card">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Enllaç invàlid o caducat</h1>
+  <p class="tq-sub">
+    Aquest enllaç de reset de contrasenya ja no és vàlid. Contacta amb
+    l'equip perquè te'n generi un de nou.
+  </p>
+  <p class="tq-small" style="margin-top:24px;text-align:center">
+    <a href="/compte/accedir">Tornar a iniciar sessió</a>
+  </p>
+</div>
+{% endblock %}

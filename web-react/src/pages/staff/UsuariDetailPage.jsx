@@ -52,6 +52,15 @@ export default function UsuariDetailPage() {
     } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
   }
 
+  async function enviarResetPassword() {
+    if (!confirm(`Enviar email de reset de contrasenya a ${u.email}?`)) return
+    setBusy(true); setErr('')
+    try {
+      await api.post(`/staff/usuaris/${pk}/enviar-reset-password/`)
+      alert(`Email enviat a ${u.email}.`)
+    } catch (e) { setErr(e.payload?.error || e.message) } finally { setBusy(false) }
+  }
+
   return (
     <section>
       <PageHeader
@@ -68,6 +77,9 @@ export default function UsuariDetailPage() {
             {u.has_totp && (
               <Btn tone="danger" size="md" onClick={reset2fa} disabled={busy}>Reset 2FA</Btn>
             )}
+            <Btn tone="secondary" size="md" onClick={enviarResetPassword} disabled={busy}>
+              Enviar reset de clau
+            </Btn>
           </>
         }
       />

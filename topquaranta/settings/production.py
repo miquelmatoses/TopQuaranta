@@ -47,8 +47,18 @@ SPOTIFY_REDIRECT_URI = config(
     default="https://www.topquaranta.cat/spotify/callback",
 )
 
-# No SMTP is configured on this server. mail_admins() calls would try
-# localhost:25 and raise ConnectionRefusedError. Route admin notifications
-# to a file instead; call sites already catch errors defensively.
-EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
-EMAIL_FILE_PATH = "/var/log/topquaranta/admin_mail"
+# SMTP via cdmon's Micropla (smtp.topquaranta.cat). Falls back to a
+# file-based backend if EMAIL_HOST_PASSWORD is not set in .env, so dev
+# or a freshly-cloned server doesn't raise on mail_admins().
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+if EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = config("EMAIL_HOST", default="smtp.topquaranta.cat")
+    EMAIL_PORT = config("EMAIL_PORT", default=465, cast=int)
+    EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+    EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=False, cast=bool)
+    EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="noreply@topquaranta.cat")
+    EMAIL_TIMEOUT = 20
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+    EMAIL_FILE_PATH = "/var/log/topquaranta/admin_mail"

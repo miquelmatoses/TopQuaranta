@@ -1,0 +1,57 @@
+{% extends "comptes/_base_auth.html" %}
+
+{% block title %}Nova contrasenya — TopQuaranta{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tq-djform input[type="password"] {
+    background: #fff;
+    color: var(--tq-ink);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 14px;
+    width: 100%;
+  }
+  .tq-djform input:focus {
+    outline: 2px solid var(--tq-focus);
+    outline-offset: 1px;
+  }
+  .tq-djform .errorlist { margin: 6px 0 0; padding: 0; list-style: none; color: #fca5a5; font-size: 11px; }
+  .tq-djform .helptext { color: var(--tq-ink-muted); font-size: 11px; display: block; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tq-card tq-djform">
+  <p class="tq-label">Compte</p>
+  <h1 class="tq-title">Nova contrasenya</h1>
+  <p class="tq-sub">Estableix una nova contrasenya per <strong>{{ email }}</strong>.</p>
+
+  {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}
+      <div class="tq-msg tq-msg--error">{{ error }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="tq-stack">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="tq-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+          <span class="tq-hint">{{ field.help_text|safe }}</span>
+        {% endif %}
+        {% if field.errors %}
+          {% for error in field.errors %}
+            <span class="tq-err">{{ error }}</span>
+          {% endfor %}
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="tq-btn">Desar</button>
+  </form>
+</div>
+{% endblock %}

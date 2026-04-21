@@ -162,6 +162,11 @@ urlpatterns = [
         staff_views.usuari_reset_2fa,
         name="staff_usuari_reset_2fa",
     ),
+    path(
+        "staff/usuaris/<int:pk>/enviar-reset-password/",
+        staff_views.usuari_enviar_reset_password,
+        name="staff_usuari_enviar_reset_password",
+    ),
     # Ranking (top 40 per territory + week)
     path("ranking/", ranking_views.ranking, name="ranking"),
     # Artistes

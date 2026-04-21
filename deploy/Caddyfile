@@ -43,6 +43,7 @@ www.topquaranta.cat {
 		path /robots.txt
 		path /compte/2fa/*
 		path /compte/activar/*
+		path /compte/nova-clau/*
 		path /compte/registre/
 		path /compte/login/
 		path /compte/logout/

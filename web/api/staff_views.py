@@ -1916,6 +1916,52 @@ def usuari_reset_2fa(request: Request, pk: int) -> Response:
     return Response({"ok": True, "totp_removed": totp_n, "static_removed": static_n})
 
 
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def usuari_enviar_reset_password(request: Request, pk: int) -> Response:
+    """Send a password-reset email to the user.
+
+    Generates a token via Django's `default_token_generator` and builds
+    a link to our custom `/compte/nova-clau/<uidb64>/<token>/` flow.
+    """
+    from django.contrib.auth.tokens import default_token_generator
+    from django.core.mail import send_mail
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    u = get_object_or_404(Usuari, pk=pk)
+    if not u.email:
+        return Response({"error": "L'usuari no té email."}, status=400)
+
+    uidb64 = urlsafe_base64_encode(force_bytes(u.pk))
+    token = default_token_generator.make_token(u)
+    scheme = "https" if request.is_secure() else "http"
+    host = request.get_host()
+    url = f"{scheme}://{host}/compte/nova-clau/{uidb64}/{token}/"
+
+    subject = "TopQuaranta · nova contrasenya"
+    body = (
+        f"Hola,\n\n"
+        f"L'equip de TopQuaranta ha generat un enllaç perquè estableixis una "
+        f"nova contrasenya del teu compte ({u.email}).\n\n"
+        f"{url}\n\n"
+        f"L'enllaç caduca a les 24 hores. Si no has demanat aquest canvi, "
+        f"pots ignorar aquest missatge.\n"
+    )
+    try:
+        send_mail(subject, body, None, [u.email], fail_silently=False)
+    except Exception as e:
+        return Response({"error": f"No s'ha pogut enviar l'email: {e}"}, status=500)
+
+    log_staff_action(
+        request,
+        "usuari_enviar_reset_password",
+        target=u,
+        email=u.email,
+    )
+    return Response({"ok": True, "email": u.email})
+
+
 # ═════════════════════════════════════════════════════════════════════════
 # Feedback (staff-side review)
 # ═════════════════════════════════════════════════════════════════════════

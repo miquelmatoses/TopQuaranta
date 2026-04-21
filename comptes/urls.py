@@ -36,6 +36,7 @@ app_name = "comptes"
 urlpatterns = [
     path("registre/", views.registre, name="registre"),
     path("activar/<str:uidb64>/<str:token>/", views.activar, name="activar"),
+    path("nova-clau/<str:uidb64>/<str:token>/", views.nova_clau, name="nova_clau"),
     path("login/", views.TQLoginView.as_view(), name="login"),
     path("logout/", views.TQLogoutView.as_view(), name="logout"),
     # S11 · 2FA
