@@ -152,6 +152,8 @@ function AlgerInset({ feature, stats, maxN, selected, hovered, onHover, onClick 
           fill={fill}
           stroke={selected ? '#0a0a0a' : '#9ca3af'}
           strokeWidth={selected ? 1.5 : 0.5}
+          strokeLinejoin="round"
+          strokeLinecap="round"
           opacity={hovered ? 0.85 : 1}
           onMouseEnter={() => onHover('ALG')}
           onMouseLeave={() => onHover(null)}
@@ -386,6 +388,8 @@ export default function MapaPage() {
                     fill={fill}
                     stroke={isSel ? '#0a0a0a' : '#9ca3af'}
                     strokeWidth={isSel ? 1.5 : 0.5}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
                     opacity={isHov ? 0.85 : 1}
                     onMouseEnter={() => setHovered(k)}
                     onMouseLeave={() => setHovered(null)}
