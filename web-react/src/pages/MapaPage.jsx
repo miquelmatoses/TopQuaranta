@@ -90,11 +90,36 @@ function mix(a, b, t) {
   return `#${((r << 16) | (g << 8) | b2).toString(16).padStart(6, '0')}`
 }
 
-// Quantile-ish colour scale via sqrt to bring small values into view.
+// Three-stop colour scale: cream → tq-yellow → orange → dark orange.
+// sqrt mapping so small values surface instead of disappearing.
 function colourFor(n, maxN) {
-  if (!n || !maxN) return '#f3f4f6'
+  if (!n || !maxN) return '#f5f1e4' // warm cream for empty regions
   const t = Math.min(1, Math.sqrt(n / maxN))
-  return mix('#fef9c3', '#eab308', t)
+  if (t < 0.5) {
+    return mix('#fde68a', '#facc15', t / 0.5)       // pale yellow → yellow
+  }
+  return mix('#f97316', '#9a3412', (t - 0.5) / 0.5) // orange → dark brick
+}
+
+// L'Alguer sits in Sardinia, ~8°E, far from the rest of PPCC. At the
+// overview level we translate its polygon westward so the map isn't
+// mostly empty sea. Only applied when rendering paisos.json (overview);
+// when the user drills into ALG we show it at its real coordinates.
+const ALG_SHIFT_LON = -3.8  // degrees; places ALG just east of Balears
+function translateCoords(coords, dx, dy) {
+  if (typeof coords[0] === 'number') return [coords[0] + dx, coords[1] + dy]
+  return coords.map(c => translateCoords(c, dx, dy))
+}
+function maybeShiftFeature(ft, level) {
+  if (level !== 'territori') return ft
+  if (ft.properties?.codi !== 'ALG') return ft
+  return {
+    ...ft,
+    geometry: {
+      type: ft.geometry.type,
+      coordinates: translateCoords(ft.geometry.coordinates, ALG_SHIFT_LON, 0),
+    },
+  }
 }
 
 function KPI({ label, value }) {
@@ -183,7 +208,8 @@ export default function MapaPage() {
     } else if (level === 'municipi' && selComarca) {
       feats = feats.filter(ft => ft.properties.comarca === selComarca)
     }
-    return feats
+    // Pull L'Alguer westward at the overview so the map isn't 60% sea.
+    return feats.map(ft => maybeShiftFeature(ft, level))
   }, [gj, level, selTerritori, selComarca])
 
   const featureBounds = useMemo(
@@ -276,7 +302,10 @@ export default function MapaPage() {
     <section className="max-w-6xl mx-auto">
       <div className="grid lg:grid-cols-[1fr_320px] gap-4">
         {/* ── Map ── */}
-        <div className="bg-white rounded-lg border border-black/5 p-3 min-h-[500px]">
+        <div
+          className="rounded-lg border border-black/5 p-3 min-h-[500px]"
+          style={{ background: 'linear-gradient(180deg, #eef2f7 0%, #f5f7fa 100%)' }}
+        >
           {!gj && <p className="text-sm text-tq-ink/60 p-6 text-center">Carregant mapa…</p>}
           {gj && (
             <svg
