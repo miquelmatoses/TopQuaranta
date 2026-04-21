@@ -28,11 +28,11 @@ export default function ComunitatLayout({ children }) {
 
   const sections = profile
     ? [
-        { to: '/compte/perfil-usuari', label: 'Perfil'     },
+        { to: '/comunitat/perfil',    label: 'Perfil'      },
         { to: '/comunitat',           label: 'Feed',       end: true },
         { to: '/comunitat/directori', label: 'Directori'   },
         { to: '/comunitat/publicar',  label: '+ Publicar'  },
-        { to: '/compte/missatges',    label: 'Missatges'   },
+        { to: '/comunitat/missatges', label: 'Missatges'   },
         { to: '/comunitat/public',    label: 'Feed públic' },
       ]
     : [

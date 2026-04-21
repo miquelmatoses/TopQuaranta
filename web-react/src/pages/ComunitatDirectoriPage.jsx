@@ -49,7 +49,7 @@ export default function ComunitatDirectoriPage() {
       <h1 className="text-2xl font-bold mb-1">Directori de la comunitat</h1>
       <p className="text-xs text-white/60 mb-4">
         Usuaris que han decidit ser visibles. Si no hi apareixes, marca la
-        casella "Vull aparèixer al directori" al teu <Link to="/compte/perfil-usuari" className="underline">perfil</Link>.
+        casella "Vull aparèixer al directori" al teu <Link to="/comunitat/perfil" className="underline">perfil</Link>.
       </p>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -121,7 +121,7 @@ export default function ComunitatDirectoriPage() {
             </div>
             <div className="mt-3 flex justify-end">
               <Link
-                to={`/compte/missatges?amb=${u.usuari_id}`}
+                to={`/comunitat/missatges?amb=${u.usuari_id}`}
                 className="text-xs font-semibold px-3 py-1.5 bg-tq-ink text-tq-yellow rounded hover:bg-tq-ink/90"
               >
                 ✉ Missatge

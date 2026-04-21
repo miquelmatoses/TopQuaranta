@@ -1,5 +1,5 @@
 /**
- * MissatgesPage — /compte/missatges
+ * MissatgesPage — /comunitat/missatges
  *
  * Inbox view: list of conversations (grouped by "altre usuari") with
  * unread counters. Clicking one expands the thread inline. Replies and
@@ -174,7 +174,7 @@ export default function MissatgesPage() {
   useEffect(loadInbox, [])
 
   if (loading) return null
-  if (!profile) return <Navigate to="/compte/accedir?next=/compte/missatges" replace />
+  if (!profile) return <Navigate to="/compte/accedir?next=/comunitat/missatges" replace />
 
   function openConversa(pk) {
     setParams({ amb: String(pk) })

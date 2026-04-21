@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
@@ -107,8 +107,10 @@ function AppContent() {
         <Route path="/compte/perfil" element={<ComptePerfilPage />} />
         <Route path="/compte/artista/proposta" element={<ProposarArtistaPage />} />
         <Route path="/compte/artista/gestio" element={<SolicitarGestioPage />} />
-        <Route path="/compte/perfil-usuari" element={<PerfilUsuariPage />} />
-        <Route path="/compte/missatges" element={<MissatgesPage />} />
+        {/* Perfil + missatges moved under /comunitat so they share the
+            community sidebar. Old URLs kept as redirects. */}
+        <Route path="/compte/perfil-usuari" element={<Navigate to="/comunitat/perfil" replace />} />
+        <Route path="/compte/missatges" element={<Navigate to="/comunitat/missatges" replace />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         {/* Comunitat — nested under a shared dark-sidebar layout
             (mirroring Staff). Individual pages render only their own
@@ -119,6 +121,8 @@ function AppContent() {
             <ComunitatLayout>
               <Routes>
                 <Route path="/" element={<ComunitatPage />} />
+                <Route path="/perfil" element={<PerfilUsuariPage />} />
+                <Route path="/missatges" element={<MissatgesPage />} />
                 <Route path="/directori" element={<ComunitatDirectoriPage />} />
                 <Route path="/publicar" element={<ComunitatPublicarPage />} />
                 <Route path="/public" element={<ComunitatPublicaPage />} />

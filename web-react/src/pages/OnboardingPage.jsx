@@ -8,7 +8,7 @@
  * as filling it — so there's no state mid-way.
  *
  * The form is the same `PerfilUsuari` surface users can come back to
- * from `/compte/perfil-usuari` later; on "Desar" we also flip
+ * from `/comunitat/perfil` later; on "Desar" we also flip
  * onboarding_complet=true and bounce them to /compte.
  */
 import { useEffect, useState } from 'react'
@@ -41,7 +41,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (loading || !profile) return
-    api.get('/compte/perfil-usuari/').then(setPerfil).catch(() => {})
+    api.get('/comunitat/perfil/').then(setPerfil).catch(() => {})
   }, [loading, profile])
 
   if (loading) return null
@@ -69,7 +69,7 @@ export default function OnboardingPage() {
         onboarding_complet: onboardingDone,
         ...(perfil.social || {}),
       }
-      await api.patch('/compte/perfil-usuari/', body)
+      await api.patch('/comunitat/perfil/', body)
       if (refresh) await refresh()
       navigate('/compte')
     } catch (err) {
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
   async function saltar() {
     setBusy(true)
     try {
-      await api.patch('/compte/perfil-usuari/', { onboarding_complet: true })
+      await api.patch('/comunitat/perfil/', { onboarding_complet: true })
       if (refresh) await refresh()
       navigate('/compte')
     } finally {
