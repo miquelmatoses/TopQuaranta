@@ -106,6 +106,8 @@ export function Btn({
     primary: 'bg-tq-ink text-tq-yellow hover:bg-tq-ink/90',
     secondary:
       'bg-transparent text-tq-ink border border-tq-ink/20 hover:bg-tq-ink/5',
+    outline:
+      'bg-transparent text-white border border-white/30 hover:bg-white/10',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     ghost: 'text-tq-ink/70 hover:text-tq-ink hover:bg-tq-ink/5',
   }

@@ -68,7 +68,7 @@ export default function UsuariDetailPage() {
         subtitle={`pk=${u.pk} · ${u.username}`}
         right={
           <>
-            <Btn tone="secondary" size="md" onClick={() => navigate('/staff/usuaris')}>Tornar</Btn>
+            <Btn tone="outline" size="md" onClick={() => navigate('/staff/usuaris')}>Tornar</Btn>
             {!u.is_staff && (
               <Btn tone={u.is_active ? 'danger' : 'primary'} size="md" onClick={toggleActiu} disabled={busy}>
                 {u.is_active ? 'Desactivar' : 'Reactivar'}
@@ -77,7 +77,7 @@ export default function UsuariDetailPage() {
             {u.has_totp && (
               <Btn tone="danger" size="md" onClick={reset2fa} disabled={busy}>Reset 2FA</Btn>
             )}
-            <Btn tone="secondary" size="md" onClick={enviarResetPassword} disabled={busy}>
+            <Btn size="md" onClick={enviarResetPassword} disabled={busy}>
               Enviar reset de clau
             </Btn>
           </>

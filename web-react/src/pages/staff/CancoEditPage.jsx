@@ -65,7 +65,7 @@ export default function CancoEditPage() {
                 ▶ Escoltar a Deezer
               </a>
             )}
-            <Btn tone="secondary" size="md" onClick={() => navigate('/staff/cancons')}>Tornar</Btn>
+            <Btn tone="outline" size="md" onClick={() => navigate('/staff/cancons')}>Tornar</Btn>
             <Btn size="md" onClick={save} disabled={busy}>Desar</Btn>
           </>
         }

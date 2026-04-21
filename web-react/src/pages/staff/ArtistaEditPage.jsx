@@ -102,7 +102,7 @@ export default function ArtistaEditPage() {
         }
         right={
           <>
-            <Btn tone="secondary" size="md" onClick={() => navigate('/staff/artistes')}>Tornar</Btn>
+            <Btn tone="outline" size="md" onClick={() => navigate('/staff/artistes')}>Tornar</Btn>
             <Btn size="md" onClick={save} disabled={busy}>Desar</Btn>
           </>
         }

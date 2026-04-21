@@ -69,7 +69,7 @@ export default function AlbumEditPage() {
         subtitle={a.artista?.nom ? `de ${a.artista.nom}` : 'Sense artista assignat'}
         right={
           <>
-            <Btn tone="secondary" size="md" onClick={() => navigate(-1)}>Tornar</Btn>
+            <Btn tone="outline" size="md" onClick={() => navigate(-1)}>Tornar</Btn>
             <Btn size="md" onClick={save} disabled={busy}>Desar</Btn>
           </>
         }

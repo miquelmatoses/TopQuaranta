@@ -152,7 +152,7 @@ export default function PropostaDetailPage() {
         subtitle={<>Proposta de {p.usuari.email} · {p.created_at?.slice(0, 10)}</>}
         right={
           <>
-            <Btn tone="secondary" size="md" onClick={() => navigate('/staff/propostes')}>Tornar</Btn>
+            <Btn tone="outline" size="md" onClick={() => navigate('/staff/propostes')}>Tornar</Btn>
             {p.estat === 'pendent' && !conflicts && (
               <>
                 <Btn size="md" onClick={aprovar} disabled={busy}>Aprovar</Btn>
