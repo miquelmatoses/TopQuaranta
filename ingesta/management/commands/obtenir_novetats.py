@@ -153,10 +153,28 @@ class Command(BaseCommand):
                     if was_new:
                         created += 1
                     calls += 1  # each track = 1 API call in get_album_tracks
-                album.cancons_obtingudes = True
-                album.save(update_fields=["cancons_obtingudes"])
+
+                # Deezer often returns an empty track list the first hours /
+                # days after an album ships — their index lags behind the
+                # album endpoint. Don't mark `cancons_obtingudes=True` yet if
+                # the album is fresh; retry next run. After 30 days give up
+                # (a truly empty album never appears).
+                from datetime import date, timedelta
+
+                album_old = (
+                    album.data_llancament
+                    and album.data_llancament < date.today() - timedelta(days=30)
+                )
+                if tracks or album_old:
+                    album.cancons_obtingudes = True
+                    album.save(update_fields=["cancons_obtingudes"])
                 self.stdout.write(
                     f"  P2 album {album.deezer_id} ({album.nom}) → {created} cançons creades"
+                    + (
+                        ""
+                        if (tracks or album_old)
+                        else "  [retry — Deezer 0 tracks, àlbum fresc]"
+                    )
                 )
                 continue
 
