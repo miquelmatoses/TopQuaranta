@@ -1,15 +1,48 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-21 — Post-Sprint-4 audit + cleanup. Legacy Django
-> template UI removed; React SPA is the exclusive front-end. ML slimmed from
-> 223 → 76 features; Bayesian smoothing on rejection ratios. Visual
-> `/staff/estat` dashboard added with live flux + feature-importance chart.
-> Spotify playlist sync active (cron 07:15 UTC).
+> Last updated: 2026-04-22.
+
+### Recent deliveries (past week)
+
+- **MusicBrainz integration** — continuous 15-min cron
+  (`obtenir_metadata_musicbrainz`) pulls MBID + area + begin/end dates +
+  URL relationships + full discography; reconciles Albums/Cançons by
+  ISRC and normalised title. Staff panel exposes MBID field + on-demand
+  sync button on every edit page. Invariant now `aprovat ⇒ Deezer OR MBID`,
+  so Crim-style collisions can keep both artists live. Estat dashboard
+  gains an MB coverage block. ML features grow 76 → **79** with
+  `mbrainz_confirmed`, `mb_lyrics_cat`, `artista_te_mbid`.
+- **Grup C community** — `PerfilUsuari`, `Publicacio`, `Comentari`,
+  `Missatge`. Directori, feed moderat, DM 1-to-1, comentaris. Email
+  notifications with per-user opt-outs. Unread-message badge on the
+  account icon.
+- **Mapa drill-down** — `/mapa` SVG of the PPCC with three zoom levels
+  (territori → comarca → municipi) + sticky side panel with KPIs and a
+  top-artist grid per region, sorted by cumulative Last.fm plays.
+  GeoJSON preprocessed with Douglas-Peucker at 0.002° (5 MB → 2 MB
+  across 17 files). L'Alguer renders as a Canaries-style inset.
+- **Email pipeline** — real SMTP via cdmon (smtp.topquaranta.cat:587
+  STARTTLS). HTML-styled emails matching site aesthetic. Password-reset
+  + resend-verification + self-delete + DM/comment notifications all
+  send via this channel now.
+- **Staff UX fixes** — visible Tornar/action buttons on dark headers
+  (new `outline` tone), semantic colour tokens in design system
+  (`--color-tq-success/warning/danger/neutral/accent`), markdown
+  rendering in publications (with heading-level shift + image support),
+  staff usuaris merged with directori-usuaris into one page.
+- **Pipeline reliability** — Deezer P2 no longer permanently marks an
+  album as "no tracks" after a single empty response (retries while
+  the album is <30 days old); NFD-encoded track names now hit Last.fm
+  correctly; ALT ranking aggregates below-threshold territoris; stale
+  RankingSetmanal rows cleared when a territori's feeders vanish.
+- **Design system** — `--color-tq-*` semantic tokens used throughout
+  `EstatPage` (dropped hardcoded hex). Intake-per-week bars switched to
+  pixel heights to fix a flex percentage-height rendering bug.
 
 ---
 
-## Current state (2026-04-21)
+## Current state (2026-04-22)
 
 **Public site**: `https://www.topquaranta.cat/` — React SPA at the root.
 Routes: `/` (home), `/top` (current weekly ranking per territori), `/artistes`

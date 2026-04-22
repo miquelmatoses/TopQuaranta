@@ -145,13 +145,48 @@ tracks from a cold start.
 See `scripts/model_comparison/resultats.md` for the eval numbers
 that justified this integration.
 
-### 3.7 `netejar_caducades` — daily 04:00
+### 3.7 `obtenir_metadata_musicbrainz` — every 15 min
+```bash
+python manage.py obtenir_metadata_musicbrainz [--refresh-days N]
+                                              [--limit N] [--artista-id PK]
+```
+Pulls MusicBrainz metadata into our Artista / Album / Canço rows.
+Single-instance `fcntl.flock` on `/tmp/mb_sync.lock`; MB's 1 req/s
+rate limit is globally enforced by the client.
+
+Per artist the flow is:
+  1. If no `musicbrainz_id`: `search_artist(nom)` — strict exact-name
+     + score ≥ 95 + PPCC area disambiguation. Ambiguous names (Crim,
+     Apa, …) are skipped and left to staff.
+  2. Otherwise: `get_artist` + `get_artist_release_groups` +
+     `get_release_group_with_recordings` → fills type/gender/area/
+     begin_date/end_date/disambiguation/sort_name/aliases/tags/rating,
+     plus URL relationships (bandcamp/spotify/youtube/youtube music/
+     soundcloud/wikipedia/viasona/facebook/myspace — never overwriting
+     values staff already set).
+  3. Reconciles Albums by normalised title (fuzzy 0.9+) →
+     `mb_release_group_id`, `mb_type_secondary`, `mb_status`,
+     `mbrainz_confirmed=True`.
+  4. Reconciles Cançons by ISRC first, then normalised title →
+     `mb_recording_id`, `mb_work_id`, `mb_lyrics_language`,
+     `mbrainz_confirmed=True`. A `Work.language=='cat'` is logged
+     and feeds the `mb_lyrics_cat` ML feature.
+  5. Caches `{isrcs, titles}` on `Artista.mb_discography_cache` for
+     quick future matches.
+  6. Stamps `mb_last_sync` regardless of outcome, so idle retries
+     don't thrash.
+
+Queue priority: aprovat > pendent > descartat; within each, oldest
+`mb_last_sync` first. Refresh every 7 days by default. The cron
+exits when nobody needs attention — idle invocations are cheap.
+
+### 3.9 `netejar_caducades` — daily 04:00
 ```bash
 python manage.py netejar_caducades
 ```
 Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 
-### 3.8 Utility / ad-hoc commands (not cron-scheduled)
+### 3.10 Utility / ad-hoc commands (not cron-scheduled)
 - `recalcular_ml` — force retrain the RF model and reclassify all unverified
   tracks. Normally runs automatically via `recalcular_ml_si_cal()` when 5+ new
   decisions have accumulated.
@@ -164,7 +199,7 @@ Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 `backfill_deezer_artistes`, `backfill_preview_url`,
 `seed_spotify_playlists`. Preserved for history only.
 
-### 3.9 Spotify playlist sync — daily 07:15 UTC
+### 3.11 Spotify playlist sync — daily 07:15 UTC
 ```bash
 python manage.py actualitzar_playlists_spotify [--dry-run] [--only <codi>]
 ```
@@ -241,14 +276,15 @@ health check (§7).
 
 ```cron
 # Pipeline
-0 * * * *   topquaranta   tq-run obtenir_novetats                 # every hour
-30 1 * * *  topquaranta   tq-run analitzar_whisper --limit 700    # nightly LID
-0 4 * * *   topquaranta   tq-run netejar_caducades                # 04:00
-0 6 * * *   topquaranta   tq-run obtenir_senyal                   # 06:00
-30 6 * * *  topquaranta   tq-run actualitzar_score_entrada        # 06:30
-0 7 * * *   topquaranta   tq-run calcular_ranking --provisional   # 07:00
-15 7 * * *  topquaranta   tq-run actualitzar_playlists_spotify    # 07:15 Spotify sync
-0 8 * * 6   topquaranta   tq-run calcular_ranking                 # Sat 08:00 official
+0 * * * *    topquaranta  tq-run obtenir_novetats                 # every hour
+*/15 * * * * topquaranta  tq-run obtenir_metadata_musicbrainz     # every 15 min
+30 1 * * *   topquaranta  tq-run analitzar_whisper --limit 700    # nightly LID
+0 4 * * *    topquaranta  tq-run netejar_caducades                # 04:00
+0 6 * * *    topquaranta  tq-run obtenir_senyal                   # 06:00
+30 6 * * *   topquaranta  tq-run actualitzar_score_entrada        # 06:30
+0 7 * * *    topquaranta  tq-run calcular_ranking --provisional   # 07:00
+15 7 * * *   topquaranta  tq-run actualitzar_playlists_spotify    # 07:15 Spotify sync
+0 8 * * 6    topquaranta  tq-run calcular_ranking                 # Sat 08:00 official
 
 # DB backup
 0 3 * * *   postgres      tq-backup                               # 03:00

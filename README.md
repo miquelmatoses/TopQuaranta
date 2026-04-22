@@ -44,9 +44,16 @@ qualsevol pugui revisar com es calcula.
   mantenint URL estable i seguidors.
 - 🎙️ **Whisper LID** per a identificació d'idioma automàtica sobre el
   preview de 30s de Deezer.
+- 🧩 **MusicBrainz oracle** — ingesta contínua cada 15 min d'MBID, àrea,
+  dates de vida, discografia i idioma de lletres. Resol col·lisions
+  tipus Crim i valida novetats.
+- 🫂 **Comunitat** — perfils públics, directori, publicacions moderades,
+  missatgeria interna i comentaris amb notificacions email opt-out.
+- 🗺️ **Mapa interactiu** — navegació drill-down per territori → comarca
+  → municipi amb KPIs i graella dels artistes més escoltats per zona.
 - 👥 **Panell staff React** per gestionar artistes, propostes, cançons i
   coeficients; tota acció destructiva queda a `StaffAuditLog`.
-- 🧠 **Classificador ML** (Random Forest, 76 features, ROC-AUC 0.9994) per
+- 🧠 **Classificador ML** (Random Forest, 79 features, ROC-AUC 0.9994) per
   pre-classificar cançons noves (A/B/C) i prioritzar revisió humana.
 - 💬 **Feedback d'usuaris** — botó "Corregir" a cada pàgina pública.
 - 🔒 **Seguretat**: Argon2, 2FA TOTP staff, django-axes, CSP estricta.

@@ -39,6 +39,7 @@ Identity: `spotify_id` (legacy), `deezer_id` (nullable BigInteger), `slug`.
 | Territories | `territoris` M2M (auto-synced) |
 | Social links | 10 URLFields, listed in `SOCIAL_LINK_FIELDS` |
 | Genre | `genere` (free text), `percentatge_femeni` (choices) |
+| MusicBrainz (2026-04-22) | `musicbrainz_id` (UUID unique), `mb_type`, `mb_gender`, `mb_area`, `mb_area_hierarchy` (JSON), `mb_begin_date`, `mb_end_date`, `mb_disambiguation`, `mb_sort_name`, `mb_aliases` (JSON), `mb_tags` (JSON), `mb_rating`, `mb_discography_cache` (JSON {isrcs, titles}), `mb_last_sync` ✦ |
 | `created_at` | auto_now_add |
 
 ✦ = `db_index=True`.
@@ -106,6 +107,10 @@ current. This is what makes `algorisme.py`'s raw SQL territory join work.
 - `imatge_url`
 - `cancons_obtingudes` ✦ — True when tracks have been pulled from Deezer
 - `descartat` ✦ — True if all tracks were rejected; skipped by obtenir_novetats
+- `mb_release_group_id` ✦ — MusicBrainz release-group UUID when matched
+- `mb_type_secondary` — Live/Remix/Compilation/Soundtrack (from MB)
+- `mb_status` — Official/Bootleg/Promotion (from MB)
+- `mbrainz_confirmed` — nullable Bool; True when MB's discography confirms ownership
 - `created_at`
 
 ### `Canco` — `music_canco`
@@ -122,6 +127,7 @@ Territory derived via `artista.territoris ∪ artistes_col.territoris`.
 | Metadata | `durada_ms`, `preview_url` |
 | ML | `ml_classe` ✦ (A/B/C), `ml_confianca` (float) |
 | Whisper LID | `whisper_lang` ✦, `whisper_p`, `whisper_all_probs` (JSON), `whisper_processat_at` ✦ |
+| MusicBrainz (2026-04-22) | `mb_recording_id` ✦, `mb_work_id`, `mb_lyrics_language` (3-char ISO, `cat` = Catalan), `mbrainz_confirmed` |
 
 - `lastfm_lookup_nom` (property) — falls back to `nom` if `lastfm_nom` is empty
 - `get_territoris()` — returns union of main + collaborator territories
@@ -134,12 +140,16 @@ into the RF classifier as 4 features (`whisper_p_ca`, `whisper_p_es`,
 set (`scripts/model_comparison/resultats.md`): precision(ca) = 100 %,
 recall(ca) = 81 %, specificity = 100 %.
 
-### `ArtistaDeezer` invariant (2026-04-21)
+### External-anchor invariant (2026-04-22, relaxed)
 Signal `unapprove_on_last_deezer_removed` (post_delete on ArtistaDeezer)
-enforces: `aprovat=True ⇒ ≥ 1 ArtistaDeezer`. When the last Deezer ID
-of an approved artist is removed — either via `rebutjar_artista` mass
-delete or a staff PATCH that empties the deezer_ids list — the signal
-flips `aprovat=False, pendent_review=False` in one UPDATE.
+enforces: `aprovat=True ⇒ ≥ 1 external anchor` (Deezer ID OR non-empty
+`musicbrainz_id`). When the last Deezer ID of an approved artist is
+removed, the signal checks for an MBID; if present the artist keeps
+`aprovat=True` (MusicBrainz pipeline is enough to stay live). Only
+when BOTH anchors are gone do we flip `aprovat=False,
+pendent_review=False`. Motivation: Crim-style collisions where one
+Catalan artist keeps the shared Deezer ID and the other lives off
+MusicBrainz alone.
 
 ### `StaffAuditLog` — `music_staffauditlog`
 R9. Append-only log of every destructive staff action. Written via
@@ -294,13 +304,37 @@ pages via the "Corregir" button.
   FK → Usuari (SET_NULL).
 - Indexes: `(resolt, -created_at)`, `(target_type, target_pk)`.
 
+### `Missatge` — `comptes_missatge` (Grup C, 2026-04-21)
+Direct message 1-to-1. No threads, no attachments.
+
+- `remitent` FK → Usuari (SET_NULL, related_name="missatges_enviats").
+- `destinatari` FK → Usuari (CASCADE, related_name="missatges_rebuts").
+- `assumpte` (≤200), `cos` (≤10 000).
+- `llegit_at` ✦ — set when the recipient opens the thread.
+- `created_at` ✦.
+- Indexes: `(destinatari, -created_at)`, `(remitent, -created_at)`.
+- Email notification to recipient on creation (opt-out via
+  `PerfilUsuari.notificar_missatges_email`). Unread count surfaces
+  as a red badge on the top-bar account icon.
+
+### `Comentari` — `comptes_comentari` (Grup C, 2026-04-21)
+Flat comment attached to a `Publicacio`. No nested threads.
+
+- `publicacio` FK → Publicacio (CASCADE, related_name="comentaris").
+- `autor` FK → Usuari (SET_NULL, related_name="comentaris").
+- `cos` (≤2 000).
+- `created_at` ✦, `Meta.ordering = ["created_at"]`.
+- Delete: author, post owner, or staff.
+- Email notification to the post author on new comment (opt-out via
+  `PerfilUsuari.notificar_comentaris_email`).
+
 ---
 
 ## Migrations
 
-- `music/` 0001–0046. Latest: `0046_spotifyauth_spotifyplaylist`.
+- `music/` 0001–0047. Latest: `0047_album_mb_release_group_id_album_mb_status_and_more` (MusicBrainz fields, 2026-04-22).
   Notable recent: `0042_artista_pendent_review_constraint` (CheckConstraint
   on `aprovat` / `pendent_review`), `0045_canco_slug` (unique slug on Canco),
   `0044_drop_deezer_no_trobat` (dropped the stale cache flag).
 - `ranking/` 0001–0004. Latest: `0004_rankingprovisional`.
-- `comptes/` 0001–0008. Latest: `0008_perfilusuari_publicacio`.
+- `comptes/` 0001–0011. Latest: `0011_alter_perfilusuari_rol_musical` (oïdor/a + músic/a + productor/a label update). Notable recent: `0009_perfilusuari_notificar_comentaris_email_and_more` (Missatge, Comentari, notification opt-outs), `0010_rename_auth_user_m2m_columns` (aligned auth_user_groups / auth_user_user_permissions column names with the custom Usuari model so cascade deletes stop hitting ProgrammingError).
