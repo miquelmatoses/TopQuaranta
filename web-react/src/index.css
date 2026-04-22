@@ -13,6 +13,15 @@
   --color-tq-surface:     #ffffff;
   --color-tq-border:      #27272a;
 
+  /* Semantic state colours — used by charts, pills, badges. Keep in
+     the design system so call-sites never hardcode hexes. */
+  --color-tq-success:     #10b981;  /* verificat / aprovat / català */
+  --color-tq-warning:     #facc15;  /* pendent / dubte — matches tq-yellow */
+  --color-tq-danger:      #ef4444;  /* rebutjat / error / no-català */
+  --color-tq-neutral:     #9ca3af;  /* inactiu / descartat / sense dades */
+  --color-tq-neutral-soft:#d1d5db;  /* sense-estat / placeholder-light */
+  --color-tq-accent:      #ea580c;  /* gradient-end / top-decile accent */
+
   --font-display: 'Playfair Display', Georgia, serif;
   --font-sans:    'Roboto', system-ui, sans-serif;
 

@@ -243,7 +243,8 @@ export default function EstatPage() {
                         className="w-full rounded-t"
                         style={{
                           height: hPx,
-                          background: 'linear-gradient(180deg, #facc15 0%, #ea580c 100%)',
+                          background:
+                            'linear-gradient(180deg, var(--color-tq-yellow) 0%, var(--color-tq-accent) 100%)',
                         }}
                         title={`${w.label}: ${w.n} entrades`}
                       />
@@ -306,9 +307,9 @@ export default function EstatPage() {
           <StackedBar
             total={bd.cancons.total}
             segments={[
-              { label: 'Verificades', value: bd.cancons.verificades, color: '#10b981' },
-              { label: 'Pendents',    value: bd.cancons.no_verificades_actives, color: '#facc15' },
-              { label: 'Inactives',   value: bd.cancons.inactives, color: '#9ca3af' },
+              { label: 'Verificades', value: bd.cancons.verificades, color: 'var(--color-tq-success)' },
+              { label: 'Pendents',    value: bd.cancons.no_verificades_actives, color: 'var(--color-tq-warning)' },
+              { label: 'Inactives',   value: bd.cancons.inactives, color: 'var(--color-tq-neutral)' },
             ]}
           />
         </div>
@@ -326,9 +327,9 @@ export default function EstatPage() {
           <StackedBar
             total={whisperTotal}
             segments={[
-              { label: 'Català',       value: whisper.ca,      color: '#10b981' },
-              { label: 'No-català',    value: whisper.no_ca,   color: '#ef4444' },
-              { label: 'Pendent',      value: whisper.pendent, color: '#d1d5db' },
+              { label: 'Català',       value: whisper.ca,      color: 'var(--color-tq-success)' },
+              { label: 'No-català',    value: whisper.no_ca,   color: 'var(--color-tq-danger)' },
+              { label: 'Pendent',      value: whisper.pendent, color: 'var(--color-tq-neutral-soft)' },
             ]}
           />
           <p className="text-[11px] opacity-60 mt-3">
@@ -439,10 +440,10 @@ export default function EstatPage() {
             <StackedBar
               total={clsTotal}
               segments={[
-                { label: 'A (aprova)',    value: clsA,    color: '#10b981' },
-                { label: 'B (dubte)',     value: clsB,    color: '#facc15' },
-                { label: 'C (rebutja)',   value: clsC,    color: '#ef4444' },
-                { label: 'Sense classe',  value: clsNone, color: '#d1d5db' },
+                { label: 'A (aprova)',    value: clsA,    color: 'var(--color-tq-success)' },
+                { label: 'B (dubte)',     value: clsB,    color: 'var(--color-tq-warning)' },
+                { label: 'C (rebutja)',   value: clsC,    color: 'var(--color-tq-danger)' },
+                { label: 'Sense classe',  value: clsNone, color: 'var(--color-tq-neutral-soft)' },
               ]}
             />
             {ml.model_mtime && (
