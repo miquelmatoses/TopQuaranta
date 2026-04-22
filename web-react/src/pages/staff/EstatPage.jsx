@@ -227,19 +227,21 @@ export default function EstatPage() {
                 </p>
               )}
             </div>
-            <div className="flex items-end gap-2 h-28">
-              {flux.intake_per_setmana.map(w => {
+            <div className="flex items-end gap-2" style={{ height: 140 }}>
+              {(() => {
+                const MAX_BAR_PX = 100
                 const maxN = Math.max(...flux.intake_per_setmana.map(x => x.n), 1)
-                const pct = (w.n / maxN) * 100
-                return (
+                return flux.intake_per_setmana.map(w => {
+                  const hPx = Math.max(2, Math.round((w.n / maxN) * MAX_BAR_PX))
+                  return (
                   <div
                     key={w.label}
                     className="flex-1 flex flex-col items-center gap-1 min-w-0"
                   >
-                    <div className="w-full flex items-end" style={{ height: '80%' }}>
+                    <div className="w-full flex items-end" style={{ height: MAX_BAR_PX }}>
                       <div
                         className="w-full bg-tq-ink rounded-t"
-                        style={{ height: `${pct}%` }}
+                        style={{ height: hPx }}
                         title={`${w.label}: ${w.n} entrades`}
                       />
                     </div>
@@ -250,8 +252,9 @@ export default function EstatPage() {
                       {w.label}
                     </div>
                   </div>
-                )
-              })}
+                  )
+                })
+              })()}
             </div>
             <p className="text-[11px] opacity-60 mt-3 leading-relaxed">
               <strong>Lectura:</strong> amb ~{flux.intake_setmanal_robust} entrades setmanals i{' '}
