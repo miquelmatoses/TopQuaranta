@@ -268,6 +268,60 @@ export default function EstatPage() {
               {flux.backlog_no_verificades.toLocaleString('ca')} cançons.
             </p>
           </div>
+
+          {flux.top_artistes_backlog?.length > 0 && (
+            <div className="mt-3 bg-white text-tq-ink rounded-lg p-4">
+              <p className="text-[11px] uppercase tracking-widest opacity-60 mb-2">
+                Top artistes amb més backlog
+              </p>
+              <ul className="divide-y divide-tq-ink/10">
+                {flux.top_artistes_backlog.map(a => (
+                  <li key={a.pk} className="py-2 flex items-center gap-3">
+                    <span className="text-xl font-bold font-display tabular-nums text-tq-yellow-deep w-12 text-right shrink-0">
+                      {a.n_backlog}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link
+                          to={`/staff/artistes/${a.pk}`}
+                          className="font-semibold text-sm underline hover:text-tq-yellow-deep"
+                        >
+                          {a.nom}
+                        </Link>
+                        {a.musicbrainz_id && (
+                          <span className="text-[10px] uppercase font-semibold px-1.5 rounded bg-emerald-100 text-emerald-800">
+                            MBID
+                          </span>
+                        )}
+                        {a.mb_end_date && (
+                          <span className="text-[10px] uppercase font-semibold px-1.5 rounded bg-red-100 text-red-800">
+                            Dissolt {a.mb_end_date.slice(0, 4)}
+                          </span>
+                        )}
+                        <Link
+                          to={`/staff/cancons?artista_pk=${a.pk}&verificada=0`}
+                          className="text-[11px] underline opacity-70 hover:opacity-100"
+                        >
+                          veure cua
+                        </Link>
+                      </div>
+                      {a.samples?.length > 0 && (
+                        <p className="text-[11px] opacity-60 truncate mt-0.5">
+                          {a.samples.join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] opacity-60 mt-2">
+                Prioritza revisar aquests artistes: o bé tenen disco gran real,
+                o bé són víctimes de col·lisió de noms a Deezer. Si hi veus un
+                "dissolt" amb cançons recents, el Deezer ID probablement és
+                d'un homònim actiu.
+              </p>
+            </div>
+          )}
         </section>
       )}
 

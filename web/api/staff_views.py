@@ -2326,6 +2326,46 @@ def _read_status_file(path):
     return data
 
 
+def _top_artistes_backlog(limit: int = 15) -> list[dict]:
+    """Artists with the most unverified tracks in the active backlog.
+
+    Approved artists first — those are the ones whose backlog staff
+    can actually clear. Includes a sample of 3 track titles for
+    context and an MBID hint so staff can spot homonym-collision
+    candidates at a glance.
+    """
+    qs = (
+        Artista.objects.filter(aprovat=True)
+        .annotate(
+            n_backlog=Count(
+                "cancons",
+                filter=Q(cancons__verificada=False, cancons__activa=True),
+            )
+        )
+        .filter(n_backlog__gt=0)
+        .order_by("-n_backlog")[:limit]
+    )
+    rows = []
+    for a in qs:
+        samples = list(
+            a.cancons.filter(verificada=False, activa=True)
+            .order_by("-data_llancament")
+            .values_list("nom", flat=True)[:3]
+        )
+        rows.append(
+            {
+                "pk": a.pk,
+                "nom": a.nom,
+                "slug": a.slug,
+                "n_backlog": a.n_backlog,
+                "musicbrainz_id": a.musicbrainz_id or "",
+                "mb_end_date": a.mb_end_date.isoformat() if a.mb_end_date else None,
+                "samples": samples,
+            }
+        )
+    return rows
+
+
 def _musicbrainz_stats() -> dict:
     """Summary of MusicBrainz coverage across our catalog."""
     aprovat_total = Artista.objects.filter(aprovat=True).count()
@@ -2632,6 +2672,7 @@ def estat(request: Request) -> Response:
                 "caducaran_30d": caducaran_30d,
                 "target_verificacio_setmanal": target_verificacio_setmanal,
                 "backlog_no_verificades": c_no_verif,
+                "top_artistes_backlog": _top_artistes_backlog(limit=15),
             },
             "whisper": {
                 "ca": w_ca,
