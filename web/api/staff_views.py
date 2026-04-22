@@ -2328,6 +2328,42 @@ def _read_status_file(path):
 
 @api_view(["GET"])
 @permission_classes([IsStaff])
+def _musicbrainz_stats() -> dict:
+    """Summary of MusicBrainz coverage across our catalog."""
+    import datetime as _dt
+
+    aprovat_total = Artista.objects.filter(aprovat=True).count()
+    with_mbid = (
+        Artista.objects.filter(aprovat=True)
+        .exclude(musicbrainz_id__isnull=True)
+        .exclude(musicbrainz_id="")
+        .count()
+    )
+    synced = Artista.objects.filter(mb_last_sync__isnull=False).count()
+    cancons_confirmed = Canco.objects.filter(mbrainz_confirmed=True).count()
+    cancons_total_verified = Canco.objects.filter(verificada=True).count()
+    albums_confirmed = Album.objects.filter(mbrainz_confirmed=True).count()
+    dissolved = Artista.objects.filter(aprovat=True, mb_end_date__isnull=False).count()
+    with_cat_lyrics = Canco.objects.filter(mb_lyrics_language="cat").count()
+    oldest_sync = (
+        Artista.objects.filter(mb_last_sync__isnull=False)
+        .order_by("mb_last_sync")
+        .values_list("mb_last_sync", flat=True)
+        .first()
+    )
+    return {
+        "aprovats_total": aprovat_total,
+        "aprovats_amb_mbid": with_mbid,
+        "artistes_sincronitzats": synced,
+        "cancons_confirmades": cancons_confirmed,
+        "cancons_verificades_total": cancons_total_verified,
+        "albums_confirmats": albums_confirmed,
+        "artistes_dissolts_detectats": dissolved,
+        "cancons_lletra_cat": with_cat_lyrics,
+        "sync_mes_antic": oldest_sync.isoformat() if oldest_sync else None,
+    }
+
+
 def estat(request: Request) -> Response:
     """Aggregate everything the visual dashboard needs in one call.
 
@@ -2605,6 +2641,7 @@ def estat(request: Request) -> Response:
                 "pendent": w_pend,
                 "total": c_total,
             },
+            "musicbrainz": _musicbrainz_stats(),
             "ranking": {
                 "setmanes_historiques": setmanes,
                 "provisional_ara": r_prov,

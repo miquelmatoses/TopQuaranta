@@ -152,7 +152,7 @@ export default function EstatPage() {
     )
   }
 
-  const { bd, whisper, ranking, senyal, comunitat, crons, ml, flux } = data
+  const { bd, whisper, ranking, senyal, comunitat, crons, ml, flux, musicbrainz: mb } = data
 
   // Biggest importance for scaling bars.
   const maxImp = ml?.importances?.[0]?.value || 1
@@ -337,6 +337,44 @@ export default function EstatPage() {
           </p>
         </div>
       </section>
+
+      {/* ─── MusicBrainz coverage ─── */}
+      {mb && (
+        <section>
+          <h2 className="text-sm uppercase tracking-widest text-white/60 mb-2">
+            MusicBrainz
+          </h2>
+          <div className="bg-white text-tq-ink rounded-lg p-4">
+            <p className="text-[11px] uppercase tracking-widest opacity-60 mb-2">
+              Cobertura (MBID assignat a {((mb.aprovats_amb_mbid / Math.max(mb.aprovats_total, 1)) * 100).toFixed(1)}% dels artistes aprovats)
+            </p>
+            <StackedBar
+              total={mb.aprovats_total}
+              segments={[
+                { label: 'Amb MBID', value: mb.aprovats_amb_mbid, color: 'var(--color-tq-success)' },
+                { label: 'Sense MBID', value: mb.aprovats_total - mb.aprovats_amb_mbid, color: 'var(--color-tq-neutral-soft)' },
+              ]}
+            />
+            <dl className="grid sm:grid-cols-2 gap-y-1 mt-3 text-xs">
+              <dt className="opacity-60">Artistes sincronitzats (alguna vegada)</dt>
+              <dd className="text-right font-semibold tabular-nums">{mb.artistes_sincronitzats.toLocaleString('ca')}</dd>
+              <dt className="opacity-60">Cançons confirmades per MB</dt>
+              <dd className="text-right font-semibold tabular-nums">
+                {mb.cancons_confirmades.toLocaleString('ca')}{' '}
+                <span className="opacity-60">/ {mb.cancons_verificades_total.toLocaleString('ca')} verif.</span>
+              </dd>
+              <dt className="opacity-60">Àlbums confirmats per MB</dt>
+              <dd className="text-right font-semibold tabular-nums">{mb.albums_confirmats.toLocaleString('ca')}</dd>
+              <dt className="opacity-60">Cançons amb lletra 'cat' (Work)</dt>
+              <dd className="text-right font-semibold tabular-nums text-emerald-700">{mb.cancons_lletra_cat.toLocaleString('ca')}</dd>
+              <dt className="opacity-60">Artistes detectats com a dissolts</dt>
+              <dd className="text-right font-semibold tabular-nums text-red-700">{mb.artistes_dissolts_detectats.toLocaleString('ca')}</dd>
+              <dt className="opacity-60">Sync més antic pendent</dt>
+              <dd className="text-right text-[11px]">{mb.sync_mes_antic ? mb.sync_mes_antic.slice(0, 16).replace('T', ' ') : '—'}</dd>
+            </dl>
+          </div>
+        </section>
+      )}
 
       {/* ─── Ranking + Comunitat ─── */}
       <section className="grid lg:grid-cols-2 gap-3">

@@ -69,6 +69,15 @@ FEATURE_NAMES = [
     "whisper_p_es",
     "whisper_p_en",
     "whisper_margin_ca",
+    # MusicBrainz features. Sparse at start (coverage grows over time) but
+    # very predictive when present: `mbrainz_confirmed=1` means MB
+    # independently attests the track belongs to this artist,
+    # `mb_lyrics_cat=1` means a human editor tagged the Work as Catalan,
+    # `artista_te_mbid=1` means the artist is indexed at all (curated
+    # artists skew heavily Catalan).
+    "mbrainz_confirmed",
+    "mb_lyrics_cat",
+    "artista_te_mbid",
 ] + [f"tfidf_{i}" for i in range(60)]
 
 TFIDF_PATH = Path(__file__).parent / "ml_tfidf.joblib"
@@ -280,8 +289,18 @@ def _build_features(canco) -> list[float]:
             fallback_lang=canco.whisper_lang,
             fallback_p=canco.whisper_p,
         )
+        + _mb_features(canco, artista)
         + _tfidf_features(canco.nom)
     )
+
+
+def _mb_features(canco, artista) -> list[float]:
+    """Return [mbrainz_confirmed, mb_lyrics_cat, artista_te_mbid]."""
+    return [
+        1.0 if canco.mbrainz_confirmed else 0.0,
+        1.0 if canco.mb_lyrics_language == "cat" else 0.0,
+        1.0 if (artista and artista.musicbrainz_id) else 0.0,
+    ]
 
 
 def _build_features_from_historial(rec) -> list[float]:
@@ -341,8 +360,28 @@ def _build_features_from_historial(rec) -> list[float]:
             float(_get_registrant_rejection_ratio_excluding(isrc, rec.pk)),
         ]
         + _whisper_features_from_historial(rec)
+        + _mb_features_from_historial(rec)
         + _tfidf_features(rec.canco_nom)
     )
+
+
+def _mb_features_from_historial(rec) -> list[float]:
+    """Same signal as _mb_features but via the current Canco/Artista.
+
+    Historical records don't snapshot MB state. Using the current state
+    is a best-effort proxy: we ask "does MB now attest this track?" —
+    accurate for any artist where staff has since set an MBID.
+    """
+    from music.models import Canco
+
+    canco = None
+    if rec.canco_deezer_id:
+        canco = Canco.objects.filter(deezer_id=rec.canco_deezer_id).first()
+    if canco is None and rec.canco_isrc:
+        canco = Canco.objects.filter(isrc=rec.canco_isrc).first()
+    if canco is None:
+        return [0.0, 0.0, 0.0]
+    return _mb_features(canco, canco.artista)
 
 
 def _whisper_features_from_historial(rec) -> list[float]:

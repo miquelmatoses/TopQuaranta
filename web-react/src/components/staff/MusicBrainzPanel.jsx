@@ -72,8 +72,13 @@ export default function MusicBrainzPanel({ kind, data, onSync, busy }) {
             <button
               type="button"
               onClick={onSync}
-              disabled={busy}
-              className="text-[11px] font-semibold px-2.5 py-1 rounded bg-tq-ink text-tq-yellow hover:bg-tq-ink/90 disabled:opacity-50"
+              disabled={busy || !data?.id}
+              title={
+                !data?.id
+                  ? "Cal desar primer un MBID al camp de l'esquerra"
+                  : "Baixa dades de MB i reconcilia àlbums/cançons"
+              }
+              className="text-[11px] font-semibold px-2.5 py-1 rounded bg-tq-ink text-tq-yellow hover:bg-tq-ink/90 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Sincronitzar ara
             </button>
