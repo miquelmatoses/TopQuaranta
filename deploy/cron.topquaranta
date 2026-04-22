@@ -59,6 +59,12 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Quarterly: archive SenyalDiari rows older than 2 years (Φ6 retention).
 0 5 1 1,4,7,10 * topquaranta   /home/topquaranta/bin/tq-run arxivar_senyal_vell >> /var/log/topquaranta/arxivar.log 2>&1
 
+# MusicBrainz metadata backfill — every 15 min. Single-instance lock
+# inside the command keeps it from piling up; exits when the queue is
+# empty (no artist older than --refresh-days) so idle invocations are
+# cheap. Rate-limited globally to 1 req/s so we stay polite.
+*/15 * * * * topquaranta   /home/topquaranta/bin/tq-run obtenir_metadata_musicbrainz >> /var/log/topquaranta/mb.log 2>&1
+
 # Nightly: Whisper LID over new tracks with Deezer previews.
 # Limited to 700 tracks/night so it finishes before provisional ranking.
 # At ~27 s/track CPU, 700 tracks = ~5h15m (01:30 → 06:45). (Φ LID)

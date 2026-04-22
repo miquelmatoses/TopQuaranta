@@ -167,6 +167,39 @@ class Artista(models.Model):
         blank=True,
         help_text="Last time Deezer was queried for new albums.",
     )
+
+    # ── MusicBrainz metadata ────────────────────────────────────────────
+    # Populated by obtenir_metadata_musicbrainz (rate-limited to 1 req/s).
+    # All fields optional — artists below MB's coverage stay empty.
+    musicbrainz_id = models.CharField(
+        max_length=36,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="MBID (UUID) — the authoritative ID for Crim-style collisions.",
+    )
+    mb_type = models.CharField(max_length=20, blank=True)  # Group / Person / Other
+    mb_gender = models.CharField(max_length=20, blank=True)  # male / female / other
+    mb_area = models.CharField(max_length=120, blank=True)
+    mb_area_hierarchy = models.JSONField(default=list, blank=True)
+    mb_begin_date = models.DateField(null=True, blank=True)
+    mb_end_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Dissolution / cessation date. New releases past this date "
+        "are almost certainly a different artist with the same name.",
+    )
+    mb_disambiguation = models.CharField(max_length=255, blank=True)
+    mb_sort_name = models.CharField(max_length=255, blank=True)
+    mb_aliases = models.JSONField(default=list, blank=True)
+    mb_tags = models.JSONField(default=list, blank=True)  # genres
+    mb_rating = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True
+    )
+    mb_discography_cache = models.JSONField(default=dict, blank=True)
+    mb_last_sync = models.DateTimeField(null=True, blank=True, db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -410,6 +443,18 @@ class Album(models.Model):
         db_index=True,
         help_text="True if all tracks were rejected. Skipped by obtenir_novetats.",
     )
+
+    # MusicBrainz cross-reference. `mbrainz_confirmed=True` means MB has a
+    # release-group attributed to the Artista's MBID that matches this album.
+    mb_release_group_id = models.CharField(max_length=36, blank=True, db_index=True)
+    mb_type_secondary = models.CharField(
+        max_length=30, blank=True
+    )  # Live/Remix/Compilation…
+    mb_status = models.CharField(
+        max_length=30, blank=True
+    )  # Official/Bootleg/Promotion…
+    mbrainz_confirmed = models.BooleanField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -509,6 +554,17 @@ class Canco(models.Model):
     # tell the classifier very different stories. Stored as JSONB.
     whisper_all_probs = models.JSONField(null=True, blank=True)
     whisper_processat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    # MusicBrainz cross-reference.
+    mb_recording_id = models.CharField(max_length=36, blank=True, db_index=True)
+    mb_work_id = models.CharField(max_length=36, blank=True)
+    mb_lyrics_language = models.CharField(
+        max_length=3,
+        blank=True,
+        help_text="Work.language from MusicBrainz ('cat' = strong Catalan signal).",
+    )
+    mbrainz_confirmed = models.BooleanField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
