@@ -240,8 +240,11 @@ export default function EstatPage() {
                   >
                     <div className="w-full flex items-end" style={{ height: MAX_BAR_PX }}>
                       <div
-                        className="w-full bg-tq-ink rounded-t"
-                        style={{ height: hPx }}
+                        className="w-full rounded-t"
+                        style={{
+                          height: hPx,
+                          background: 'linear-gradient(180deg, #facc15 0%, #ea580c 100%)',
+                        }}
                         title={`${w.label}: ${w.n} entrades`}
                       />
                     </div>
