@@ -2326,12 +2326,8 @@ def _read_status_file(path):
     return data
 
 
-@api_view(["GET"])
-@permission_classes([IsStaff])
 def _musicbrainz_stats() -> dict:
     """Summary of MusicBrainz coverage across our catalog."""
-    import datetime as _dt
-
     aprovat_total = Artista.objects.filter(aprovat=True).count()
     with_mbid = (
         Artista.objects.filter(aprovat=True)
@@ -2364,6 +2360,8 @@ def _musicbrainz_stats() -> dict:
     }
 
 
+@api_view(["GET"])
+@permission_classes([IsStaff])
 def estat(request: Request) -> Response:
     """Aggregate everything the visual dashboard needs in one call.
 
