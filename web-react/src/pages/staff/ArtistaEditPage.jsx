@@ -10,6 +10,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { Btn, Input, PageHeader, Select, TableCard } from '../../components/staff/StaffTable'
 import LocationCascade from '../../components/staff/LocationCascade'
+import MusicBrainzPanel from '../../components/staff/MusicBrainzPanel'
 
 export default function ArtistaEditPage() {
   const { pk } = useParams()
@@ -62,6 +63,27 @@ export default function ArtistaEditPage() {
     setA(prev => ({ ...prev, deezer_ids: ids }))
   }
 
+  async function syncMB() {
+    setBusy(true); setErr(''); setMsg('')
+    try {
+      const out = await api.post(`/staff/artistes/${pk}/sync-mb/`)
+      if (out.ok) {
+        const c = out.counters || {}
+        setMsg(
+          `MB sync: URLs=${c.urls_filled || 0} àlbums=${c.albums_matched || 0}/${c.rgs || 0} ` +
+          `cançons=${c.cancons_matched || 0}/${c.recordings || 0} ISRCs=${c.isrcs || 0}`
+        )
+        // Re-fetch to show the fresh MB fields.
+        const fresh = await api.get(`/staff/artistes/${pk}/`)
+        setA(fresh)
+      } else {
+        setErr(out.msg || 'Sync ha fallat.')
+      }
+    } catch (e) {
+      setErr(e.payload?.error || e.message)
+    } finally { setBusy(false) }
+  }
+
   async function save() {
     setBusy(true)
     setErr('')
@@ -73,6 +95,7 @@ export default function ArtistaEditPage() {
         genere: a.genere,
         percentatge_femeni: a.percentatge_femeni,
         aprovat: a.aprovat,
+        musicbrainz_id: a.musicbrainz?.id || '',
         localitats: a.localitats.map(l => ({
           municipi_id: l.municipi_id || null,
           manual: l.manual || '',
@@ -205,6 +228,32 @@ export default function ArtistaEditPage() {
             </p>
           </div>
         </TableCard>
+
+        <div className="lg:col-span-2 grid lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-3">
+            <div className="bg-white text-tq-ink rounded-lg border border-black/5 p-4">
+              <h2 className="font-semibold mb-2 text-sm">MusicBrainz ID</h2>
+              <Input
+                value={a.musicbrainz?.id || ''}
+                onChange={e => patch({ musicbrainz: { ...a.musicbrainz, id: e.target.value.trim() } })}
+                placeholder="UUID (ex: 1068d2b9-596a-4fdf-9b87-b779b9f25dd3)"
+                className="w-full font-mono text-[12px]"
+              />
+              <p className="text-[11px] text-tq-ink/60 mt-1">
+                Si deixes el camp buit, el cron l'intentarà resoldre pel nom.
+                Per artistes homònims (Crim, Apa…) cerca l'UUID correcte a
+                musicbrainz.org i enganxa'l aquí. Desa i després prem
+                "Sincronitzar ara".
+              </p>
+            </div>
+          </div>
+          <MusicBrainzPanel
+            kind="artista"
+            data={{ ...a.musicbrainz, nom_hint: a.nom }}
+            onSync={syncMB}
+            busy={busy}
+          />
+        </div>
       </div>
     </section>
   )

@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../lib/api'
+import MusicBrainzPanel from '../../components/staff/MusicBrainzPanel'
 import {
   Btn,
   Input,
@@ -165,6 +166,10 @@ export default function AlbumEditPage() {
             </tbody>
           </Table>
         </TableCard>
+
+        <div className="lg:col-span-2">
+          <MusicBrainzPanel kind="album" data={a} />
+        </div>
       </div>
     </section>
   )

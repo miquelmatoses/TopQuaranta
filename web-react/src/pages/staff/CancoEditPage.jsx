@@ -9,6 +9,7 @@ import { api } from '../../lib/api'
 import { Btn, Input, PageHeader, TableCard } from '../../components/staff/StaffTable'
 import ArtistaPicker from '../../components/staff/ArtistaPicker'
 import ArtistesColPicker from '../../components/staff/ArtistesColPicker'
+import MusicBrainzPanel from '../../components/staff/MusicBrainzPanel'
 
 export default function CancoEditPage() {
   const { pk } = useParams()
@@ -173,6 +174,10 @@ export default function CancoEditPage() {
           </label>
         </div>
       </TableCard>
+
+      <div className="mt-4 max-w-2xl">
+        <MusicBrainzPanel kind="canco" data={c} />
+      </div>
     </section>
   )
 }

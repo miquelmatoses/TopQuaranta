@@ -73,6 +73,11 @@ urlpatterns = [
         staff_views.artista_detail,
         name="staff_artista_detail",
     ),
+    path(
+        "staff/artistes/<int:pk>/sync-mb/",
+        staff_views.artista_sync_mb,
+        name="staff_artista_sync_mb",
+    ),
     # Cançons
     path("staff/cancons/", staff_views.cancons_list, name="staff_cancons_list"),
     path("staff/cancons/accio/", staff_views.cancons_accio, name="staff_cancons_accio"),

@@ -566,6 +566,7 @@ def artista_detail(request: Request, pk: int) -> Response:
             "lastfm_nom",
             "genere",
             "percentatge_femeni",
+            "musicbrainz_id",
         ] + [f for f, _ in Artista.SOCIAL_LINK_FIELDS]
         for f in simple_fields:
             if f in data:
@@ -642,9 +643,58 @@ def artista_detail(request: Request, pk: int) -> Response:
             ],
             "percentatge_choices": list(Artista.PERCENTATGE_FEMENI_CHOICES),
             "social_fields": list(Artista.SOCIAL_LINK_FIELDS),
+            "musicbrainz": {
+                "id": artista.musicbrainz_id or "",
+                "type": artista.mb_type or "",
+                "gender": artista.mb_gender or "",
+                "area": artista.mb_area or "",
+                "area_hierarchy": artista.mb_area_hierarchy or [],
+                "begin_date": (
+                    artista.mb_begin_date.isoformat() if artista.mb_begin_date else None
+                ),
+                "end_date": (
+                    artista.mb_end_date.isoformat() if artista.mb_end_date else None
+                ),
+                "disambiguation": artista.mb_disambiguation or "",
+                "sort_name": artista.mb_sort_name or "",
+                "aliases": artista.mb_aliases or [],
+                "tags": artista.mb_tags or [],
+                "rating": float(artista.mb_rating) if artista.mb_rating else None,
+                "last_sync": (
+                    artista.mb_last_sync.isoformat() if artista.mb_last_sync else None
+                ),
+                "n_isrcs_known": len(
+                    (artista.mb_discography_cache or {}).get("isrcs", [])
+                ),
+            },
         }
     )
     return Response(row)
+
+
+@api_view(["POST"])
+@permission_classes([IsStaff])
+def artista_sync_mb(request: Request, pk: int) -> Response:
+    """Run MusicBrainz sync synchronously for a single artist."""
+    from music.mb_sync import resolve_mbid, sync_from_mbid
+
+    artista = get_object_or_404(Artista, pk=pk)
+    if not artista.musicbrainz_id:
+        mbid = resolve_mbid(artista)
+        if mbid:
+            artista.musicbrainz_id = mbid
+            artista.save(update_fields=["musicbrainz_id"])
+        else:
+            return Response(
+                {
+                    "ok": False,
+                    "msg": "No s'ha pogut resoldre un MBID únic per aquest nom. "
+                    "Omple'l manualment a partir de musicbrainz.org.",
+                }
+            )
+    counters = sync_from_mbid(artista)
+    log_staff_action(request, "artista_sync_mb", target=artista, **counters)
+    return Response({"ok": True, "counters": counters})
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -668,6 +718,10 @@ def _canco_row(c) -> dict:
         ),
         "lastfm_nom": c.lastfm_nom or "",
         "whisper_lang": c.whisper_lang or "",
+        "mb_recording_id": c.mb_recording_id or "",
+        "mb_work_id": c.mb_work_id or "",
+        "mb_lyrics_language": c.mb_lyrics_language or "",
+        "mbrainz_confirmed": c.mbrainz_confirmed,
         "artista": (
             {
                 "pk": c.artista_id,
@@ -1039,6 +1093,10 @@ def album_detail(request: Request, pk: int) -> Response:
             "deezer_id": album.deezer_id,
             "imatge_url": album.imatge_url or "",
             "descartat": album.descartat,
+            "mb_release_group_id": album.mb_release_group_id or "",
+            "mb_type_secondary": album.mb_type_secondary or "",
+            "mb_status": album.mb_status or "",
+            "mbrainz_confirmed": album.mbrainz_confirmed,
             "artista": {
                 "pk": album.artista_id,
                 "nom": album.artista.nom if album.artista else "",
