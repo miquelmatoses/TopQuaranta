@@ -11,18 +11,21 @@
      Deezer (hourly, obtenir_novetats)     Last.fm (daily, obtenir_senyal)
            │                                        │
            ▼                                        ▼
-   new Canco (verificada=False)              SenyalDiari
+   new Canco (verificada=False)              SenyalDiari (raw playcount)
            │                                        │
    staff review → verificada=True ──────────────────┤
                                                     ▼
-                                          score_entrada (percent_rank)
+                                     calcular_ranking (daily provisional,
+                                                       Saturday official)
+                                                    │
+                               weekly_plays = playcount_today
+                                              − playcount_7_days_ago
+                                    × age_factor
+                                    × past_top_factor
+                                    × monopoly (album / artista)
                                                     │
                                                     ▼
-                                   calcular_ranking (daily provisional,
-                                                     Saturday official)
-                                                    │
-                                                    ▼
-                                        RankingProvisional / RankingSetmanal
+                                     RankingProvisional / RankingSetmanal
 ```
 
 ## 2. API clients (`ingesta/clients/`)
@@ -70,19 +73,14 @@ from `music/constants.py`. Never raise — return `None` on any failure.
 python manage.py obtenir_senyal [--data YYYY-MM-DD] [--limit N] [--dry-run]
 ```
 Selects `verificada=True AND activa=True AND artista.aprovat=True AND
-data_llancament ≥ today - DIES_CADUCITAT` tracks, calls Last.fm per track,
-writes `SenyalDiari`. At end, calls `ranking.senyal.normalize_score_entrada`
-to compute percent_rank over the day. Skips tracks already ingested for that
-date (idempotent).
+data_llancament ≥ today - DIES_CADUCITAT` tracks, calls Last.fm per
+track, writes raw cumulative `lastfm_playcount` + `lastfm_listeners`
+into `SenyalDiari`. Skips tracks already ingested for that date
+(idempotent). No post-processing — the former `score_entrada`
+normalisation was removed in algorithm v2.0 (2026-04-23); the
+ranking consumes the raw counts directly.
 
-### 3.2 `actualitzar_score_entrada` — daily 06:30 (safety net)
-```bash
-python manage.py actualitzar_score_entrada [--data YYYY-MM-DD] [--tots]
-```
-Backfills `score_entrada` for rows where it is NULL or where yesterday was
-missed.
-
-### 3.3 `calcular_ranking`
+### 3.2 `calcular_ranking`
 ```bash
 python manage.py calcular_ranking [--setmana YYYY-MM-DD] [--territori CODE]
                                    [--dry-run] [--provisional]
@@ -98,7 +96,7 @@ python manage.py calcular_ranking [--setmana YYYY-MM-DD] [--territori CODE]
   rankings in memory (`algorisme.calcular_ppcc_ranking` calls the per-territory
   function for each source territory).
 
-### 3.4 `obtenir_novetats` — hourly (every :00)
+### 3.3 `obtenir_novetats` — hourly (every :00)
 ```bash
 python manage.py obtenir_novetats [--limit N] [--dry-run]
 ```
@@ -112,7 +110,7 @@ Uses an `fcntl.flock` on `/tmp/obtenir_novetats.lock` — if a run is still
 going, the next hour's run exits cleanly. All created Canco records start
 with `verificada=False`; `classificar_i_guardar(canco)` applies the ML class.
 
-### 3.5 `obtenir_metadata` — on demand
+### 3.4 `obtenir_metadata` — on demand
 ```bash
 python manage.py obtenir_metadata [--artista-id N] [--force] [--dry-run] [--limit N]
 ```
@@ -128,7 +126,7 @@ Not in the cron by default — run on demand when staff approves a
 batch of new artists without Deezer ids, or before a marketing push
 that needs fresh fan counts.
 
-### 3.6 `analitzar_whisper` — nightly 01:30 UTC
+### 3.5 `analitzar_whisper` — nightly 01:30 UTC
 ```bash
 python manage.py analitzar_whisper [--limit N] [--refresh-older-than DAYS]
                                     [--canco-id PK] [--dry-run]
@@ -145,7 +143,7 @@ tracks from a cold start.
 See `scripts/model_comparison/resultats.md` for the eval numbers
 that justified this integration.
 
-### 3.7 `obtenir_metadata_musicbrainz` — every 15 min
+### 3.6 `obtenir_metadata_musicbrainz` — every 15 min
 ```bash
 python manage.py obtenir_metadata_musicbrainz [--refresh-days N]
                                               [--limit N] [--artista-id PK]
@@ -180,13 +178,13 @@ Queue priority: aprovat > pendent > descartat; within each, oldest
 `mb_last_sync` first. Refresh every 7 days by default. The cron
 exits when nobody needs attention — idle invocations are cheap.
 
-### 3.9 `netejar_caducades` — daily 04:00
+### 3.7 `netejar_caducades` — daily 04:00
 ```bash
 python manage.py netejar_caducades
 ```
 Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 
-### 3.10 Utility / ad-hoc commands (not cron-scheduled)
+### 3.8 Utility / ad-hoc commands (not cron-scheduled)
 - `recalcular_ml` — force retrain the RF model and reclassify all unverified
   tracks. Normally runs automatically via `recalcular_ml_si_cal()` when 5+ new
   decisions have accumulated.
@@ -199,7 +197,7 @@ Deletes unverified tracks with `data_llancament < today - DIES_CADUCITAT`.
 `backfill_deezer_artistes`, `backfill_preview_url`,
 `seed_spotify_playlists`. Preserved for history only.
 
-### 3.11 Spotify playlist sync — daily 07:15 UTC
+### 3.9 Spotify playlist sync — daily 07:15 UTC
 ```bash
 python manage.py actualitzar_playlists_spotify [--dry-run] [--only <codi>]
 ```
@@ -281,7 +279,6 @@ health check (§7).
 30 1 * * *   topquaranta  tq-run analitzar_whisper --limit 700    # nightly LID
 0 4 * * *    topquaranta  tq-run netejar_caducades                # 04:00
 0 6 * * *    topquaranta  tq-run obtenir_senyal                   # 06:00
-30 6 * * *   topquaranta  tq-run actualitzar_score_entrada        # 06:30
 0 7 * * *    topquaranta  tq-run calcular_ranking --provisional   # 07:00
 15 7 * * *   topquaranta  tq-run actualitzar_playlists_spotify    # 07:15 Spotify sync
 0 8 * * 6    topquaranta  tq-run calcular_ranking                 # Sat 08:00 official

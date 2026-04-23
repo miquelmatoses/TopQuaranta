@@ -1674,7 +1674,6 @@ def senyal_list(request: Request) -> Response:
                 ),
                 "lastfm_playcount": s.lastfm_playcount,
                 "lastfm_listeners": s.lastfm_listeners,
-                "score_entrada": s.score_entrada,
                 "error": s.error,
                 "corregit": s.corregit,
                 "lastfm_confirmed": (s.canco.lastfm_confirmed if s.canco else False),

@@ -9,7 +9,6 @@ from ingesta.clients.lastfm import _normalize_track, get_track_info
 from music.constants import DIES_CADUCITAT
 from music.models import Canco
 from ranking.models import SenyalDiari
-from ranking.senyal import normalize_score_entrada
 
 logger = logging.getLogger(__name__)
 
@@ -266,6 +265,6 @@ class Command(BaseCommand):
             )
         )
 
-        # Normalization: compute score_entrada via percent_rank over the day's playcounts
-        updated = normalize_score_entrada(target_date)
-        self.stdout.write(f"  score_entrada normalized: {updated} rows updated")
+        # 2026-04-23 (algorithm v2.0): the percentile-rank normalisation
+        # used to run here. It's gone — the new ranking algorithm consumes
+        # raw `lastfm_playcount` deltas directly (see ranking/algorisme.py).

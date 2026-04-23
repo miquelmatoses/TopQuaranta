@@ -1,94 +1,167 @@
 # CLAUDE_ALGORITHM.md — Ranking Algorithm
 
-> Extracted from legacy PostgreSQL views, now in `ranking/algorisme.py`.
-> The algorithm logic is identical to legacy — only table/column names changed.
+> Algorithm **v2.0** (2026-04-23). Python-first implementation in
+> `ranking/algorisme.py`. Replaces the legacy 14-CTE SQL that was ported
+> from the original PostgreSQL views.
+>
+> Motivation for the rewrite: the v1 pipeline relied on a pre-normalised
+> `score_entrada` (percentile of daily playcount across the whole
+> catalog) and mixed in heuristics for descent / novelty / smoothing.
+> Those heuristics created a ranking that was hard to explain to the
+> public and sensitive to ingestion gaps. v2.0 operates directly on the
+> raw `lastfm_playcount` snapshots and keeps only the four factors we
+> actually care about.
 
 ---
 
-## 1. The ranking algorithm — 14-CTE SQL
+## 1. Inputs
 
-The algorithm was originally 5 PostgreSQL views (one per territory):
-`vw_top40_weekly_cat`, `vw_top40_weekly_pv`, `vw_top40_weekly_ib`,
-`vw_top40_weekly_ppcc`, `vw_top40_weekly_altres`.
+For each territori the algorithm looks at:
 
-Now parameterized in `ranking/algorisme.py` as a single SQL with territory as parameter.
+1. **`SenyalDiari.lastfm_playcount`** — the raw cumulative Last.fm play
+   count per (cançó, data). Ingested daily by `obtenir_senyal`
+   (06:00 UTC). No normalisation; we consume it as-is.
+2. **`RankingSetmanal`** — every prior weekly ranking row for this
+   (cançó, territori) at posicions ≤ 40. Used to compute the
+   past-top-position penalty.
+3. **`ConfiguracioGlobal`** — four editable coefficients:
+   - `exponent_penalitzacio_antiguitat` (default **2.5**).
+   - `coeficient_penalitzacio_top` (default **0.04**).
+   - `penalitzacio_album_per_canco` (default **0.25**).
+   - `penalitzacio_artista_per_canco` (default **0.2**).
+   - `min_cancons_ranking_propi` (default 20) — optional-territori
+     threshold.
 
-### CTE chain
+---
+
+## 2. Per-territori computation
 
 ```
-cancons_territori → configuracio → base → calculs_a → calcul_factor_a → amb_score_a
-→ posicions_a → calculs_b → calcul_factor_b → amb_score_b → posicions_b
-→ calculs_c → calcul_factor_final → amb_score_final → posicions_final
+base_score = weekly_plays × age_factor × past_top_factor
 ```
 
-### How it works
+then post-process with monopoly multipliers, re-sort, top 100.
 
-1. **cancons_territori**: bridge CTE — joins `ranking_senyaldiari` to territory via
-   `music_artista_territoris` M2M. Includes collaborators via LEFT JOIN `music_canco_artistes_col`.
-2. **configuracio**: reads coefficients from `ranking_configuracioglobal` table
-3. **base**: aggregates last 7 days of signal per track — computes
-   `popularitat_mitjana`, `popularitat_inici` (days -7 to -5), `popularitat_final`
-   (days -2 to 0), `dies_en_top`, `setmanes_top`, `antiguitat_dies`
-4. **Phase A** (`calculs_a` → `amb_score_a`): individual track penalties
-   - Age penalty (antiguitat): exponent 2.5, max 1.0
-   - Descent penalty: 0.025 per score_entrada drop
-   - Stability weight: dies_en_top / 7 (capped at 1.0)
-   - Top-position penalty: sum of 1/2^(posicio-1), capped 10.0
-5. **Phase B** (`calculs_b` → `amb_score_b`): monopoly penalties
-   - Album monopoly: 0.25 per earlier track from same album
-   - Artist monopoly: 0.2 per earlier track from same artist
-6. **Phase C** (`calculs_c` → `calcul_factor_final`): new-entry adjustment + smoothing
-   - Novelty bonus: -0.1 / -0.05 / 0.0 for weeks 0-2 if pos <= top thresholds
-   - Smoothing: factor_suavitat = canvi_posicio / (100 * suavitat)
-7. **posicions_final**: ranks by `score_setmanal` DESC, limits to top 100
+### 2.1 `weekly_plays`
 
-### Adaptations from legacy
+Plays accumulated in the last 7 days:
 
-| Legacy | New |
+```
+weekly_plays = playcount_today − playcount_fa_7_dies
+```
+
+Casuístiques:
+
+- **Release < 7 dies**: extrapolation lineal assumint creixement
+  constant des del dia del llançament →
+  `playcount_today × 7 / dies_des_del_llancament`.
+- **Gap de dades** (no hi ha fila exactament a -7d): agafem la fila
+  més propera dins d'una finestra de ±3 dies; si cap encaixa, caiem
+  a qualsevol fila anterior ≥ 4 dies enrere i rescalem a denominador 7.
+- **Diferència negativa** (Last.fm ha corregit scrobbles): es clampa
+  a 0.
+- Si no tenim prou dades per estimar (cap SenyalDiari recent):
+  `weekly_plays = 0` i la cançó queda fora del ranking.
+
+### 2.2 `age_factor`
+
+```
+age_factor = max(0, 1 − min(1, (dies / 365) ** exponent))
+```
+
+amb `exponent = exponent_penalitzacio_antiguitat` (2.5). Cançons
+acabades de llançar ≈ 1.0; decreix lentament els primers mesos i
+s'accelera cap als 365 dies.
+
+### 2.3 `past_top_factor`
+
+Penalització acumulada per aparicions prèvies al rànquing setmanal.
+Per cada fila de `RankingSetmanal(canco=C, territori=T, posicio=N)`
+amb N ≤ 40, suma:
+
+```
+penalty_N = coeficient_base / 2 ** (N − 1)
+```
+
+amb `coeficient_base = 0.04` per defecte. Exemples:
+
+| Posició | Penalització |
 |---|---|
-| `ranking_diari.popularitat` | `ranking_senyaldiari.score_entrada` |
-| `configuracio_global` | `ranking_configuracioglobal` |
-| Territory filter on `cançons.territori` | Territory via `music_artista_territoris` M2M |
-| Single artist per track | Main artist + collaborators (LEFT JOIN `music_canco_artistes_col`) |
-| Territory codes: `cat`/`pv`/`ib` | `CAT`/`VAL`/`BAL`/`CNO`/`AND`/etc. |
+| 1 | 4 % |
+| 2 | 2 % |
+| 3 | 1 % |
+| 4 | 0.5 % |
+| … | … (s'atenua ràpid) |
 
-### `configuracio_global` current values
+Totes les setmanes anteriors es sumen:
 
 ```
-dia_setmana_ranking              = 6      (Saturday)
-penalitzacio_descens             = 0.025
-exponent_penalitzacio_antiguitat = 2.5
-max_factor_a                     = 1.0
-max_factor_b                     = 1.0
-max_factor_c                     = 1.0
-max_factor_final                 = 1.5
-penalitzacio_album_per_canco     = 0.25
-penalitzacio_artista_per_canco   = 0.2
-coeficient_penalitzacio_top      = 0.075
-penalitzacio_setmana_0           = 0.1
-penalitzacio_setmana_1           = 0.05
-penalitzacio_setmana_2           = 0.0
-suavitat                         = 5
+past_top_factor = max(0, 1 − Σ penalty_N)
 ```
+
+Cap posició queda exempta, però les posicions baixes costen molt poc
+per la divisió per 2ⁿ⁻¹. Si la penalització total supera 1 la cançó
+surt del top (factor 0).
+
+### 2.4 Monopoli (post-process)
+
+Ordenem els candidats per `base_score` descendent i recorrem la llista.
+Per cada cançó, comptem quantes cançons del mateix àlbum i quantes
+del mateix artista principal han aparegut abans en aquesta mateixa
+passada:
+
+```
+final_score = base_score
+            × (1 − penalitzacio_album)    ** n_prev_mateix_album
+            × (1 − penalitzacio_artista)  ** n_prev_mateix_artista
+```
+
+Defaults: àlbum **×0.75** per cançó prèvia, artista **×0.8** per
+cançó prèvia. Multiplicatiu / exponencial, no additiu. Dos cançons
+prèvies del mateix àlbum → ×0.5625, etc.
+
+Després del monopoli reordenem per `final_score` i truncem a top 100.
+
+### 2.5 `canvi_posicio`
+
+Per visualització: diferència entre la posició actual i la posició a
+la setmana immediatament anterior (RankingSetmanal ordenat per
+`-setmana`). NEW si no hi havia.
 
 ---
 
-## 2. Signal formula (Phase 3 — implemented)
+## 3. Agregació PPCC
 
-**Formula B chosen:** `score_entrada = percentileofscore(day_playcounts, playcount, kind='rank')`
+PPCC no executa el càlcul per territori — agrega els resultats de
+tots els territoris amb rànquing propi (CAT, VAL, BAL, ALT +
+opcionals amb prou volum):
 
-- playcount=0 → score_entrada=0.0
-- Computed per-day over all successful tracks
-- Average ~50, std ~29, full 0-100 range
-- Implemented inline in `obtenir_senyal` (normalization step at end of ingestion)
-- Safety net: `actualitzar_score_entrada` at 06:30 as backfill
+1. Per cada fila, `score_global = score_setmanal × (1 − (pos − 1) × 0.04)`
+   (penalització lineal del 4 % per posició al top d'origen).
+2. Dedupliquem per `canco_id` conservant el `score_global` més alt.
+3. Ordenem per `score_global` desc, top 100.
 
 ---
 
-## 3. Territory support
+## 4. Suport territorial
 
-- **Fixed** (always ranked): CAT, VAL, BAL
-- **Aggregated** (always computed): ALT, PPCC
-- **Optional** (ranked if >= `min_cancons_ranking_propi` verified tracks): CNO, AND, FRA, ALG, CAR
-- Threshold configured in `ConfiguracioGlobal.min_cancons_ranking_propi` (default=20)
-- `algorisme.py::territoris_amb_ranking_propi()` determines eligible territories
+- **Fixos** (sempre rànquing): `CAT`, `VAL`, `BAL`.
+- **Agregats** (sempre es generen): `ALT`, `PPCC`.
+- **Opcionals**: `CNO`, `AND`, `FRA`, `ALG`, `CAR`. Només tenen top
+  propi si arriben al llindar `min_cancons_ranking_propi` (default
+  20) de cançons verificades actives dins la finestra `DIES_CADUCITAT`.
+  En cas contrari les seves cançons entren dins d'`ALT`.
+
+L'`ALT` funciona com a paraigües: acull artistes amb `territoris`
+M2M = `{"ALT"}` + artistes de qualsevol territori opcional que no
+arriba al llindar. Així cap cançó dels PPCC queda fora del sistema
+encara que el seu territori natal tingui poca producció.
+
+---
+
+## 5. Config snapshot per reproducibilitat
+
+Cada fila de `RankingSetmanal` guarda `algorithm_version="v2.0"` i
+`config_snapshot` amb els coeficients usats en aquell càlcul. Això
+permet reproduir exactament el rànquing d'una setmana històrica
+encara que els defaults canviïn més endavant.

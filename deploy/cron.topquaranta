@@ -27,11 +27,10 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # Daily cleanup of expired unverified tracks — 04:00
 0 4 * * *   topquaranta   /home/topquaranta/bin/tq-run netejar_caducades >> /var/log/topquaranta/neteja.log 2>&1
 
-# Daily signal ingestion — 06:00 (score_entrada computed inline at end)
+# Daily signal ingestion — 06:00. Stores raw Last.fm playcount + listeners
+# per (canço, data). No normalisation step any more (algorithm v2.0 uses
+# weekly-delta of playcount directly).
 0 6 * * *   topquaranta   /home/topquaranta/bin/tq-run obtenir_senyal >> /var/log/topquaranta/senyal.log 2>&1
-
-# Safety net: recompute score_entrada for yesterday if missed — 06:30
-30 6 * * *  topquaranta   /home/topquaranta/bin/tq-run actualitzar_score_entrada >> /var/log/topquaranta/senyal.log 2>&1
 
 # Daily provisional ranking — 07:00
 0 7 * * *   topquaranta   /home/topquaranta/bin/tq-run calcular_ranking --provisional >> /var/log/topquaranta/provisional.log 2>&1

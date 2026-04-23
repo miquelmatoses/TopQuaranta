@@ -26,27 +26,19 @@ logger = logging.getLogger(__name__)
 ALL_TERRITORIS = sorted(TERRITORIS_FIXOS | TERRITORIS_AGREGATS | TERRITORIS_OPCIONALS)
 
 # R1: semantic tag for the current ranking algorithm. Bump when the formula
-# changes in a way that affects results (new CTE, different coefficient
-# semantics, …). Historical rows keep their original tag.
-ALGORITHM_VERSION = "v1.0"
+# changes in a way that affects results. Historical rows keep their own tag.
+# v2.0 (2026-04-23) replaced the 14-CTE score_entrada pipeline with a
+# weekly-plays Python algorithm.
+ALGORITHM_VERSION = "v2.0"
 
-# R1: coefficients we snapshot into each RankingSetmanal row. Matches the
-# fields stored in ConfiguracioGlobal.
+# R1: coefficients we snapshot into each RankingSetmanal row. Only the
+# fields that still live on ConfiguracioGlobal after the v2.0 simplification.
 _CONFIG_SNAPSHOT_FIELDS = [
     "dia_setmana_ranking",
-    "penalitzacio_descens",
     "exponent_penalitzacio_antiguitat",
-    "max_factor_a",
-    "max_factor_b",
-    "max_factor_c",
-    "max_factor_final",
     "penalitzacio_album_per_canco",
     "penalitzacio_artista_per_canco",
     "coeficient_penalitzacio_top",
-    "penalitzacio_setmana_0",
-    "penalitzacio_setmana_1",
-    "penalitzacio_setmana_2",
-    "suavitat",
     "min_cancons_ranking_propi",
 ]
 
@@ -137,21 +129,21 @@ class Command(BaseCommand):
             activa=True,
             data_llancament__gte=date.today() - timedelta(days=DIES_CADUCITAT),
         ).count()
-        with_score = (
+        with_plays = (
             SenyalDiari.objects.filter(
                 data__gte=date.today() - timedelta(days=7),
                 error=False,
-                score_entrada__isnull=False,
+                lastfm_playcount__isnull=False,
             )
             .values("canco_id")
             .distinct()
             .count()
         )
 
-        coverage = (with_score / total_verified * 100) if total_verified > 0 else 0
+        coverage = (with_plays / total_verified * 100) if total_verified > 0 else 0
         self.stdout.write(
-            f"Pre-flight: {with_score}/{total_verified} verified tracks "
-            f"have score_entrada in last 7 days ({coverage:.0f}%)"
+            f"Pre-flight: {with_plays}/{total_verified} verified tracks "
+            f"have Last.fm playcount in last 7 days ({coverage:.0f}%)"
         )
         if coverage < 50:
             self.stdout.write(
@@ -165,7 +157,7 @@ class Command(BaseCommand):
             SenyalDiari.objects.filter(
                 data__gte=date.today() - timedelta(days=7),
                 error=False,
-                score_entrada__isnull=False,
+                lastfm_playcount__isnull=False,
             )
             .values_list("data", flat=True)
             .distinct()
@@ -313,7 +305,11 @@ class Command(BaseCommand):
                         posicio=r["posicio"],
                         score_setmanal=r["score_setmanal"] or 0.0,
                         lastfm_playcount=playcount_map.get(r["canco_id"]),
-                        dies_en_top=r.get("dies_en_top"),
+                        # v2.0 uses weekly_plays in place of dies_en_top.
+                        # The column name is historical; repurposed to hold
+                        # the plays-this-week value surfaced by the new
+                        # algorithm.
+                        dies_en_top=int(r.get("weekly_plays") or 0),
                     )
                 )
             RankingProvisional.objects.bulk_create(objs)

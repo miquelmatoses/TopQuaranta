@@ -18,10 +18,8 @@ from music.models import Canco
 #   - Threshold counts:      [0, 10000]
 #   - Day-of-week:           [0, 6]
 
-_FACTOR_RANGE = [MinValueValidator(0), MaxValueValidator(5)]
 _PENALTY_RANGE = [MinValueValidator(0), MaxValueValidator(1)]
 _EXPONENT_RANGE = [MinValueValidator(0), MaxValueValidator(10)]
-_SMOOTH_RANGE = [MinValueValidator(0), MaxValueValidator(100)]
 _COUNT_RANGE = [MinValueValidator(0), MaxValueValidator(10000)]
 _DAY_RANGE = [MinValueValidator(0), MaxValueValidator(6)]
 
@@ -29,90 +27,48 @@ _DAY_RANGE = [MinValueValidator(0), MaxValueValidator(6)]
 class ConfiguracioGlobal(models.Model):
     """
     Ranking algorithm coefficients. Single-row table.
-    Migrated from legacy `configuracio_global`.
+
+    Simplified 2026-04-23 (algorithm v2.0): dropped `penalitzacio_descens`,
+    `penalitzacio_setmana_0..2`, `suavitat` and the `max_factor_*` clamps.
+    The new algorithm uses weekly Last.fm play deltas directly and applies
+    just three penalties: age (exponential), cumulative past-top-position
+    penalty, and monopoly (album + artist) multipliers.
     """
 
     # Defaults are Decimal(str) — never float — so full_clean() doesn't trip
-    # on imprecise float → Decimal round-tripping (e.g. 0.025 becoming
-    # 0.02500000000000000138...).
+    # on imprecise float → Decimal round-tripping.
     dia_setmana_ranking = models.IntegerField(default=6, validators=_DAY_RANGE)
-    penalitzacio_descens = models.DecimalField(
-        max_digits=5,
-        decimal_places=3,
-        default=Decimal("0.025"),
-        validators=_PENALTY_RANGE,
-    )
     exponent_penalitzacio_antiguitat = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=Decimal("2.5"),
         validators=_EXPONENT_RANGE,
-    )
-    max_factor_a = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("1.0"),
-        validators=_FACTOR_RANGE,
-    )
-    max_factor_b = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("1.0"),
-        validators=_FACTOR_RANGE,
-    )
-    max_factor_c = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("1.0"),
-        validators=_FACTOR_RANGE,
-    )
-    max_factor_final = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("1.5"),
-        validators=_FACTOR_RANGE,
+        help_text="Antiguitat: penalty = min(1, (dies/365)^exponent).",
     )
     penalitzacio_album_per_canco = models.DecimalField(
         max_digits=5,
         decimal_places=3,
         default=Decimal("0.25"),
         validators=_PENALTY_RANGE,
+        help_text="Monopoli àlbum: per cada cançó anterior del mateix àlbum, "
+        "multiplica el score per (1 - valor). 0.25 → x0.75 per cançó.",
     )
     penalitzacio_artista_per_canco = models.DecimalField(
         max_digits=5,
         decimal_places=3,
         default=Decimal("0.2"),
         validators=_PENALTY_RANGE,
+        help_text="Monopoli artista: per cada cançó anterior del mateix "
+        "artista al rànquing, multiplica el score per (1 - valor). 0.2 → x0.8.",
     )
     coeficient_penalitzacio_top = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal("0.075"),
+        default=Decimal("0.04"),
         validators=_PENALTY_RANGE,
-    )
-    penalitzacio_setmana_0 = models.DecimalField(
-        max_digits=5,
-        decimal_places=3,
-        default=Decimal("0.1"),
-        validators=_PENALTY_RANGE,
-    )
-    penalitzacio_setmana_1 = models.DecimalField(
-        max_digits=5,
-        decimal_places=3,
-        default=Decimal("0.05"),
-        validators=_PENALTY_RANGE,
-    )
-    penalitzacio_setmana_2 = models.DecimalField(
-        max_digits=5,
-        decimal_places=3,
-        default=Decimal("0.0"),
-        validators=_PENALTY_RANGE,
-    )
-    suavitat = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal("5.0"),
-        validators=_SMOOTH_RANGE,
+        help_text="Penalització per setmanes anteriors al top. Per cada "
+        "aparició a la posició N acumula: coeficient_base / 2^(N-1). "
+        "Ex amb 0.04: pos 1 = 4%, pos 2 = 2%, pos 3 = 1%…",
     )
     min_cancons_ranking_propi = models.IntegerField(
         default=20,
@@ -165,10 +121,9 @@ class SenyalDiari(models.Model):
     lastfm_returned_artista = models.CharField(max_length=255, blank=True)
     corregit = models.BooleanField(default=False, db_index=True)
 
-    score_entrada = models.FloatField(
-        null=True,
-        help_text="Normalized score (0-100) for the ranking algorithm.",
-    )
+    # 2026-04-23: the old percentile-normalised `score_entrada` field has
+    # been dropped. Algorithm v2.0 operates directly on `lastfm_playcount`
+    # deltas (plays this week vs. a week ago) so normalisation is unused.
 
     error = models.BooleanField(default=False)
     error_msg = models.TextField(blank=True)

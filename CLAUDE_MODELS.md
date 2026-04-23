@@ -194,16 +194,33 @@ and confidence — this allows the ML model to be retrained from its own history
 
 ### `ConfiguracioGlobal` — `ranking_configuracioglobal`
 Singleton. `save()` forces `pk=1`, `load()` classmethod uses get_or_create.
-Holds the 14 ranking coefficients + `min_cancons_ranking_propi` (threshold for
-optional territories to get their own ranking). See `CLAUDE_ALGORITHM.md`.
+Holds the editable coefficients consumed by algorithm v2.0 plus
+`min_cancons_ranking_propi` (threshold for optional territoris to get
+their own ranking). See `CLAUDE_ALGORITHM.md`.
+
+Fields after the 2026-04-23 simplification:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `dia_setmana_ranking` | 6 | Day of the week the official ranking runs (0=Mon, 6=Sun). |
+| `exponent_penalitzacio_antiguitat` | 2.5 | `age_factor = 1 - min(1, (dies/365)^exponent)`. |
+| `coeficient_penalitzacio_top` | 0.04 | Per-past-position penalty base. Position N costs `coef / 2^(N-1)`. |
+| `penalitzacio_album_per_canco` | 0.25 | Monopoli àlbum: `×(1 - value)` per earlier same-album track. |
+| `penalitzacio_artista_per_canco` | 0.2 | Monopoli artista: `×(1 - value)` per earlier same-artist track. |
+| `min_cancons_ranking_propi` | 20 | Threshold for an optional territori to get its own top. |
+
+Dropped 2026-04-23 (algorithm v1 legacy): `penalitzacio_descens`,
+`penalitzacio_setmana_0..2`, `suavitat`, `max_factor_a/b/c/final`.
 
 ### `SenyalDiari` — `ranking_senyaldiari`
 Daily Last.fm signal per track. One row per `(canco, data)`.
 - `canco` FK, `data` DateField
 - `lastfm_playcount` BigInt (cumulative total plays), `lastfm_listeners` Int
-- `score_entrada` FloatField — percent_rank normalization (0-100)
 - `error` Bool, `error_msg` Text
-- Indexes: `(canco, data)` unique, `(data, error)`
+- R5 drift fields: `lastfm_returned_track`, `lastfm_returned_artista`, `corregit`
+- Indexes: `(canco, data)` unique, `(data, error)`, `(data, corregit)`
+- **No normalisation** since 2026-04-23. Algorithm v2.0 reads
+  `lastfm_playcount` directly and computes weekly deltas at ranking time.
 
 ### `RankingSetmanal` — `ranking_rankingsetmanal`
 Weekly official ranking. `setmana` = Monday of the ranking ISO week.
@@ -336,5 +353,5 @@ Flat comment attached to a `Publicacio`. No nested threads.
   Notable recent: `0042_artista_pendent_review_constraint` (CheckConstraint
   on `aprovat` / `pendent_review`), `0045_canco_slug` (unique slug on Canco),
   `0044_drop_deezer_no_trobat` (dropped the stale cache flag).
-- `ranking/` 0001–0004. Latest: `0004_rankingprovisional`.
+- `ranking/` 0001–0010. Latest: `0010_remove_configuracioglobal_max_factor_a_and_more` (drops `score_entrada`, the four `max_factor_*` clamps, `penalitzacio_descens`, `penalitzacio_setmana_0..2`, `suavitat`; bumps `coeficient_penalitzacio_top` default to 0.04 and carries that over to the live row when it still held the pre-v2.0 0.075).
 - `comptes/` 0001–0011. Latest: `0011_alter_perfilusuari_rol_musical` (oïdor/a + músic/a + productor/a label update). Notable recent: `0009_perfilusuari_notificar_comentaris_email_and_more` (Missatge, Comentari, notification opt-outs), `0010_rename_auth_user_m2m_columns` (aligned auth_user_groups / auth_user_user_permissions column names with the custom Usuari model so cascade deletes stop hitting ProgrammingError).

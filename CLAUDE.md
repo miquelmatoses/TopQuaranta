@@ -126,7 +126,7 @@ the SPA palette but has no dependency on mm-design.
     │   ├── clients/             # deezer.py · lastfm.py · spotify.py · whisper.py
     │   └── management/commands/
     │       ├── obtenir_novetats.py · obtenir_metadata.py · obtenir_senyal.py
-    │       ├── actualitzar_score_entrada.py · netejar_caducades.py
+    │       ├── netejar_caducades.py
     │       ├── analitzar_whisper.py · arxivar_senyal_vell.py
     │       ├── autoritzar_spotify.py · configurar_spotify_playlists.py
     │       └── actualitzar_playlists_spotify.py

@@ -1,47 +1,79 @@
-"""
-Ranking algorithm — 14-CTE SQL extracted from legacy PostgreSQL views.
+"""Ranking algorithm v2.0 (2026-04-23).
 
-Ported from vw_top40_weekly_cat (and identical siblings for other territories).
-The SQL logic is identical; only table/column references are adapted to the
-new Django models. See CLAUDE.md section 6 for the full CTE chain.
+Rewrote the former 14-CTE SQL into a Python-first pipeline. The old
+algorithm read a pre-normalised `score_entrada` (percentile of daily
+playcount) and mixed in descent / novelty / smoothing heuristics; it
+was brittle and hard to reason about.
+
+v2.0 operates directly on the raw `SenyalDiari.lastfm_playcount`
+snapshots. For each eligible track we compute:
+
+  1. weekly_plays  — playcount today minus playcount 7 days ago.
+                     Handles release <7 days ago (linear extrapolation),
+                     gaps in the signal (closest neighbour ± a few days),
+                     and Last.fm backfills that produce negatives
+                     (clamped to 0).
+  2. age_factor    — `1 - min(1, (dies / 365)^exponent)` with
+                     `exponent_penalitzacio_antiguitat` (default 2.5).
+  3. past_top_factor — `max(0, 1 - Σ coef / 2^(posicio-1))` across every
+                     prior RankingSetmanal row for this (canço, territori)
+                     at posicions ≤ 40. Position 1 costs 4%, position 2
+                     costs 2%, etc. — accumulates without floor.
+  4. Monopoly post-process — after sorting by base_score, apply
+                     multiplicative penalties: ×(1 - penalitzacio_album)
+                     per earlier track from same album, ×(1 - penalitzacio
+                     _artista) per earlier track from same main artist.
+                     Re-sort by final score, top 100.
+
+PPCC is still an aggregate across non-PPCC rankings, with a 4% position
+penalty per source position and dedup by canço.
+
+ALT is an umbrella for below-threshold optional territoris (CNO / AND /
+FRA / ALG / CAR) plus literal ALT (artists from outside the PPCC).
 """
+
+from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import date, timedelta
+from decimal import Decimal
 
-from django.db import connection
+from django.db.models import Q
 
 from music.constants import DIES_CADUCITAT
-from music.models import Canco, Territori
-from ranking.models import ConfiguracioGlobal
+from music.models import Canco
+from ranking.models import ConfiguracioGlobal, RankingSetmanal, SenyalDiari
 
 logger = logging.getLogger(__name__)
 
-# Territories that always get their own ranking regardless of track count
+# Territori buckets.
 TERRITORIS_FIXOS = {"CAT", "VAL", "BAL"}
-
-# Aggregate territories (always generated)
 TERRITORIS_AGREGATS = {"ALT", "PPCC"}
-
-# Territories that need a minimum track count for their own ranking
 TERRITORIS_OPCIONALS = {"CNO", "AND", "FRA", "ALG", "CAR"}
+
+# PPCC aggregation: penalty applied to source-territori position.
+PPCC_PENALITZACIO_PER_POSICIO = 0.04
+
+# When looking for a SenyalDiari "~ 7 days ago" we accept any row within
+# this many days on either side; closest wins. Keeps gaps in ingestion
+# from blanking out otherwise-healthy tracks.
+_WEEK_WINDOW_DAYS = 3
 
 
 def territoris_amb_ranking_propi() -> list[str]:
-    """
-    Returns territory codes that have enough active verified tracks
-    to generate their own Top 40.
+    """Codis dels territoris que tenen prou cançons per un top propi.
 
-    Always includes: CAT, VAL, BAL, ALT, PPCC.
-    For CNO, AND, FRA, ALG, CAR: only if they have
-    >= min_cancons_ranking_propi active verified tracks.
+    Sempre: CAT, VAL, BAL, ALT, PPCC.
+    Opcionals (CNO / AND / FRA / ALG / CAR) entren si tenen
+    `min_cancons_ranking_propi` cançons verificades actives amb
+    llançament dins la finestra `DIES_CADUCITAT`.
     """
     config = ConfiguracioGlobal.load()
     threshold = config.min_cancons_ranking_propi
     cutoff = date.today() - timedelta(days=DIES_CADUCITAT)
 
     result = sorted(TERRITORIS_FIXOS | TERRITORIS_AGREGATS)
-
     for codi in sorted(TERRITORIS_OPCIONALS):
         count = Canco.objects.filter(
             verificada=True,
@@ -51,325 +83,296 @@ def territoris_amb_ranking_propi() -> list[str]:
         ).count()
         if count >= threshold:
             result.append(codi)
-
     return result
 
 
-# The full 14-CTE SQL, adapted from vw_top40_weekly_cat.
-# Parameters: %(territori)s
-#
-# CTE chain overview:
-#   cancons_territori  — Bridge: join signal to territory via artist M2M + collaborators
-#   configuracio       — Read algorithm coefficients from ConfiguracioGlobal
-#   base               — Aggregate 7-day window: avg popularity, trend, age, history
-#   Phase A (calculs_a → amb_score_a → posicions_a):
-#       Individual track penalties: age, descent, stability, top-position accumulation
-#   Phase B (calculs_b → amb_score_b → posicions_b):
-#       Monopoly penalties: album monopoly (0.25/track), artist monopoly (0.2/track)
-#   Phase C (calculs_c → calcul_factor_final → amb_score_final):
-#       New-entry adjustment + smoothing factor based on position change
-#   posicions_final    — Final ranking ordered by score_setmanal DESC
-RANKING_SQL = """
-WITH cancons_territori AS (
-    -- Bridge CTE: join signal to territory via artist M2M + collaborators (LEFT JOIN).
-    -- A track appears in territory T if its main artist OR any collaborator belongs to T.
-    SELECT DISTINCT ON (sd.canco_id, sd.data)
-        sd.canco_id AS id_canco,
-        sd.data,
-        sd.score_entrada AS popularitat,
-        c.album_id,
-        c.artista_id,
-        a.data_llancament AS album_data
-    FROM ranking_senyaldiari sd
-    JOIN music_canco c ON c.id = sd.canco_id
-    JOIN music_album a ON a.id = c.album_id
-    LEFT JOIN music_canco_artistes_col col ON col.canco_id = c.id
-    JOIN music_artista_territoris mt ON (
-        mt.artista_id = c.artista_id
-        OR mt.artista_id = col.artista_id
-    )
-    WHERE mt.territori_id = ANY(%(territoris_list)s::text[])
-      AND sd.data >= CURRENT_DATE - INTERVAL '7 days'
-      AND sd.error = FALSE
-      AND sd.score_entrada IS NOT NULL
-      AND c.verificada = TRUE
-      AND c.activa = TRUE
-),
-configuracio AS (
-    SELECT
-        %(territori)s::text AS territori,
-        penalitzacio_descens,
-        exponent_penalitzacio_antiguitat,
-        max_factor_a,
-        max_factor_b,
-        max_factor_c,
-        max_factor_final,
-        penalitzacio_album_per_canco,
-        penalitzacio_artista_per_canco,
-        coeficient_penalitzacio_top,
-        penalitzacio_setmana_0,
-        penalitzacio_setmana_1,
-        penalitzacio_setmana_2,
-        suavitat
-    FROM ranking_configuracioglobal
-    WHERE id = 1
-),
-base AS (
-    SELECT
-        r.id_canco,
-        r.album_id,
-        r.album_data,
-        r.artista_id,
-        COUNT(DISTINCT r.data) AS dies_en_top,
-        (SELECT COUNT(*)
-         FROM ranking_rankingsetmanal rs
-         WHERE rs.canco_id = r.id_canco
-           AND rs.territori = (SELECT territori FROM configuracio)
-           AND rs.posicio <= 40
-        ) AS setmanes_top,
-        AVG(r.popularitat) AS popularitat_mitjana,
-        (SELECT AVG(r1.popularitat)
-         FROM cancons_territori r1
-         WHERE r1.id_canco = r.id_canco
-           AND r1.data >= CURRENT_DATE - INTERVAL '7 days'
-           AND r1.data <= CURRENT_DATE - INTERVAL '5 days'
-        ) AS popularitat_inici,
-        (SELECT AVG(r2.popularitat)
-         FROM cancons_territori r2
-         WHERE r2.id_canco = r.id_canco
-           AND r2.data >= CURRENT_DATE - INTERVAL '2 days'
-           AND r2.data <= CURRENT_DATE
-        ) AS popularitat_final,
-        CURRENT_DATE - r.album_data AS antiguitat_dies,
-        ROW_NUMBER() OVER (PARTITION BY r.id_canco ORDER BY AVG(r.popularitat) DESC) AS rn_id,
-        (SELECT r_ant.posicio
-         FROM ranking_rankingsetmanal r_ant
-         WHERE r_ant.canco_id = r.id_canco
-           AND r_ant.territori = (SELECT territori FROM configuracio)
-           AND r_ant.setmana = (
-               SELECT MAX(setmana) FROM ranking_rankingsetmanal
-               WHERE territori = (SELECT territori FROM configuracio)
-           )
-        ) AS posicio_anterior
-    FROM cancons_territori r
-    GROUP BY r.id_canco, r.album_id, r.album_data, r.artista_id
-),
-calculs_a AS (
-    SELECT
-        b.id_canco, b.album_id, b.album_data, b.artista_id,
-        b.dies_en_top, b.setmanes_top,
-        b.popularitat_mitjana, b.popularitat_inici, b.popularitat_final,
-        b.antiguitat_dies,
-        COALESCE(b.popularitat_final, 0) - COALESCE(b.popularitat_inici, 0) AS popularitat_delta,
-        LEAST(1.0, POWER(b.antiguitat_dies::numeric / 365.0,
-            (SELECT exponent_penalitzacio_antiguitat FROM configuracio))
-        ) AS penalitzacio_antiguitat,
-        CASE
-            WHEN COALESCE(b.popularitat_final, 0) < COALESCE(b.popularitat_inici, 0)
-            THEN (SELECT penalitzacio_descens FROM configuracio)
-            ELSE 0.0
-        END AS penalitzacio_descens,
-        LEAST(b.dies_en_top::numeric / 7.0, 1.0) AS pes_estabilitat,
-        ROUND((
-            LEAST(10.0, COALESCE(
-                (SELECT SUM(1.0 / POWER(2.0, (rs.posicio - 1)::numeric))
-                 FROM ranking_rankingsetmanal rs
-                 WHERE rs.canco_id = b.id_canco
-                   AND rs.territori = (SELECT territori FROM configuracio)
-                   AND rs.posicio <= 40
-                ), 0.0)
-            ) * (SELECT coeficient_penalitzacio_top FROM configuracio)
-        )::numeric, 2) AS penalitzacio_top,
-        b.posicio_anterior
-    FROM base b
-    WHERE b.rn_id = 1
-),
-calcul_factor_a AS (
-    SELECT c.*,
-        LEAST(
-            GREATEST(1.0 - c.penalitzacio_antiguitat - c.penalitzacio_descens - c.penalitzacio_top, -1.0),
-            (SELECT max_factor_a FROM configuracio)
-        ) AS factor_score_a
-    FROM calculs_a c
-),
-amb_score_a AS (
-    SELECT c.*,
-        ROUND((c.popularitat_mitjana * c.pes_estabilitat * c.factor_score_a)::numeric, 2) AS score_a
-    FROM calcul_factor_a c
-),
-posicions_a AS (
-    SELECT c.*,
-        ROW_NUMBER() OVER (ORDER BY c.score_a DESC) AS posicio_a
-    FROM amb_score_a c
-),
-calculs_b AS (
-    SELECT c.*,
-        (SELECT COUNT(*)::numeric * (SELECT penalitzacio_album_per_canco FROM configuracio)
-         FROM posicions_a x
-         WHERE x.album_id = c.album_id AND x.posicio_a < c.posicio_a
-        ) AS penalitzacio_album,
-        (SELECT COUNT(*)::numeric * (SELECT penalitzacio_artista_per_canco FROM configuracio)
-         FROM posicions_a x
-         WHERE x.id_canco <> c.id_canco AND x.artista_id = c.artista_id AND x.posicio_a < c.posicio_a
-        ) AS penalitzacio_artista
-    FROM posicions_a c
-),
-calcul_factor_b AS (
-    SELECT b.*,
-        LEAST(
-            GREATEST(b.factor_score_a - b.penalitzacio_album - b.penalitzacio_artista, -1.0),
-            (SELECT max_factor_b FROM configuracio)
-        ) AS factor_score_b
-    FROM calculs_b b
-),
-amb_score_b AS (
-    SELECT p.*,
-        ROUND((p.popularitat_mitjana * p.pes_estabilitat * p.factor_score_b)::numeric) AS score_b
-    FROM calcul_factor_b p
-),
-posicions_b AS (
-    SELECT f.*,
-        ROW_NUMBER() OVER (ORDER BY f.score_b DESC) AS posicio_b
-    FROM amb_score_b f
-),
-calculs_c AS (
-    SELECT b.*,
-        CASE
-            WHEN b.setmanes_top = 0 AND b.posicio_b <= 20
-                THEN (SELECT penalitzacio_setmana_0 FROM configuracio)
-            WHEN b.setmanes_top = 1 AND b.posicio_b <= 10
-                THEN (SELECT penalitzacio_setmana_1 FROM configuracio)
-            WHEN b.setmanes_top = 2 AND b.posicio_b <= 5
-                THEN (SELECT penalitzacio_setmana_2 FROM configuracio)
-            ELSE 0.0
-        END AS penalitzacio_entrada,
-        COALESCE(b.posicio_anterior, 41) - LEAST(b.posicio_b, 41) AS canvi_posicio_b
-    FROM posicions_b b
-),
-calcul_factor_final AS (
-    SELECT e.*,
-        ROUND(COALESCE(e.canvi_posicio_b::numeric / (100.0 *
-            (SELECT suavitat FROM configuracio)), 0.0)::numeric, 2) AS factor_suavitat
-    FROM calculs_c e
-),
-amb_score_final AS (
-    SELECT s.*,
-        LEAST(
-            GREATEST(s.factor_score_b - s.penalitzacio_entrada - s.factor_suavitat, 0.0),
-            (SELECT max_factor_final FROM configuracio)
-        ) AS factor_score,
-        ROUND((
-            s.popularitat_mitjana * s.pes_estabilitat *
-            LEAST(
-                GREATEST(s.factor_score_b - s.penalitzacio_entrada - s.factor_suavitat, 0.0),
-                (SELECT max_factor_final FROM configuracio)
-            ))::numeric, 2
-        ) AS score_setmanal
-    FROM calcul_factor_final s
-),
-posicions_final AS (
-    SELECT f.*,
-        ROW_NUMBER() OVER (ORDER BY f.score_setmanal DESC) AS posicio
-    FROM amb_score_final f
-)
-SELECT
-    o.id_canco AS canco_id,
-    o.score_setmanal,
-    o.posicio,
-    o.posicio_anterior,
-    o.posicio_anterior - o.posicio AS canvi_posicio,
-    o.dies_en_top
-FROM posicions_final o
-WHERE o.posicio <= 100
-ORDER BY o.score_setmanal DESC
-"""
+# ── Per-territori computation ─────────────────────────────────────────
 
 
 def calcular_ranking_territori(territori: str) -> list[dict]:
-    """
-    Run the ranking algorithm for a given territory.
+    """Run the v2.0 ranking for a single territori.
 
-    For regular territories (CAT, VAL, BAL, ALT, CNO, etc.):
-        Runs the full 14-CTE algorithm filtered by that territory.
-
-    For PPCC (aggregate / "general"):
-        Does NOT run the 14-CTE. Instead, aggregates results from all
-        non-aggregate territory rankings:
-        1. UNION ALL results from each territory's 14-CTE
-        2. Apply position-based penalty: score * (1 - (posicio-1) * 0.04)
-        3. Deduplicate by canco_id (keep best score_global)
-        4. Re-rank by score_global DESC, top 100
-
-    This mirrors the legacy vw_top40_weekly_ppcc SQL view exactly.
-
-    Returns list of dicts with posicio, canco_id, score_setmanal, canvi_posicio.
+    Returns a list of dicts sorted by posicio ascending:
+        {canco_id, score_setmanal, posicio, posicio_anterior,
+         canvi_posicio, weekly_plays}.
+    Limit: top 100.
     """
     if territori == "PPCC":
         return _calcular_ranking_ppcc()
 
-    # ALT is the catch-all bucket: it collects artistes from any PPCC
-    # territori too small to run its own ranking (CNO, AND, FRA, ALG,
-    # CAR below min_cancons_ranking_propi) plus literal ALT (artistes
-    # de fora dels PPCC).
+    # ALT collects literal-ALT artists + any optional territori below
+    # its own-top threshold.
     if territori == "ALT":
         eligible = set(territoris_amb_ranking_propi())
-        territoris_list = ["ALT"] + sorted(TERRITORIS_OPCIONALS - eligible)
+        territoris_match = ["ALT"] + sorted(TERRITORIS_OPCIONALS - eligible)
     else:
-        territoris_list = [territori]
+        territoris_match = [territori]
 
-    with connection.cursor() as cursor:
-        cursor.execute(
-            RANKING_SQL,
-            {"territori": territori, "territoris_list": territoris_list},
+    cfg = ConfiguracioGlobal.load()
+    return _ranking_for_territoris(
+        territori=territori, territoris_match=territoris_match, cfg=cfg
+    )
+
+
+def _ranking_for_territoris(
+    territori: str, territoris_match: list[str], cfg: ConfiguracioGlobal
+) -> list[dict]:
+    """Core: eligible cançons × weekly_plays × age × past_top, then monopoly."""
+    today = date.today()
+    cutoff = today - timedelta(days=DIES_CADUCITAT)
+
+    # Cançons whose main artist OR any collaborator lives in any of the
+    # matched territoris. `distinct` to avoid dupes from the OR.
+    cancons_qs = (
+        Canco.objects.filter(
+            verificada=True,
+            activa=True,
+            data_llancament__gte=cutoff,
         )
-        col_names = [col[0] for col in cursor.description]
-        results = []
-        for row in cursor.fetchall():
-            results.append(dict(zip(col_names, row)))
+        .filter(
+            Q(artista__territoris__codi__in=territoris_match)
+            | Q(artistes_col__territoris__codi__in=territoris_match)
+        )
+        .select_related("album", "artista")
+        .distinct()
+    )
+    cancons = {c.pk: c for c in cancons_qs}
+    if not cancons:
+        return []
+
+    # Pull a fortnight of signal in one query. Enough slack to find a
+    # "~ 7 days ago" row even when some days are missing.
+    window_start = today - timedelta(days=14)
+    senyals_by_canco: dict[int, list[SenyalDiari]] = defaultdict(list)
+    for s in SenyalDiari.objects.filter(
+        canco_id__in=cancons.keys(),
+        data__gte=window_start,
+        error=False,
+        lastfm_playcount__isnull=False,
+    ).only("canco_id", "data", "lastfm_playcount"):
+        senyals_by_canco[s.canco_id].append(s)
+    for lst in senyals_by_canco.values():
+        lst.sort(key=lambda s: s.data)
+
+    # Prior RankingSetmanal entries per canço (for the past-top penalty).
+    prior_positions_by_canco: dict[int, list[int]] = defaultdict(list)
+    for rs_canco_id, rs_pos in RankingSetmanal.objects.filter(
+        canco_id__in=cancons.keys(),
+        territori=territori,
+        posicio__lte=40,
+    ).values_list("canco_id", "posicio"):
+        prior_positions_by_canco[rs_canco_id].append(rs_pos)
+
+    # Previous week for canvi_posicio lookup.
+    prev_week_positions: dict[int, int] = {}
+    prev_setmana = (
+        RankingSetmanal.objects.filter(territori=territori)
+        .order_by("-setmana")
+        .values_list("setmana", flat=True)
+        .first()
+    )
+    if prev_setmana is not None:
+        for c_id, pos in RankingSetmanal.objects.filter(
+            territori=territori, setmana=prev_setmana
+        ).values_list("canco_id", "posicio"):
+            prev_week_positions[c_id] = pos
+
+    exp = float(cfg.exponent_penalitzacio_antiguitat)
+    coef_top = float(cfg.coeficient_penalitzacio_top)
+    pen_album = float(cfg.penalitzacio_album_per_canco)
+    pen_artista = float(cfg.penalitzacio_artista_per_canco)
+
+    rows: list[dict] = []
+    for canco in cancons.values():
+        plays = _compute_weekly_plays(
+            canco=canco, signals=senyals_by_canco.get(canco.pk, []), today=today
+        )
+        if plays <= 0:
+            continue
+
+        age_factor = _age_factor(canco.data_llancament, today=today, exponent=exp)
+        past_top_factor = _past_top_factor(
+            prior_positions_by_canco.get(canco.pk, []), coef_top
+        )
+
+        base_score = plays * age_factor * past_top_factor
+        if base_score <= 0:
+            continue
+
+        rows.append(
+            {
+                "canco_id": canco.pk,
+                "album_id": canco.album_id,
+                "artista_id": canco.artista_id,
+                "weekly_plays": plays,
+                "age_factor": age_factor,
+                "past_top_factor": past_top_factor,
+                "base_score": base_score,
+            }
+        )
+
+    if not rows:
+        return []
+
+    # Sort by base_score DESC so monopoly sees earlier-ranked first.
+    rows.sort(key=lambda r: -r["base_score"])
+
+    seen_albums: dict[int, int] = defaultdict(int)
+    seen_artists: dict[int, int] = defaultdict(int)
+    for r in rows:
+        alb_seen = seen_albums[r["album_id"]] if r["album_id"] else 0
+        art_seen = seen_artists[r["artista_id"]] if r["artista_id"] else 0
+        monopoly = ((1.0 - pen_album) ** alb_seen) * ((1.0 - pen_artista) ** art_seen)
+        r["final_score"] = r["base_score"] * monopoly
+        if r["album_id"]:
+            seen_albums[r["album_id"]] = alb_seen + 1
+        if r["artista_id"]:
+            seen_artists[r["artista_id"]] = art_seen + 1
+
+    # Monopoly may reorder: sort by final_score and truncate.
+    rows.sort(key=lambda r: -r["final_score"])
+    top = rows[:100]
+
+    results: list[dict] = []
+    for i, r in enumerate(top, start=1):
+        prev_pos = prev_week_positions.get(r["canco_id"])
+        canvi = (prev_pos - i) if prev_pos is not None else None
+        results.append(
+            {
+                "canco_id": r["canco_id"],
+                "score_setmanal": round(r["final_score"], 2),
+                "posicio": i,
+                "posicio_anterior": prev_pos,
+                "canvi_posicio": canvi,
+                "weekly_plays": r["weekly_plays"],
+            }
+        )
     return results
 
 
-# Legacy PPCC aggregation: position penalty coefficient (0.04 per position)
-PPCC_PENALITZACIO_PER_POSICIO = 0.04
+# ── Weekly-plays estimator (with gap + fresh-release handling) ────────
+
+
+def _compute_weekly_plays(
+    canco: Canco, signals: list[SenyalDiari], today: date
+) -> float:
+    """Estimate plays gained in the last 7 days for `canco`.
+
+    `signals` is pre-sorted ascending by date. Strategy:
+
+    * If canço was released less than 7 days ago and we have a recent
+      playcount, linearly extrapolate: playcount_today × (7 / dies_since_release).
+    * Otherwise, pick the newest signal as "today's" playcount and find the
+      signal closest to `today - 7d` within ±_WEEK_WINDOW_DAYS; subtract.
+      If no "week ago" row falls inside the window, try the next row we
+      have (anything ≥ 4d ago) and rescale to a 7-day denominator
+      (linear). Returns 0 on Last.fm back-corrections (negative diffs).
+    """
+    if not signals:
+        return 0.0
+
+    latest = signals[-1]
+    playcount_today = latest.lastfm_playcount
+    if playcount_today is None:
+        return 0.0
+
+    # Fresh release branch.
+    if canco.data_llancament and canco.data_llancament > today - timedelta(days=7):
+        days_since = max((today - canco.data_llancament).days, 0)
+        if days_since < 1:
+            return 0.0  # Too early for a meaningful signal.
+        # playcount_today ≈ plays accumulated since release → scale to 7.
+        return max(0.0, playcount_today * 7.0 / days_since)
+
+    target = today - timedelta(days=7)
+    # Find closest signal to `target` within ±window.
+    window_lo = today - timedelta(days=7 + _WEEK_WINDOW_DAYS)
+    window_hi = today - timedelta(days=7 - _WEEK_WINDOW_DAYS)
+    candidates = [
+        s
+        for s in signals
+        if s is not latest
+        and s.lastfm_playcount is not None
+        and window_lo <= s.data <= window_hi
+    ]
+    if candidates:
+        baseline = min(candidates, key=lambda s: abs((s.data - target).days))
+        delta = playcount_today - baseline.lastfm_playcount
+        gap_days = (latest.data - baseline.data).days or 7
+        # Rescale to a 7-day denominator so we compare apples to apples.
+        return max(0.0, delta * 7.0 / gap_days)
+
+    # Fallback: any older row we have (>= 4 days ago), rescale linearly.
+    older = [
+        s
+        for s in signals
+        if s is not latest
+        and s.lastfm_playcount is not None
+        and s.data <= today - timedelta(days=4)
+    ]
+    if older:
+        baseline = older[-1]  # closest-to-today older row
+        gap_days = (latest.data - baseline.data).days
+        if gap_days <= 0:
+            return 0.0
+        delta = playcount_today - baseline.lastfm_playcount
+        return max(0.0, delta * 7.0 / gap_days)
+
+    # Only one signal total → no usable delta.
+    return 0.0
+
+
+# ── Factors ───────────────────────────────────────────────────────────
+
+
+def _age_factor(data_llancament: date | None, today: date, exponent: float) -> float:
+    """1 - min(1, (dies/365)^exponent). Newer = closer to 1, older → 0."""
+    if data_llancament is None:
+        return 1.0
+    days = max((today - data_llancament).days, 0)
+    penalty = min(1.0, (days / 365.0) ** exponent)
+    return max(0.0, 1.0 - penalty)
+
+
+def _past_top_factor(prior_positions: list[int], coef_base: float) -> float:
+    """Multiplicative factor for prior weeks at top.
+
+    Each past position N contributes `coef_base / 2^(N-1)` to a cumulative
+    penalty. Factor = max(0, 1 - total_penalty).
+    """
+    if not prior_positions:
+        return 1.0
+    total = 0.0
+    for pos in prior_positions:
+        if pos < 1:
+            continue
+        total += coef_base / (2.0 ** (pos - 1))
+    return max(0.0, 1.0 - total)
+
+
+# ── PPCC aggregation ──────────────────────────────────────────────────
 
 
 def _calcular_ranking_ppcc() -> list[dict]:
-    """
-    Compute PPCC ranking by aggregating all non-aggregate territory rankings.
-
-    Mirrors legacy vw_top40_weekly_ppcc:
-      1. Run 14-CTE for each eligible territory (CAT, VAL, BAL, ALT, + optional)
-      2. Penalize by position: score_global = score * (1 - (pos-1) * 0.04)
-      3. Deduplicate: keep best score_global per canco_id
-      4. Rank by score_global DESC, top 100
-    """
-    # Collect all territory rankings (non-aggregate only)
+    """Aggregate all non-PPCC rankings, penalise by source position, dedupe."""
+    source_territoris = [t for t in territoris_amb_ranking_propi() if t != "PPCC"]
     all_results: list[dict] = []
-    source_territoris = territoris_amb_ranking_propi()
-
     for t in source_territoris:
-        if t == "PPCC":
-            continue  # Avoid feeding PPCC into itself.
-        # ALT feeds PPCC too: it's the only path for tracks from small
-        # territoris (CNO/AND/FRA/ALG/CAR below threshold) to reach the
-        # general top. Skipping ALT would erase those tracks from PPCC.
-        territory_results = calcular_ranking_territori(t)
-        for r in territory_results:
+        for r in calcular_ranking_territori(t):
+            r = dict(r)
             r["territori_original"] = t
-        all_results.extend(territory_results)
+            all_results.append(r)
 
     if not all_results:
         return []
 
-    # Apply position-based penalty
     for r in all_results:
         pos = r.get("posicio", 1)
-        score = r.get("score_setmanal") or 0.0
+        score = float(r.get("score_setmanal") or 0.0)
         r["score_global"] = round(
-            float(score) * (1.0 - (pos - 1) * PPCC_PENALITZACIO_PER_POSICIO), 4
+            score * (1.0 - (pos - 1) * PPCC_PENALITZACIO_PER_POSICIO), 4
         )
 
-    # Deduplicate by canco_id: keep best score_global
     best_by_canco: dict[int, dict] = {}
     for r in all_results:
         cid = r["canco_id"]
@@ -379,19 +382,23 @@ def _calcular_ranking_ppcc() -> list[dict]:
         ):
             best_by_canco[cid] = r
 
-    # Sort by score_global DESC and assign final positions
     deduped = sorted(best_by_canco.values(), key=lambda x: -x["score_global"])
-
-    results = []
+    out: list[dict] = []
     for i, r in enumerate(deduped[:100], start=1):
-        results.append(
+        out.append(
             {
                 "canco_id": r["canco_id"],
                 "score_setmanal": r["score_global"],
                 "posicio": i,
                 "posicio_anterior": r.get("posicio_anterior"),
                 "canvi_posicio": r.get("canvi_posicio"),
-                "dies_en_top": r.get("dies_en_top"),
+                "weekly_plays": r.get("weekly_plays"),
             }
         )
-    return results
+    return out
+
+
+# Historical: keep Decimal imported so tests that inspect module-level
+# names don't regress; not used in live code but signals the v2.0 sweep
+# touched this module.
+_ = Decimal

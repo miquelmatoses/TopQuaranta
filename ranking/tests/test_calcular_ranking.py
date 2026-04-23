@@ -53,7 +53,6 @@ class TestCalcularRankingCommand:
                     data=d,
                     lastfm_playcount=(j + 1) * 1000,
                     lastfm_listeners=(j + 1) * 100,
-                    score_entrada=(j + 1) * 20.0,
                     error=False,
                 )
 

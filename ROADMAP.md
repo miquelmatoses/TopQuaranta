@@ -1,10 +1,20 @@
 # ROADMAP.md — TopQuaranta
 
 > Current state and next steps. Historical iteration detail lives in git log.
-> Last updated: 2026-04-22.
+> Last updated: 2026-04-23.
 
 ### Recent deliveries (past week)
 
+- **Ranking algorithm v2.0** — rewrote `ranking/algorisme.py` from
+  the old 14-CTE SQL to a Python pipeline that consumes raw
+  `lastfm_playcount` deltas (plays this week vs a week ago).
+  Dropped `score_entrada` (field + percentile normalisation +
+  `actualitzar_score_entrada` command + cron). Simplified the
+  penalty stack to four factors only: age, past-top positions
+  (`coef / 2^(N-1)` per prior week), album monopoly, artist monopoly.
+  Removed `penalitzacio_descens`, `penalitzacio_setmana_0..2`,
+  `suavitat`, and the four `max_factor_*` clamps from
+  `ConfiguracioGlobal`. `ALGORITHM_VERSION = v2.0`.
 - **MusicBrainz integration** — continuous 15-min cron
   (`obtenir_metadata_musicbrainz`) pulls MBID + area + begin/end dates +
   URL relationships + full discography; reconciles Albums/Cançons by
@@ -67,7 +77,7 @@ enforced at the API layer (`IsStaff` requires `user.is_verified()`). The
 - Hourly: `obtenir_novetats` (Deezer incremental).
 - **01:30 UTC**: `analitzar_whisper --limit 700` (LID, ~5h15m window).
 - 04:00: `netejar_caducades` (drop unverified > 12 months).
-- 06:00: `obtenir_senyal` (Last.fm) + `actualitzar_score_entrada` (06:30).
+- 06:00: `obtenir_senyal` (Last.fm). No normalisation post-ingest (algorithm v2.0 reads raw playcounts).
 - **07:00**: `calcular_ranking --provisional`.
 - **07:15**: `actualitzar_playlists_spotify` (top-CAT/VAL/BAL/ALT + novetats).
 - Saturday 08:00: `calcular_ranking` (official weekly).

@@ -74,7 +74,6 @@ class TestCollaboratorTerritoryInclusion:
                 data=d,
                 lastfm_playcount=5000,
                 lastfm_listeners=500,
-                score_entrada=75.0,
                 error=False,
             )
 

@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -13,15 +14,17 @@ class TestConfiguracioGlobal:
         assert config.dia_setmana_ranking == 6
 
     def test_save_forces_pk_1(self):
-        config = ConfiguracioGlobal(pk=99, suavitat=10.0)
+        config = ConfiguracioGlobal(pk=99, coeficient_penalitzacio_top=Decimal("0.05"))
         config.save()
         assert config.pk == 1
         assert ConfiguracioGlobal.objects.count() == 1
 
     def test_load_returns_existing(self):
-        ConfiguracioGlobal.objects.create(pk=1, suavitat=7.0)
+        ConfiguracioGlobal.objects.create(
+            pk=1, coeficient_penalitzacio_top=Decimal("0.05")
+        )
         config = ConfiguracioGlobal.load()
-        assert float(config.suavitat) == 7.0
+        assert float(config.coeficient_penalitzacio_top) == 0.05
 
 
 @pytest.mark.django_db
