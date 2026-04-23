@@ -44,6 +44,7 @@ export default function StaffCanconsPage() {
   const [mlClasse, setMlClasse] = useState(urlParams.get('ml_classe') || '')
   const [whisper, setWhisper] = useState(urlParams.get('whisper') || '')
   const [deezer, setDeezer] = useState(urlParams.get('deezer') || '')
+  const [mb, setMb] = useState(urlParams.get('mb') || '')
   const [sort, setSort] = useState(urlParams.get('sort') || '-ml_confianca')
   const artistaPk = urlParams.get('artista_pk') || ''
   const [page, setPage] = useState(1)
@@ -55,13 +56,13 @@ export default function StaffCanconsPage() {
 
   function load() {
     const params = new URLSearchParams({
-      q, verificada, ml_classe: mlClasse, whisper, deezer, sort, page,
+      q, verificada, ml_classe: mlClasse, whisper, deezer, mb, sort, page,
     })
     if (artistaPk) params.set('artista_pk', artistaPk)
     api.get(`/staff/cancons/?${params}`).then(setData).catch(() => setData(null))
   }
 
-  useEffect(load, [q, verificada, mlClasse, whisper, deezer, sort, page, artistaPk])
+  useEffect(load, [q, verificada, mlClasse, whisper, deezer, mb, sort, page, artistaPk])
 
   const allSelected = data?.results?.length && data.results.every(r => sel.has(r.pk))
 
@@ -157,6 +158,14 @@ export default function StaffCanconsPage() {
           <option value="no">Sense Deezer</option>
           <option value="si">Amb Deezer</option>
         </Select>
+        <Select value={mb} onChange={e => { setPage(1); setMb(e.target.value) }}>
+          <option value="">MusicBrainz: qualsevol</option>
+          <option value="confirmat">Confirmat ✓</option>
+          <option value="no_confirmat">No confirmat ✗</option>
+          <option value="desconegut">Desconegut ?</option>
+          <option value="cat">Lletra cat</option>
+          <option value="artista_dissolt">Artista dissolt</option>
+        </Select>
         <Select value={sort} onChange={e => { setPage(1); setSort(e.target.value) }}>
           <option value="-ml_confianca">Ordre: ML conf. ↓</option>
           <option value="ml_confianca">Ordre: ML conf. ↑</option>
@@ -193,13 +202,14 @@ export default function StaffCanconsPage() {
               <Th>Àlbum</Th>
               <Th>ML</Th>
               <Th>Whisper</Th>
+              <Th>MB</Th>
               <Th>Estat</Th>
               <Th>Preescolta</Th>
             </tr>
           </THead>
           <tbody>
             {data?.results?.length === 0 && (
-              <tr><td colSpan={8}><EmptyState>Cap cançó.</EmptyState></td></tr>
+              <tr><td colSpan={9}><EmptyState>Cap cançó.</EmptyState></td></tr>
             )}
             {data?.results?.map(c => (
               <Tr key={c.pk} onClick={() => navigate(`/staff/cancons/${c.pk}`)}>
@@ -210,7 +220,14 @@ export default function StaffCanconsPage() {
                   <div className="font-semibold">{c.nom}</div>
                   {c.isrc && <div className="text-[11px] opacity-60">ISRC {c.isrc}</div>}
                 </Td>
-                <Td>{c.artista.nom}</Td>
+                <Td>
+                  <div>{c.artista.nom}</div>
+                  {c.artista.mb_end_date && (
+                    <div className="text-[10px] font-semibold text-red-600" title={`MusicBrainz: dissolt ${c.artista.mb_end_date}`}>
+                      ⚠ dissolt {c.artista.mb_end_date.slice(0, 4)}
+                    </div>
+                  )}
+                </Td>
                 <Td className="text-xs opacity-70">{c.album?.nom || '—'}</Td>
                 <Td>
                   {c.ml_classe && <Pill tone={c.ml_classe === 'A' ? 'green' : c.ml_classe === 'C' ? 'red' : 'yellow'}>{c.ml_classe}</Pill>}
@@ -218,6 +235,14 @@ export default function StaffCanconsPage() {
                 </Td>
                 <Td>
                   {c.whisper_lang ? <Pill tone={c.whisper_lang === 'ca' ? 'green' : 'red'}>{c.whisper_lang}</Pill> : <span className="opacity-40 text-xs">—</span>}
+                </Td>
+                <Td>
+                  {c.mbrainz_confirmed === true && <Pill tone="green">✓</Pill>}
+                  {c.mbrainz_confirmed === false && <Pill tone="red">✗</Pill>}
+                  {c.mbrainz_confirmed == null && <span className="opacity-40 text-xs">—</span>}
+                  {c.mb_lyrics_language === 'cat' && (
+                    <span className="ml-1 text-[10px] font-semibold text-emerald-700" title="MusicBrainz Work.language = cat">cat</span>
+                  )}
                 </Td>
                 <Td>
                   {c.verificada ? <Pill tone="green">Verificada</Pill> : <Pill tone="gray">Pendent</Pill>}

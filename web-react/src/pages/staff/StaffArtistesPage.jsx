@@ -43,6 +43,7 @@ export default function StaffArtistesPage() {
   const [aprovat, setAprovat] = useState('1')
   const [deezer, setDeezer] = useState('')
   const [territori, setTerritori] = useState('')
+  const [mb, setMb] = useState('')
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
 
@@ -52,10 +53,11 @@ export default function StaffArtistesPage() {
       aprovat,
       deezer,
       territori,
+      mb,
       page,
     })
     api.get(`/staff/artistes/?${params}`).then(setData).catch(() => setData(null))
-  }, [q, aprovat, deezer, territori, page])
+  }, [q, aprovat, deezer, territori, mb, page])
 
   return (
     <section>
@@ -93,6 +95,13 @@ export default function StaffArtistesPage() {
             <option key={c} value={c}>{l}</option>
           ))}
         </Select>
+        <Select value={mb} onChange={e => { setPage(1); setMb(e.target.value) }}>
+          <option value="">MusicBrainz: qualsevol</option>
+          <option value="sense_mbid">Sense MBID</option>
+          <option value="amb_mbid">Amb MBID</option>
+          <option value="dissolt">Dissolts</option>
+          <option value="no_sincronitzat">No sincronitzats</option>
+        </Select>
       </div>
 
       <TableCard>
@@ -103,13 +112,14 @@ export default function StaffArtistesPage() {
               <Th>Territoris</Th>
               <Th>Localitat</Th>
               <Th>Deezer</Th>
+              <Th>MB</Th>
               <Th>Estat</Th>
               <Th></Th>
             </tr>
           </THead>
           <tbody>
             {data?.results?.length === 0 && (
-              <tr><td colSpan={6}><EmptyState>Cap artista.</EmptyState></td></tr>
+              <tr><td colSpan={7}><EmptyState>Cap artista.</EmptyState></td></tr>
             )}
             {data?.results?.map(a => (
               <Tr key={a.pk} onClick={() => navigate(`/staff/artistes/${a.pk}`)}>
@@ -126,6 +136,18 @@ export default function StaffArtistesPage() {
                   {a.localitat ? (a.localitat.municipi_nom || a.localitat.manual) : <span className="opacity-40">—</span>}
                 </Td>
                 <Td className="text-xs">{a.deezer_ids.length ? a.deezer_ids.join(', ') : <span className="opacity-40">—</span>}</Td>
+                <Td>
+                  {a.musicbrainz_id ? (
+                    <Pill tone="green">MBID</Pill>
+                  ) : a.mb_last_sync ? (
+                    <Pill tone="gray">Sense MBID</Pill>
+                  ) : (
+                    <span className="opacity-40 text-xs">—</span>
+                  )}
+                  {a.mb_end_date && (
+                    <Pill tone="red">Dissolt {a.mb_end_date.slice(0, 4)}</Pill>
+                  )}
+                </Td>
                 <Td>
                   {a.aprovat && <Pill tone="green">Aprovat</Pill>}
                   {!a.aprovat && a.pendent_review && <Pill tone="yellow">Pendent</Pill>}

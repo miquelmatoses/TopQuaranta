@@ -221,6 +221,9 @@ def _artista_card(a) -> dict:
             a.territoris.values_list("codi", flat=True).order_by("codi")
         ),
         "localitat": loc_out,
+        "musicbrainz_id": a.musicbrainz_id or "",
+        "mb_end_date": a.mb_end_date.isoformat() if a.mb_end_date else None,
+        "mb_last_sync": a.mb_last_sync.isoformat() if a.mb_last_sync else None,
     }
 
 
@@ -479,6 +482,17 @@ def artistes_list(request: Request) -> Response:
     territori = request.GET.get("territori", "")
     if territori:
         qs = qs.filter(territoris__codi=territori)
+    # MusicBrainz filters — surface artists that still need manual MBID
+    # resolution, or those flagged as dissolved.
+    mb = request.GET.get("mb", "")
+    if mb == "sense_mbid":
+        qs = qs.filter(Q(musicbrainz_id__isnull=True) | Q(musicbrainz_id=""))
+    elif mb == "amb_mbid":
+        qs = qs.exclude(musicbrainz_id__isnull=True).exclude(musicbrainz_id="")
+    elif mb == "dissolt":
+        qs = qs.filter(mb_end_date__isnull=False)
+    elif mb == "no_sincronitzat":
+        qs = qs.filter(mb_last_sync__isnull=True)
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(nom__icontains=cerca)
@@ -728,6 +742,10 @@ def _canco_row(c) -> dict:
                 "nom": c.artista.nom,
                 "aprovat": c.artista.aprovat,
                 "pendent_review": c.artista.pendent_review,
+                "musicbrainz_id": c.artista.musicbrainz_id or "",
+                "mb_end_date": (
+                    c.artista.mb_end_date.isoformat() if c.artista.mb_end_date else None
+                ),
             }
             if c.artista
             else None
@@ -774,6 +792,20 @@ def cancons_list(request: Request) -> Response:
         qs = qs.filter(deezer_id__isnull=True)
     elif deezer == "si":
         qs = qs.filter(deezer_id__isnull=False)
+    # MusicBrainz filters: confirmat (MB attests ownership), no_confirmat
+    # (synced but didn't match), desconegut (not yet reconciled), cat
+    # (Work.language == 'cat'), artista_dissolt (main artist has mb_end_date).
+    mb = request.GET.get("mb", "")
+    if mb == "confirmat":
+        qs = qs.filter(mbrainz_confirmed=True)
+    elif mb == "no_confirmat":
+        qs = qs.filter(mbrainz_confirmed=False)
+    elif mb == "desconegut":
+        qs = qs.filter(mbrainz_confirmed__isnull=True)
+    elif mb == "cat":
+        qs = qs.filter(mb_lyrics_language="cat")
+    elif mb == "artista_dissolt":
+        qs = qs.filter(artista__mb_end_date__isnull=False)
     cerca = (request.GET.get("q") or "").strip()
     if cerca:
         qs = qs.filter(Q(nom__icontains=cerca) | Q(artista__nom__icontains=cerca))
