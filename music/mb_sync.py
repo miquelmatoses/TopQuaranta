@@ -220,6 +220,26 @@ def sync_from_mbid(artista) -> dict:
         rgs = []
     result["rgs"] = len(rgs)
 
+    # Reset any stale MB-reconciliation fields on this artist's albums
+    # and cançons before re-matching. Motivation: if staff corrected an
+    # MBID after a wrong auto-resolve (e.g. Meteor valencià → Meteor
+    # Medellín), the obsolete mb_release_group_id / mb_recording_id /
+    # mb_work_id / mb_lyrics_language / mbrainz_confirmed stay behind
+    # because sync_from_mbid only sets True on new matches. Reset
+    # wholesale here so the new sync is authoritative.
+    Album.objects.filter(artista=artista).update(
+        mb_release_group_id="",
+        mb_type_secondary="",
+        mb_status="",
+        mbrainz_confirmed=None,
+    )
+    Canco.objects.filter(artista=artista).update(
+        mb_recording_id="",
+        mb_work_id="",
+        mb_lyrics_language="",
+        mbrainz_confirmed=None,
+    )
+
     # Index our albums by normalized title for matching.
     nostres_albums = {
         _normalize_title(a.nom): a for a in Album.objects.filter(artista=artista)
