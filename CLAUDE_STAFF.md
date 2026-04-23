@@ -168,15 +168,54 @@ future classification.
 
 ## 6. Invariants enforced by signals
 
-- **`aprovat=True ⇒ ≥ 1 ArtistaDeezer`** — `music/signals.py` post_delete
-  on `ArtistaDeezer`. When the last Deezer ID of an approved artist is
-  removed, `aprovat` is flipped to False (and `pendent_review` to False)
-  in one UPDATE. Prevents phantom approved artists invisible to
-  `obtenir_novetats`.
+- **`aprovat=True ⇒ Deezer ID OR MBID`** (2026-04-22, relaxed) —
+  `music/signals.py` post_delete on `ArtistaDeezer`. When the last
+  Deezer ID is removed the artist stays `aprovat` only if it has a
+  non-empty `musicbrainz_id`; otherwise it flips to False (and
+  `pendent_review=False`). Motivation: Crim-style collisions where two
+  PPCC artists share one Deezer ID — one keeps Deezer, the other
+  lives off MusicBrainz exclusively.
 - **D5: main artist ≠ collaborator on same canço** — `m2m_changed` on
   `Canco.artistes_col`. Raises `ValidationError` on pre_add / pre_set.
 - **`artista_no_aprovat_pendent_review`** — DB CheckConstraint (migration
   0042). `aprovat=True AND pendent_review=True` is impossible.
+
+## 6b. MusicBrainz integration surface (2026-04-22)
+
+MB sync is continuous: cron every 15 min, single-instance lock, exits
+when the queue is empty (all artists synced within `--refresh-days=7`).
+See `CLAUDE_PIPELINE.md §3.7` for the per-artist flow.
+
+Where MB shows up on the staff UI:
+
+- **ArtistaEditPage** (`/staff/artistes/<pk>`) — shared
+  `MusicBrainzPanel` component renders type, gender, area, begin/end
+  dates, disambiguation, aliases, tags, cached-ISRC count and last
+  sync timestamp. Editable `musicbrainz_id` field + "Sincronitzar
+  ara" button (disabled until the MBID is persisted). Posts to
+  `/api/v1/staff/artistes/<pk>/sync-mb/`.
+- **AlbumEditPage + CancoEditPage** — read-only MB panel variant
+  with release-group / recording / work IDs, lyrics language (green
+  when `cat`), `mbrainz_confirmed` status pill, link to MB.
+- **StaffArtistesPage** (`/staff/artistes`) — new "MB" column with
+  `MBID` / `Sense MBID` / `Dissolt YYYY` pills + new filter
+  (`sense_mbid`, `amb_mbid`, `dissolt`, `no_sincronitzat`).
+- **StaffCanconsPage** (`/staff/cancons`) — new "MB" column with
+  ✓/✗/? + Work `cat` tag; artist cell warns `⚠ dissolt YYYY`
+  inline; new filter (`confirmat`, `no_confirmat`, `desconegut`,
+  `cat`, `artista_dissolt`).
+- **EstatPage** (`/staff/estat`) — MusicBrainz section with coverage
+  bar (`aprovats_amb_mbid` / `aprovats_total`), synced count,
+  confirmed-album / confirmed-track totals, Catalan-lyrics Work
+  counter, dissolved-artists counter, oldest pending sync. Plus a
+  "Top artistes amb més backlog" list (approved artists with the
+  most unverified tracks) that surfaces MBID pills + dissolved
+  badges — the fastest way to spot Crim/Apa/Renata-style collisions.
+
+The three MB-derived ML features (`mbrainz_confirmed`,
+`mb_lyrics_cat`, `artista_te_mbid`) plug into the RF classifier and
+are visible in the Estat → "Importància de features" chart after the
+model retrains.
 
 ## 7. Adding a new staff page
 

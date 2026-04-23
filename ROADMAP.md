@@ -80,7 +80,7 @@ Post-purge 2026-04-20: 1,920 aprovats + 2,323 pendents = 4,244 Artistes;
 (21.8%); 17,408 SenyalDiari rows; 4,371 HistorialRevisio decisions.
 
 **ML classifier** (`music/ml.py`) — RandomForestClassifier + TF-IDF.
-**76 features** post-slim (16 structured + 4 Whisper + 60 TF-IDF).
+**79 features** post-slim + MB (12 structured + 4 Whisper + 3 MusicBrainz + 60 TF-IDF).
 5-fold CV: ROC-AUC 0.9994, F1 0.9522, accuracy 0.9675. Top features:
 `ratio_rebuig_artista` (22.2%), `ratio_rebuig_registrant` (14.9%),
 `ratio_rebuig_isrc_prefix` (13.6%), all Bayesian-smoothed (k=5, p=0.5).
@@ -128,7 +128,7 @@ but the service is disabled.
 - **Feedback feature**: `Feedback` model + "Corregir" button on every
   content page (staff → edit link, user → modal, anonymous → login).
 - **Spotify playlist sync**: one-time OAuth + daily cron.
-- **ML slim**: 223 → 76 features, Bayesian smoothing on rejection
+- **ML slim**: 223 → 76 → 79 features (2026-04-22 added MB signals), Bayesian smoothing on rejection
   ratios, ROC-AUC 0.9994.
 - **Visual `/staff/estat` dashboard**: live BD inventory, cron health,
   weekly flux, ML feature-importance chart.
